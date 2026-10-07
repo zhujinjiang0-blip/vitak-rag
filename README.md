@@ -4,6 +4,14 @@ VitaK-RAG 是一个面向公众科普的维生素 K 知识图谱问答原型。�
 
 当前演示库采用“公开可核验事实 + 明确标记的合成 RCT 样例”，尚未导入毕业设计真实数据库、内部 RCT 统计结果和完整文献集。
 
+## 在线演示
+
+GitHub Pages 版本会把演示快照导出到浏览器，直接运行同一套确定性问答、图谱浏览和证据检索逻辑，无需安装环境：
+
+<https://zhujinjiang0-blip.github.io/vitak-rag/>
+
+在线演示不包含 FastAPI 文件入库和内部审核接口；这些能力仍通过仓库中的完整后端在本地运行。
+
 ![问答界面](docs/screenshots/chat-desktop.png)
 
 ## 已实现能力

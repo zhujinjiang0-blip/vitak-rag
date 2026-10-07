@@ -10,6 +10,7 @@ const sharp = require(
 );
 
 const outputDir = "/private/tmp/vitak-rag-visual";
+const baseUrl = process.env.VITAK_WEB_URL || "http://127.0.0.1:5173";
 await mkdir(outputDir, { recursive: true });
 
 const browser = await chromium.launch({
@@ -23,7 +24,7 @@ page.on("console", (message) => {
 });
 page.on("pageerror", (error) => consoleErrors.push(error.message));
 
-await page.goto("http://127.0.0.1:5173/chat", { waitUntil: "networkidle" });
+await page.goto(`${baseUrl}/#/chat`, { waitUntil: "networkidle" });
 await page.getByText("从一个具体问题开始").waitFor();
 await page.screenshot({
   path: `${outputDir}/chat-desktop.png`,
@@ -38,7 +39,7 @@ await page.screenshot({
   fullPage: true
 });
 
-await page.goto("http://127.0.0.1:5173/graph", { waitUntil: "networkidle" });
+await page.goto(`${baseUrl}/#/graph`, { waitUntil: "networkidle" });
 await page.getByRole("heading", { name: "知识图谱" }).waitFor();
 await page.locator(".react-flow").waitFor();
 await page.screenshot({
@@ -46,7 +47,7 @@ await page.screenshot({
   fullPage: true
 });
 
-await page.goto("http://127.0.0.1:5173/evidence", { waitUntil: "networkidle" });
+await page.goto(`${baseUrl}/#/evidence`, { waitUntil: "networkidle" });
 await page.getByPlaceholder("输入关键词、实体或研究主题...").fill("华法林");
 await page.getByRole("button", { name: "检索" }).click();
 await page.locator(".evidence-result-card").first().waitFor({ timeout: 15_000 });
@@ -56,7 +57,7 @@ await page.screenshot({
 });
 
 await page.setViewportSize({ width: 390, height: 844 });
-await page.goto("http://127.0.0.1:5173/chat", { waitUntil: "networkidle" });
+await page.goto(`${baseUrl}/#/chat`, { waitUntil: "networkidle" });
 await page.screenshot({
   path: `${outputDir}/chat-mobile.png`,
   fullPage: true

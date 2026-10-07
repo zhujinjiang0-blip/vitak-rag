@@ -6,6 +6,15 @@ import type {
   SearchResult,
   Subgraph
 } from "./types";
+import {
+  askStaticQuestion,
+  getStaticGraphMeta,
+  getStaticHealth,
+  getStaticSubgraph,
+  searchStaticEvidence,
+  searchStaticGraph,
+  STATIC_DEMO_MODE
+} from "./staticDemo";
 
 async function jsonRequest<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
@@ -17,14 +26,17 @@ async function jsonRequest<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export function getHealth(): Promise<Health> {
+  if (STATIC_DEMO_MODE) return getStaticHealth();
   return jsonRequest<Health>("/api/v1/health");
 }
 
 export function getGraphMeta(): Promise<GraphMeta> {
+  if (STATIC_DEMO_MODE) return getStaticGraphMeta();
   return jsonRequest<GraphMeta>("/api/v1/graph/meta");
 }
 
 export function searchGraph(query: string): Promise<{ items: GraphNode[]; total: number }> {
+  if (STATIC_DEMO_MODE) return searchStaticGraph(query);
   return jsonRequest(`/api/v1/graph/search?q=${encodeURIComponent(query)}&limit=30`);
 }
 
@@ -33,6 +45,7 @@ export function getSubgraph(
   depth: number,
   domains: string[]
 ): Promise<Subgraph> {
+  if (STATIC_DEMO_MODE) return getStaticSubgraph(entityIds, depth, domains);
   return jsonRequest<Subgraph>("/api/v1/graph/subgraph", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -49,6 +62,7 @@ export function searchEvidence(query: string): Promise<{
   items: SearchResult[];
   total: number;
 }> {
+  if (STATIC_DEMO_MODE) return searchStaticEvidence(query);
   return jsonRequest(`/api/v1/search?q=${encodeURIComponent(query)}&limit=20`);
 }
 
@@ -60,6 +74,11 @@ export async function askQuestion(
     onAnswer: (answer: Answer) => void;
   }
 ): Promise<void> {
+  if (STATIC_DEMO_MODE) {
+    handlers.status?.("正在加载浏览器端知识库");
+    handlers.onAnswer(await askStaticQuestion(query));
+    return;
+  }
   const response = await fetch("/api/v1/qa/stream", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -94,4 +113,3 @@ export async function askQuestion(
     }
   }
 }
-

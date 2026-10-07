@@ -11,6 +11,7 @@ from app.config import PROJECT_ROOT, get_settings
 from app.services.evaluation import EvaluationService
 from app.services.ingest import IngestionService
 from app.services.snapshot import DEMO_VERSION, SnapshotManager
+from app.services.static_export import StaticExportService
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -85,6 +86,16 @@ def _parser() -> argparse.ArgumentParser:
         default=str(PROJECT_ROOT / "data/eval/questions.jsonl"),
     )
     generate_eval.set_defaults(handler=_generate_eval)
+
+    export_static = subparsers.add_parser(
+        "export-static",
+        help="export the active snapshot for the GitHub Pages demo",
+    )
+    export_static.add_argument(
+        "--output",
+        default=str(PROJECT_ROOT / "frontend/public/demo-data.json"),
+    )
+    export_static.set_defaults(handler=_export_static)
     return parser
 
 
@@ -222,6 +233,16 @@ def _evaluate(args: argparse.Namespace) -> int:
                 "summary": report["summary"],
             }
         )
+    finally:
+        snapshot.close()
+    return 0
+
+
+def _export_static(args: argparse.Namespace) -> int:
+    snapshot = SnapshotManager(get_settings()).bootstrap()
+    try:
+        result = StaticExportService(snapshot).export(Path(args.output))
+        _print(result)
     finally:
         snapshot.close()
     return 0

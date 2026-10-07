@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { BookOpenText, Database, GitFork, MessageSquareText } from "lucide-react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { getHealth } from "./lib/api";
+import { STATIC_DEMO_MODE } from "./lib/staticDemo";
 import ChatPage from "./pages/ChatPage";
 import EvidencePage from "./pages/EvidencePage";
 import GraphPage from "./pages/GraphPage";
@@ -38,7 +39,13 @@ function App() {
         <div className="topbar-status">
           <span className={`status-dot ${health.isError ? "error" : ""}`} />
           <div>
-            <strong>{health.isError ? "服务未连接" : "本地知识库"}</strong>
+            <strong>
+              {health.isError
+                ? "知识库加载失败"
+                : STATIC_DEMO_MODE
+                  ? "在线静态演示"
+                  : "本地知识库"}
+            </strong>
             <small>
               {health.data
                 ? `${health.data.data_version.version} · ${health.data.data_version.entity_count} 实体`
@@ -62,4 +69,3 @@ function App() {
 }
 
 export default App;
-

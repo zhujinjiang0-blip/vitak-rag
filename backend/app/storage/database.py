@@ -308,6 +308,21 @@ class MetadataStore:
             by_id = {row["id"]: dict(row) for row in rows}
             return [by_id[item] for item in evidence_ids if item in by_id]
 
+    def all_evidence(self) -> list[dict[str, Any]]:
+        with self.connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT e.*, c.text AS chunk_text, c.entity_ids_json, c.locator,
+                       s.title, s.source_type, s.publisher, s.published_at,
+                       s.url, s.is_demo
+                FROM evidence e
+                JOIN chunks c ON c.id = e.chunk_id
+                JOIN sources s ON s.id = e.source_id
+                ORDER BY e.id
+                """
+            ).fetchall()
+            return [dict(row) for row in rows]
+
     def search_fts(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
         terms = [term for term in tokenize(query).split() if term]
         if not terms:

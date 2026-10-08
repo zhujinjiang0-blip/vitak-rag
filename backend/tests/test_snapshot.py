@@ -17,3 +17,25 @@ def test_graph_search_supports_aliases(demo_context):
     assert items
     assert items[0].name == "华法林"
 
+
+def test_demo_sources_are_classified_by_origin(demo_context):
+    _, _, context = demo_context
+    with context.metadata.connect() as connection:
+        rows = connection.execute(
+            """
+            SELECT data_origin, COUNT(*) AS count
+            FROM sources
+            GROUP BY data_origin
+            """
+        ).fetchall()
+        classifications = connection.execute(
+            """
+            SELECT COUNT(*) AS count
+            FROM sources
+            WHERE source_classification = ''
+            """
+        ).fetchone()["count"]
+
+    counts = {row["data_origin"]: row["count"] for row in rows}
+    assert counts == {"public": 30, "synthetic": 10}
+    assert classifications == 0

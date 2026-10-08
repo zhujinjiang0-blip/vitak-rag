@@ -602,6 +602,7 @@ a {
 }
 
 .source-type,
+.origin-pill,
 .demo-pill {
   padding: 3px 6px;
   border-radius: 4px;
@@ -610,6 +611,26 @@ a {
   font-size: 9px;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+.origin-pill.internal {
+  background: #fee2e2;
+  color: #a61b2b;
+}
+
+.origin-pill.external {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.origin-pill.public {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.origin-pill.synthetic {
+  background: #f3e8ff;
+  color: #6b21a8;
 }
 
 .demo-pill {
@@ -1220,4 +1241,3 @@ a {
     flex-wrap: wrap;
   }
 }
-

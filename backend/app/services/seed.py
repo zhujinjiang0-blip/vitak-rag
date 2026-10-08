@@ -241,14 +241,18 @@ def _seed_sources(
     chunk_records: list[tuple[str, str]] = []
     for source in sources:
         store.add_source(
-            source.id,
-            source.title,
-            source.source_type,
-            source.publisher,
-            source.published_at,
-            source.url,
-            source.is_demo,
-            {"demo_catalog": source.is_demo},
+            source_id=source.id,
+            title=source.title,
+            source_type=source.source_type,
+            source_classification=source.source_type,
+            data_origin="synthetic" if source.is_demo else "public",
+            data_owner=source.publisher,
+            access_scope="public",
+            publisher=source.publisher,
+            published_at=source.published_at,
+            url=source.url,
+            is_demo=source.is_demo,
+            metadata={"demo_catalog": source.is_demo},
         )
         keyword_map = {
             "PUB-003": "膳食参考摄入、成人、儿童、孕妇和哺乳期人群",

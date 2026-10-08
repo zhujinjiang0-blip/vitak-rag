@@ -40,6 +40,22 @@ scripts/
 
 后端使用 Kuzu 存储属性图，Chroma 存储向量，SQLite FTS5 + Jieba 提供中文关键词检索。元数据和审核状态保存在同一快照的 SQLite 文件中。
 
+来源证据同时记录以下分类字段：
+
+- `data_origin`：`internal`、`external`、`public` 或 `synthetic`。
+- `data_owner`：资料所属团队、机构或公开来源方。
+- `access_scope`：`private`、`controlled` 或 `public`。
+- `source_classification`：`internal_rct`、`internal_database`、`guideline`、`review` 等细分类。
+
+内部导入默认标记为 `internal/private`，公开资料标记为 `public`，合成 RCT 标记为 `synthetic`。这些字段会随 Citation 一并返回并展示在证据卡片中。
+
+项目真实数据按以下来源组织：
+
+- 外部数据：564 篇已发表维生素 K 研究文献，经抽取和对齐形成 13,118 条三元组、6,297 个唯一实体，统一标记为 `external/public`。
+- 内部数据：项目组 395 人前瞻性干预队列，使用标准化个体证据和强度标签，统一标记为 `internal/private`。
+
+完整字段和导入说明见 [`docs/data-sources.md`](docs/data-sources.md)。
+
 ## 本地启动
 
 当前开发环境已经安装依赖并生成演示快照，可以直接启动：
@@ -119,7 +135,7 @@ Kuzu 使用文件锁。运行 CLI 时若 API 正在访问同一快照，可能�
 
 ## 入库与审核
 
-入库会从当前快照复制出新的版本目录，解析文档、切分片段、建立来源证据并产生候选关系。候选关系进入 SQLite 审核队列，只有执行 `review-apply --decision approve` 后才写入图谱。
+入库会从当前快照复制出新的版本目录，解析文档、切分片段、建立来源证据并产生候选关系。内部导入默认使用 `data_origin=internal`、`access_scope=private`，可通过 CLI 参数覆盖。候选关系进入 SQLite 审核队列，只有执行 `review-apply --decision approve` 后才写入图谱。
 
 默认抽取服务为阿里云百炼 Qwen，可通过 `.env` 切换任意 OpenAI 兼容接口。生成模型只允许用于离线结构化抽取，不能参与用户问答的最终回答。
 

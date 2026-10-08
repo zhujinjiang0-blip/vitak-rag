@@ -20,6 +20,10 @@ class StaticExportService:
                 source_id=row["source_id"],
                 source_title=row["title"],
                 source_type=row["source_type"],
+                source_classification=row["source_classification"],
+                data_origin=row["data_origin"],
+                data_owner=row["data_owner"],
+                access_scope=row["access_scope"],
                 publisher=row["publisher"],
                 published_at=row["published_at"],
                 url=row["url"],
@@ -56,4 +60,3 @@ class StaticExportService:
             "evidence": len(evidence),
             "bytes": output.stat().st_size,
         }
-

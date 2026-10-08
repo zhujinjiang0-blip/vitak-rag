@@ -9,6 +9,7 @@ import uvicorn
 
 from app.config import PROJECT_ROOT, get_settings
 from app.services.evaluation import EvaluationService
+from app.services.external_triples import ExternalTripleImporter
 from app.services.ingest import IngestionService
 from app.services.snapshot import DEMO_VERSION, SnapshotManager
 from app.services.static_export import StaticExportService
@@ -46,9 +47,30 @@ def _parser() -> argparse.ArgumentParser:
     ingest.add_argument("path")
     ingest.add_argument("--title")
     ingest.add_argument("--source-type", default="document")
+    ingest.add_argument(
+        "--data-origin",
+        choices=["internal", "external", "public", "synthetic"],
+        default="internal",
+    )
+    ingest.add_argument("--data-owner", default="毕业设计内部资料")
+    ingest.add_argument(
+        "--access-scope",
+        choices=["private", "controlled", "public"],
+        default="private",
+    )
+    ingest.add_argument("--source-classification", default="")
     ingest.add_argument("--use-llm", action="store_true")
     ingest.add_argument("--activate", action="store_true")
     ingest.set_defaults(handler=_ingest)
+
+    external_triples = subparsers.add_parser(
+        "import-external-triples",
+        help="import aligned_triples.csv from external vitamin K literature",
+    )
+    external_triples.add_argument("path")
+    external_triples.add_argument("--data-owner", default="已发表维生素 K 研究文献")
+    external_triples.add_argument("--activate", action="store_true")
+    external_triples.set_defaults(handler=_import_external_triples)
 
     review_export = subparsers.add_parser(
         "review-export",
@@ -134,7 +156,22 @@ def _ingest(args: argparse.Namespace) -> int:
         Path(args.path),
         source_title=args.title,
         source_type=args.source_type,
+        data_origin=args.data_origin,
+        data_owner=args.data_owner,
+        access_scope=args.access_scope,
+        source_classification=args.source_classification,
         use_llm=args.use_llm,
+        activate=args.activate,
+    )
+    _print(result)
+    return 0
+
+
+def _import_external_triples(args: argparse.Namespace) -> int:
+    manager = SnapshotManager(get_settings())
+    result = ExternalTripleImporter(manager).import_csv(
+        Path(args.path),
+        data_owner=args.data_owner,
         activate=args.activate,
     )
     _print(result)

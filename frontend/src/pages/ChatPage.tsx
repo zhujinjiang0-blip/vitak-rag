@@ -239,13 +239,18 @@ function ChatPage() {
                 {activeAnswer.citations.map((citation) => (
                   <article className="citation-card" key={citation.id}>
                     <div className="citation-topline">
-                      <span className="source-type">{citation.source_type}</span>
+                      <span className="source-type">
+                        {citation.source_classification || citation.source_type}
+                      </span>
+                      <span className={`origin-pill ${citation.data_origin}`}>
+                        {originLabel(citation.data_origin)}
+                      </span>
                       {citation.is_demo && <span className="demo-pill">演示</span>}
                     </div>
                     <h4>{citation.source_title}</h4>
                     <p>{citation.snippet}</p>
                     <div className="citation-footer">
-                      <span>{citation.locator || citation.source_id}</span>
+                      <span>{citation.data_owner || citation.locator || citation.source_id}</span>
                       {citation.url && (
                         <a href={citation.url} target="_blank" rel="noreferrer">
                           查看来源 <ExternalLink size={13} />
@@ -290,5 +295,13 @@ function sufficiencyLabel(value: Answer["sufficiency"]) {
   }[value];
 }
 
-export default ChatPage;
+function originLabel(origin: string) {
+  return {
+    internal: "内部数据",
+    external: "外部数据",
+    public: "公开数据",
+    synthetic: "合成数据"
+  }[origin] ?? origin;
+}
 
+export default ChatPage;

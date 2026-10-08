@@ -46,6 +46,10 @@ class MetadataStore:
                     id TEXT PRIMARY KEY,
                     title TEXT NOT NULL,
                     source_type TEXT NOT NULL,
+                    source_classification TEXT NOT NULL DEFAULT '',
+                    data_origin TEXT NOT NULL DEFAULT 'external',
+                    data_owner TEXT NOT NULL DEFAULT '',
+                    access_scope TEXT NOT NULL DEFAULT 'public',
                     publisher TEXT NOT NULL DEFAULT '',
                     published_at TEXT NOT NULL DEFAULT '',
                     url TEXT NOT NULL DEFAULT '',
@@ -148,6 +152,56 @@ class MetadataStore:
                 CREATE INDEX IF NOT EXISTS idx_review_status ON review_items(status, created_at);
                 """
             )
+            self._migrate_source_columns(connection)
+
+    @staticmethod
+    def _migrate_source_columns(connection: sqlite3.Connection) -> None:
+        columns = {
+            row["name"]
+            for row in connection.execute("PRAGMA table_info(sources)").fetchall()
+        }
+        additions = {
+            "source_classification": "TEXT NOT NULL DEFAULT ''",
+            "data_origin": "TEXT NOT NULL DEFAULT 'external'",
+            "data_owner": "TEXT NOT NULL DEFAULT ''",
+            "access_scope": "TEXT NOT NULL DEFAULT 'public'",
+        }
+        added_any = False
+        for name, definition in additions.items():
+            if name not in columns:
+                connection.execute(f"ALTER TABLE sources ADD COLUMN {name} {definition}")
+                added_any = True
+        if not added_any:
+            return
+        connection.execute(
+            """
+            UPDATE sources
+            SET source_classification = source_type
+            WHERE source_classification = ''
+            """
+        )
+        connection.execute(
+            """
+            UPDATE sources
+            SET data_owner = publisher
+            WHERE data_owner = ''
+            """
+        )
+        connection.execute(
+            """
+            UPDATE sources
+            SET data_origin = CASE
+                WHEN metadata_json LIKE '%imported_path%' THEN 'internal'
+                WHEN is_demo = 1 THEN 'synthetic'
+                ELSE 'public'
+            END,
+            access_scope = CASE
+                WHEN metadata_json LIKE '%imported_path%' THEN 'private'
+                ELSE 'public'
+            END
+            WHERE data_origin = 'external'
+            """
+        )
 
     def has_demo_data(self) -> bool:
         with self.connect() as connection:
@@ -159,6 +213,10 @@ class MetadataStore:
         source_id: str,
         title: str,
         source_type: str,
+        source_classification: str = "",
+        data_origin: str = "external",
+        data_owner: str = "",
+        access_scope: str = "public",
         publisher: str = "",
         published_at: str = "",
         url: str = "",
@@ -169,13 +227,21 @@ class MetadataStore:
             connection.execute(
                 """
                 INSERT OR REPLACE INTO sources
-                (id, title, source_type, publisher, published_at, url, is_demo, metadata_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (
+                    id, title, source_type, source_classification, data_origin,
+                    data_owner, access_scope, publisher, published_at, url,
+                    is_demo, metadata_json
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     source_id,
                     title,
                     source_type,
+                    source_classification or source_type,
+                    data_origin,
+                    data_owner or publisher,
+                    access_scope,
                     publisher,
                     published_at,
                     url,
@@ -279,7 +345,8 @@ class MetadataStore:
             row = connection.execute(
                 """
                 SELECT e.*, c.text AS chunk_text, c.locator, s.title, s.source_type,
-                       s.publisher, s.published_at, s.url, s.is_demo
+                       s.source_classification, s.data_origin, s.data_owner,
+                       s.access_scope, s.publisher, s.published_at, s.url, s.is_demo
                 FROM evidence e
                 JOIN chunks c ON c.id = e.chunk_id
                 JOIN sources s ON s.id = e.source_id
@@ -297,7 +364,8 @@ class MetadataStore:
             rows = connection.execute(
                 f"""
                 SELECT e.*, c.text AS chunk_text, c.locator, s.title, s.source_type,
-                       s.publisher, s.published_at, s.url, s.is_demo
+                       s.source_classification, s.data_origin, s.data_owner,
+                       s.access_scope, s.publisher, s.published_at, s.url, s.is_demo
                 FROM evidence e
                 JOIN chunks c ON c.id = e.chunk_id
                 JOIN sources s ON s.id = e.source_id
@@ -313,8 +381,9 @@ class MetadataStore:
             rows = connection.execute(
                 """
                 SELECT e.*, c.text AS chunk_text, c.entity_ids_json, c.locator,
-                       s.title, s.source_type, s.publisher, s.published_at,
-                       s.url, s.is_demo
+                       s.title, s.source_type, s.source_classification,
+                       s.data_origin, s.data_owner, s.access_scope,
+                       s.publisher, s.published_at, s.url, s.is_demo
                 FROM evidence e
                 JOIN chunks c ON c.id = e.chunk_id
                 JOIN sources s ON s.id = e.source_id
@@ -332,7 +401,8 @@ class MetadataStore:
             rows = connection.execute(
                 """
                 SELECT c.id, c.document_id, c.source_id, c.text, c.entity_ids_json,
-                       c.locator, s.title, s.is_demo,
+                       c.locator, s.title, s.source_classification,
+                       s.data_origin, s.data_owner, s.access_scope, s.is_demo,
                        bm25(chunk_fts) AS rank
                 FROM chunk_fts
                 JOIN chunks c ON c.id = chunk_fts.chunk_id
@@ -349,7 +419,9 @@ class MetadataStore:
         with self.connect() as connection:
             row = connection.execute(
                 """
-                SELECT c.*, s.title, s.source_type, s.publisher, s.published_at, s.url, s.is_demo
+                SELECT c.*, s.title, s.source_type, s.source_classification,
+                       s.data_origin, s.data_owner, s.access_scope,
+                       s.publisher, s.published_at, s.url, s.is_demo
                 FROM chunks c JOIN sources s ON s.id = c.source_id
                 WHERE c.id = ?
                 """,
@@ -361,7 +433,9 @@ class MetadataStore:
         with self.connect() as connection:
             rows = connection.execute(
                 """
-                SELECT c.*, s.title, s.source_type, s.publisher, s.published_at, s.url, s.is_demo
+                SELECT c.*, s.title, s.source_type, s.source_classification,
+                       s.data_origin, s.data_owner, s.access_scope,
+                       s.publisher, s.published_at, s.url, s.is_demo
                 FROM chunks c JOIN sources s ON s.id = c.source_id
                 ORDER BY c.id
                 """

@@ -12,6 +12,19 @@ class EvidenceSufficiency(StrEnum):
     NONE = "none"
 
 
+class DataOrigin(StrEnum):
+    INTERNAL = "internal"
+    EXTERNAL = "external"
+    PUBLIC = "public"
+    SYNTHETIC = "synthetic"
+
+
+class AccessScope(StrEnum):
+    PRIVATE = "private"
+    CONTROLLED = "controlled"
+    PUBLIC = "public"
+
+
 class DataVersion(BaseModel):
     version: str
     created_at: datetime
@@ -48,6 +61,10 @@ class Citation(BaseModel):
     source_id: str
     source_title: str
     source_type: str
+    source_classification: str = ""
+    data_origin: DataOrigin = DataOrigin.PUBLIC
+    data_owner: str = ""
+    access_scope: AccessScope = AccessScope.PUBLIC
     publisher: str = ""
     published_at: str = ""
     url: str = ""
@@ -114,6 +131,10 @@ class SearchResult(BaseModel):
     document_id: str
     source_id: str
     title: str
+    source_classification: str = ""
+    data_origin: DataOrigin = DataOrigin.PUBLIC
+    data_owner: str = ""
+    access_scope: AccessScope = AccessScope.PUBLIC
     snippet: str
     entity_ids: list[str] = Field(default_factory=list)
     score: float
@@ -129,6 +150,10 @@ class IngestRequest(BaseModel):
     path: str
     source_title: str | None = None
     source_type: str = "document"
+    data_origin: DataOrigin = DataOrigin.INTERNAL
+    data_owner: str = "毕业设计内部资料"
+    access_scope: AccessScope = AccessScope.PRIVATE
+    source_classification: str = ""
     use_llm: bool = False
     activate: bool = False
 
@@ -139,6 +164,22 @@ class IngestResponse(BaseModel):
     documents: int
     chunks: int
     candidates: int
+    warnings: list[str] = Field(default_factory=list)
+
+
+class ExternalTripleImportRequest(BaseModel):
+    path: str
+    data_owner: str = "已发表维生素 K 研究文献"
+    activate: bool = False
+
+
+class ExternalTripleImportResponse(BaseModel):
+    snapshot_version: str
+    rows: int
+    skipped_rows: int
+    sources: int
+    nodes_added: int
+    edges_added: int
     warnings: list[str] = Field(default_factory=list)
 
 

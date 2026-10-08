@@ -71,6 +71,9 @@ function EvidencePage() {
             <article className="evidence-result-card" key={item.chunk_id}>
               <div className="result-topline">
                 <span>{item.source_id}</span>
+                <span className={`origin-pill ${item.data_origin}`}>
+                  {originLabel(item.data_origin)}
+                </span>
                 {item.is_demo && <span className="demo-pill">演示数据</span>}
                 <span className="result-score">匹配度 {Math.round(item.score * 100)}%</span>
               </div>
@@ -84,7 +87,7 @@ function EvidencePage() {
                 </div>
               )}
               <div className="result-link">
-                <span>{item.chunk_id}</span>
+                <span>{item.data_owner || item.source_classification || item.chunk_id}</span>
                 <ExternalLink size={14} />
               </div>
             </article>
@@ -95,5 +98,13 @@ function EvidencePage() {
   );
 }
 
-export default EvidencePage;
+function originLabel(origin: string) {
+  return {
+    internal: "内部数据",
+    external: "外部数据",
+    public: "公开数据",
+    synthetic: "合成数据"
+  }[origin] ?? origin;
+}
 
+export default EvidencePage;

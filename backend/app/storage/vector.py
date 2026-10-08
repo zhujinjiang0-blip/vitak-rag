@@ -77,6 +77,19 @@ class ChromaVectorStore:
             )
         return output
 
+    def upsert_many(
+        self,
+        items: list[tuple[str, str, dict[str, Any]]],
+    ) -> None:
+        if not items:
+            return
+        self.collection.upsert(
+            ids=[item[0] for item in items],
+            documents=[item[1] for item in items],
+            embeddings=[embed_text(item[1]) for item in items],
+            metadatas=[item[2] for item in items],
+        )
+
     def count(self) -> int:
         return int(self.collection.count())
 

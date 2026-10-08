@@ -304,6 +304,10 @@ class IngestionService:
         path: Path,
         source_title: str | None = None,
         source_type: str = "document",
+        data_origin: str = "internal",
+        data_owner: str = "毕业设计内部资料",
+        access_scope: str = "private",
+        source_classification: str = "",
         use_llm: bool = False,
         activate: bool = False,
     ) -> dict[str, Any]:
@@ -325,9 +329,20 @@ class IngestionService:
             title = source_title or path.stem
             checksum = hashlib.sha256(path.read_bytes()).hexdigest()
             snapshot.metadata.add_source(
-                source_id,
-                title,
-                source_type,
+                source_id=source_id,
+                title=title,
+                source_type=source_type,
+                source_classification=source_classification
+                or (
+                    "internal_rct"
+                    if "rct" in source_type.lower()
+                    else "internal_database"
+                    if "database" in source_type.lower()
+                    else "internal_document"
+                ),
+                data_origin=data_origin,
+                data_owner=data_owner,
+                access_scope=access_scope,
                 publisher="本地导入",
                 published_at="",
                 url="",
@@ -433,4 +448,3 @@ class IngestionService:
                 )
                 snapshot.graph.add_edge(edge)
         return snapshot.metadata.decide_review(candidate_ids, decision, reviewer)
-

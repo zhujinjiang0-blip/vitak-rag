@@ -8,6 +8,8 @@ from fastapi.responses import StreamingResponse
 
 from app.schemas import (
     Answer,
+    ExternalTripleImportRequest,
+    ExternalTripleImportResponse,
     GraphSearchResponse,
     HealthResponse,
     IngestRequest,
@@ -19,6 +21,7 @@ from app.schemas import (
     SubgraphRequest,
     SubgraphResponse,
 )
+from app.services.external_triples import ExternalTripleImporter
 from app.services.ingest import IngestionService
 
 router = APIRouter()
@@ -118,6 +121,10 @@ def search(
             document_id=row["document_id"],
             source_id=row["source_id"],
             title=row["title"],
+            source_classification=row["source_classification"],
+            data_origin=row["data_origin"],
+            data_owner=row["data_owner"],
+            access_scope=row["access_scope"],
             snippet=row["text"][:360],
             entity_ids=json.loads(row["entity_ids_json"] or "[]"),
             score=score,
@@ -141,6 +148,10 @@ def search(
             document_id=chunk["document_id"],
             source_id=chunk["source_id"],
             title=chunk["title"],
+            source_classification=chunk["source_classification"],
+            data_origin=chunk["data_origin"],
+            data_owner=chunk["data_owner"],
+            access_scope=chunk["access_scope"],
             snippet=chunk["text"][:360],
             entity_ids=json.loads(chunk["entity_ids_json"] or "[]"),
             score=max(score, previous.score if previous else 0.0),
@@ -161,6 +172,10 @@ def evidence(evidence_id: str, request: Request):
         "source_id": row["source_id"],
         "source_title": row["title"],
         "source_type": row["source_type"],
+        "source_classification": row["source_classification"],
+        "data_origin": row["data_origin"],
+        "data_owner": row["data_owner"],
+        "access_scope": row["access_scope"],
         "publisher": row["publisher"],
         "published_at": row["published_at"],
         "url": row["url"],
@@ -221,10 +236,33 @@ def ingest(
         Path(payload.path).expanduser().resolve(),
         source_title=payload.source_title,
         source_type=payload.source_type,
+        data_origin=payload.data_origin.value,
+        data_owner=payload.data_owner,
+        access_scope=payload.access_scope.value,
+        source_classification=payload.source_classification,
         use_llm=payload.use_llm,
         activate=payload.activate,
     )
     return IngestResponse(**result)
+
+
+@router.post(
+    "/internal/v1/import-external-triples",
+    response_model=ExternalTripleImportResponse,
+)
+def import_external_triples(
+    payload: ExternalTripleImportRequest,
+    request: Request,
+    x_internal_token: str | None = Header(default=None),
+) -> ExternalTripleImportResponse:
+    _assert_internal_token(request, x_internal_token)
+    importer = ExternalTripleImporter(_manager(request))
+    result = importer.import_csv(
+        Path(payload.path).expanduser().resolve(),
+        data_owner=payload.data_owner,
+        activate=payload.activate,
+    )
+    return ExternalTripleImportResponse(**result)
 
 
 @router.get("/internal/v1/review")
@@ -281,4 +319,3 @@ def snapshots(
 ):
     _assert_internal_token(request, x_internal_token)
     return {"items": _manager(request).list()}
-

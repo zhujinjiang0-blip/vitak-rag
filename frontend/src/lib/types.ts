@@ -1,4 +1,6 @@
 export type EvidenceSufficiency = "sufficient" | "partial" | "none";
+export type DataOrigin = "internal" | "external" | "public" | "synthetic";
+export type AccessScope = "private" | "controlled" | "public";
 
 export interface DataVersion {
   version: string;
@@ -36,6 +38,10 @@ export interface Citation {
   source_id: string;
   source_title: string;
   source_type: string;
+  source_classification: string;
+  data_origin: DataOrigin;
+  data_owner: string;
+  access_scope: AccessScope;
   publisher: string;
   published_at: string;
   url: string;
@@ -88,6 +94,10 @@ export interface SearchResult {
   document_id: string;
   source_id: string;
   title: string;
+  source_classification: string;
+  data_origin: DataOrigin;
+  data_owner: string;
+  access_scope: AccessScope;
   snippet: string;
   entity_ids: string[];
   score: number;
@@ -106,4 +116,3 @@ export interface GraphMeta {
   stats: { nodes: number; edges: number };
   data_version: DataVersion;
 }
-

@@ -47,3 +47,4 @@ def test_every_claim_has_traceable_citation(engine):
         for claim in answer.claims
         for evidence_id in claim.evidence_ids
     )
+    assert all(citation.data_origin in {"public", "synthetic"} for citation in answer.citations)

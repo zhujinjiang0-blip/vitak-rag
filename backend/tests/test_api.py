@@ -23,7 +23,9 @@ def test_public_api_contract_and_internal_auth():
     assert health.json()["runtime_llm"] is False
     assert answer.status_code == 200
     assert answer.json()["claims"]
+    assert {
+        citation["data_origin"] for citation in answer.json()["citations"]
+    }.issubset({"public", "synthetic"})
     assert graph.status_code == 200
     assert graph.json()["nodes"]
     assert protected.status_code == 401
-

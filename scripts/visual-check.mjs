@@ -34,6 +34,7 @@ await page.screenshot({
 await page.getByPlaceholder("输入关于维生素K的问题...").fill("维生素K有哪些食物来源？");
 await page.getByRole("button", { name: "发送问题" }).click();
 await page.getByText("鸡蛋含有维生素K。").waitFor({ timeout: 15_000 });
+await page.locator(".origin-pill.public").first().waitFor({ timeout: 15_000 });
 await page.screenshot({
   path: `${outputDir}/chat-answer-desktop.png`,
   fullPage: true
@@ -51,6 +52,7 @@ await page.goto(`${baseUrl}/#/evidence`, { waitUntil: "networkidle" });
 await page.getByPlaceholder("输入关键词、实体或研究主题...").fill("华法林");
 await page.getByRole("button", { name: "检索" }).click();
 await page.locator(".evidence-result-card").first().waitFor({ timeout: 15_000 });
+await page.locator(".origin-pill.public").first().waitFor({ timeout: 15_000 });
 await page.screenshot({
   path: `${outputDir}/evidence-desktop.png`,
   fullPage: true

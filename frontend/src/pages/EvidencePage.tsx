@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { BookOpenText, ExternalLink, FileSearch, Search } from "lucide-react";
+import DataSourceLegend from "../components/DataSourceLegend";
 import { searchEvidence } from "../lib/api";
 import type { SearchResult } from "../lib/types";
 
@@ -7,6 +8,7 @@ function EvidencePage() {
   const [query, setQuery] = useState("");
   const [submitted, setSubmitted] = useState("");
   const [items, setItems] = useState<SearchResult[]>([]);
+  const [originFilter, setOriginFilter] = useState("all");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -28,6 +30,11 @@ function EvidencePage() {
     }
   }
 
+  const visibleItems =
+    originFilter === "all"
+      ? items
+      : items.filter((item) => item.data_origin === originFilter);
+
   return (
     <div className="evidence-page">
       <section className="page-heading evidence-heading">
@@ -38,6 +45,8 @@ function EvidencePage() {
         </div>
         <BookOpenText size={34} />
       </section>
+
+      <DataSourceLegend />
 
       <form className="evidence-search" onSubmit={runSearch}>
         <FileSearch size={21} />
@@ -54,12 +63,30 @@ function EvidencePage() {
 
       <div className="evidence-summary">
         <span>{submitted ? `“${submitted}”` : "等待检索"}</span>
-        <strong>{items.length} 条结果</strong>
+        <div className="origin-filter">
+          {[
+            ["all", "全部"],
+            ["internal", "内部"],
+            ["external", "外部"],
+            ["public", "公开"],
+            ["synthetic", "合成"]
+          ].map(([value, label]) => (
+            <button
+              type="button"
+              key={value}
+              className={originFilter === value ? "active" : ""}
+              onClick={() => setOriginFilter(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <strong>{visibleItems.length} 条结果</strong>
       </div>
 
       {error && <div className="error-banner">{error}</div>}
 
-      {items.length === 0 && !loading && !error ? (
+      {visibleItems.length === 0 && !loading && !error ? (
         <div className="evidence-empty">
           <BookOpenText size={42} />
           <h2>从知识库中查找来源</h2>
@@ -67,7 +94,7 @@ function EvidencePage() {
         </div>
       ) : (
         <div className="evidence-results">
-          {items.map((item) => (
+          {visibleItems.map((item) => (
             <article className="evidence-result-card" key={item.chunk_id}>
               <div className="result-topline">
                 <span>{item.source_id}</span>

@@ -66,6 +66,75 @@ export function searchEvidence(query: string): Promise<{
   return jsonRequest(`/api/v1/search?q=${encodeURIComponent(query)}&limit=20`);
 }
 
+interface ImportResult {
+  snapshot_version: string;
+  rows?: number;
+  chunks?: number;
+  edges_added?: number;
+  candidates?: number;
+  warnings: string[];
+}
+
+async function uploadRequest(
+  endpoint: string,
+  file: File,
+  fields: Record<string, string>,
+  token: string
+): Promise<ImportResult> {
+  const form = new FormData();
+  form.append("file", file);
+  for (const [key, value] of Object.entries(fields)) {
+    form.append(key, value);
+  }
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "X-Internal-Token": token },
+    body: form
+  });
+  if (!response.ok) {
+    throw new Error(`${response.status} ${await response.text()}`);
+  }
+  return response.json() as Promise<ImportResult>;
+}
+
+export function uploadExternalTriples(
+  file: File,
+  dataOwner: string,
+  activate: boolean,
+  token: string
+): Promise<ImportResult> {
+  return uploadRequest(
+    "/internal/v1/upload-external-triples",
+    file,
+    {
+      data_owner: dataOwner,
+      activate: String(activate)
+    },
+    token
+  );
+}
+
+export function uploadInternalCsv(
+  file: File,
+  dataOwner: string,
+  sourceType: string,
+  sourceClassification: string,
+  activate: boolean,
+  token: string
+): Promise<ImportResult> {
+  return uploadRequest(
+    "/internal/v1/upload-internal-csv",
+    file,
+    {
+      data_owner: dataOwner,
+      source_type: sourceType,
+      source_classification: sourceClassification,
+      activate: String(activate)
+    },
+    token
+  );
+}
+
 export async function askQuestion(
   query: string,
   sessionId: string | null,

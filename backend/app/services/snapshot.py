@@ -16,7 +16,7 @@ from app.storage.database import MetadataStore
 from app.storage.graph import KuzuGraphStore
 from app.storage.vector import ChromaVectorStore
 
-DEMO_VERSION = "demo-2026.10.2"
+DEMO_VERSION = "demo-2026.10.4"
 
 
 @dataclass

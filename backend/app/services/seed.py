@@ -26,6 +26,8 @@ class SeedSource:
     published_at: str
     url: str
     is_demo: bool
+    data_origin: str = "public"
+    access_scope: str = "public"
 
 
 def _source_catalog() -> list[SeedSource]:
@@ -46,17 +48,46 @@ def _source_catalog() -> list[SeedSource]:
         for item in public
     ]
     for index in range(11, 31):
-        catalog.append(
-            SeedSource(
-                f"PUB-{index:03d}",
-                f"维生素 K 公开知识整理条目 {index:03d}",
-                "public_topic",
-                "公开资料演示目录",
-                "2026",
-                "",
-                False,
+        if index == 29:
+            catalog.append(
+                SeedSource(
+                    f"PUB-{index:03d}",
+                    "内部队列证据结构演示（非真实参与者数据）",
+                    "synthetic_internal_example",
+                    "毕业设计内部资料结构",
+                    "2026",
+                    "",
+                    True,
+                    data_origin="internal",
+                    access_scope="private",
+                )
             )
-        )
+        elif index == 30:
+            catalog.append(
+                SeedSource(
+                    f"PUB-{index:03d}",
+                    "外部文献三元组结构演示",
+                    "external_literature_triple",
+                    "已发表维生素 K 研究文献",
+                    "2026",
+                    "",
+                    True,
+                    data_origin="external",
+                    access_scope="public",
+                )
+            )
+        else:
+            catalog.append(
+                SeedSource(
+                    f"PUB-{index:03d}",
+                    f"维生素 K 公开知识整理条目 {index:03d}",
+                    "public_topic",
+                    "公开资料演示目录",
+                    "2026",
+                    "",
+                    False,
+                )
+            )
     for index in range(1, 11):
         catalog.append(
             SeedSource(
@@ -67,6 +98,7 @@ def _source_catalog() -> list[SeedSource]:
                 "2026",
                 "",
                 True,
+                data_origin="synthetic",
             )
         )
     return catalog
@@ -245,9 +277,9 @@ def _seed_sources(
             title=source.title,
             source_type=source.source_type,
             source_classification=source.source_type,
-            data_origin="synthetic" if source.is_demo else "public",
+            data_origin=source.data_origin,
             data_owner=source.publisher,
-            access_scope="public",
+            access_scope=source.access_scope,
             publisher=source.publisher,
             published_at=source.published_at,
             url=source.url,

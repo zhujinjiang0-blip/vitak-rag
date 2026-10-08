@@ -35,6 +35,7 @@ await page.getByPlaceholder("输入关于维生素K的问题...").fill("维生�
 await page.getByRole("button", { name: "发送问题" }).click();
 await page.getByText("鸡蛋含有维生素K。").waitFor({ timeout: 15_000 });
 await page.locator(".origin-pill.public").first().waitFor({ timeout: 15_000 });
+await page.locator(".origin-legend.compact").waitFor();
 await page.screenshot({
   path: `${outputDir}/chat-answer-desktop.png`,
   fullPage: true
@@ -53,8 +54,16 @@ await page.getByPlaceholder("输入关键词、实体或研究主题...").fill("
 await page.getByRole("button", { name: "检索" }).click();
 await page.locator(".evidence-result-card").first().waitFor({ timeout: 15_000 });
 await page.locator(".origin-pill.public").first().waitFor({ timeout: 15_000 });
+await page.locator(".origin-filter").waitFor();
 await page.screenshot({
   path: `${outputDir}/evidence-desktop.png`,
+  fullPage: true
+});
+
+await page.goto(`${baseUrl}/#/import`, { waitUntil: "networkidle" });
+await page.getByRole("heading", { name: "知识库导入" }).waitFor();
+await page.screenshot({
+  path: `${outputDir}/import-desktop.png`,
   fullPage: true
 });
 
@@ -73,6 +82,7 @@ const screenshots = [
   "chat-answer-desktop.png",
   "graph-desktop.png",
   "evidence-desktop.png",
+  "import-desktop.png",
   "chat-mobile.png"
 ];
 const imageChecks = {};

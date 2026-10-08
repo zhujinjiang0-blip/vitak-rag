@@ -37,5 +37,10 @@ def test_demo_sources_are_classified_by_origin(demo_context):
         ).fetchone()["count"]
 
     counts = {row["data_origin"]: row["count"] for row in rows}
-    assert counts == {"public": 30, "synthetic": 10}
+    assert counts == {
+        "internal": 1,
+        "external": 1,
+        "public": 28,
+        "synthetic": 10,
+    }
     assert classifications == 0

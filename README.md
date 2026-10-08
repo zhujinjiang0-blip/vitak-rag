@@ -67,6 +67,12 @@ make web
 
 浏览器访问 `http://127.0.0.1:5173`，API 文档位于 `http://127.0.0.1:8000/docs`。
 
+本地数据入口位于 `http://127.0.0.1:5173/#/import`：
+
+- “外部数据”入口用于上传 `aligned_triples.csv`，并直接生成外部文献三元组。
+- “内部数据”入口用于上传内部 CSV，默认以 `internal/private` 证据入库并进入审核流程。
+- GitHub Pages 在线版是只读演示，文件上传必须在本地全栈模式运行。
+
 也可以在一个终端启动前后端：
 
 ```bash
@@ -84,30 +90,35 @@ make web
 ## 常用命令
 
 ```bash
+cd backend
+
 # 创建或恢复演示快照
-.venv/bin/vitak seed-demo
+../.venv/bin/python -m app.cli seed-demo
 
 # 查看、校验、激活和回滚快照
-.venv/bin/vitak snapshot-list
-.venv/bin/vitak snapshot-validate demo-2026.10.2
-.venv/bin/vitak snapshot-activate demo-2026.10.2
+../.venv/bin/python -m app.cli snapshot-list
+../.venv/bin/python -m app.cli snapshot-validate demo-2026.10.4
+../.venv/bin/python -m app.cli snapshot-activate demo-2026.10.4
+
+# 导入外部文献 aligned_triples.csv
+../.venv/bin/python -m app.cli import-external-triples path/to/aligned_triples.csv
 
 # 导入文本型 PDF、DOCX、TXT、Markdown、JSON、XML、HTML、CSV 或 XLSX
-.venv/bin/vitak ingest path/to/document.pdf --title "材料名称"
+../.venv/bin/python -m app.cli ingest path/to/document.pdf --title "材料名称"
 
 # 使用云模型产生候选关系，但不会直接写入图谱
-.venv/bin/vitak ingest path/to/document.pdf --use-llm
+../.venv/bin/python -m app.cli ingest path/to/document.pdf --use-llm
 
 # 导出并审核候选关系
-.venv/bin/vitak review-export
-.venv/bin/vitak review-apply --decision approve --ids CANDIDATE_ID
+../.venv/bin/python -m app.cli review-export
+../.venv/bin/python -m app.cli review-apply --decision approve --ids CANDIDATE_ID
 
 # 重建当前版本的向量索引
-.venv/bin/vitak rebuild-index
+../.venv/bin/python -m app.cli rebuild-index
 
 # 生成 80 道题并运行评测
-.venv/bin/vitak generate-eval
-.venv/bin/vitak evaluate
+../.venv/bin/python -m app.cli generate-eval
+../.venv/bin/python -m app.cli evaluate
 ```
 
 Kuzu 使用文件锁。运行 CLI 时若 API 正在访问同一快照，可能提示无法加锁。此时应使用内部 API 完成导入，或先停止 API 再运行 CLI。

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { askQuestion } from "../lib/api";
 import type { Answer } from "../lib/types";
+import DataSourceLegend from "../components/DataSourceLegend";
 
 interface Message {
   id: string;
@@ -195,6 +196,7 @@ function ChatPage() {
           </div>
           <Info size={19} />
         </div>
+        <DataSourceLegend compact />
 
         {!activeAnswer ? (
           <div className="rail-empty">

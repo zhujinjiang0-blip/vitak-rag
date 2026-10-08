@@ -1,11 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
-import { BookOpenText, Database, GitFork, MessageSquareText } from "lucide-react";
+import {
+  BookOpenText,
+  Database,
+  GitFork,
+  MessageSquareText,
+  UploadCloud
+} from "lucide-react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { getHealth } from "./lib/api";
 import { STATIC_DEMO_MODE } from "./lib/staticDemo";
 import ChatPage from "./pages/ChatPage";
 import EvidencePage from "./pages/EvidencePage";
 import GraphPage from "./pages/GraphPage";
+import ImportPage from "./pages/ImportPage";
 
 function App() {
   const health = useQuery({ queryKey: ["health"], queryFn: getHealth });
@@ -34,6 +41,10 @@ function App() {
             <BookOpenText size={18} />
             <span>证据检索</span>
           </NavLink>
+          <NavLink to="/import">
+            <UploadCloud size={18} />
+            <span>数据入口</span>
+          </NavLink>
         </nav>
 
         <div className="topbar-status">
@@ -61,6 +72,7 @@ function App() {
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/graph" element={<GraphPage />} />
           <Route path="/evidence" element={<EvidencePage />} />
+          <Route path="/import" element={<ImportPage />} />
           <Route path="*" element={<Navigate to="/chat" replace />} />
         </Routes>
       </main>

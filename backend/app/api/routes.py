@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import uuid
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import APIRouter, Header, HTTPException, Query, Request
+from fastapi import APIRouter, File, Form, Header, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
 from app.schemas import (
@@ -263,6 +265,69 @@ def import_external_triples(
         activate=payload.activate,
     )
     return ExternalTripleImportResponse(**result)
+
+
+@router.post(
+    "/internal/v1/upload-external-triples",
+    response_model=ExternalTripleImportResponse,
+)
+async def upload_external_triples(
+    request: Request,
+    file: Annotated[UploadFile, File()],
+    data_owner: str = Form(default="已发表维生素 K 研究文献"),
+    activate: bool = Form(default=False),
+    x_internal_token: str | None = Header(default=None),
+) -> ExternalTripleImportResponse:
+    _assert_internal_token(request, x_internal_token)
+    output_dir = request.app.state.settings.runtime_dir / "uploads"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    suffix = Path(file.filename or "aligned_triples.csv").suffix or ".csv"
+    upload_path = output_dir / f"external-{uuid.uuid4().hex}{suffix}"
+    upload_path.write_bytes(await file.read())
+    try:
+        result = ExternalTripleImporter(_manager(request)).import_csv(
+            upload_path,
+            data_owner=data_owner,
+            activate=activate,
+        )
+    finally:
+        upload_path.unlink(missing_ok=True)
+    return ExternalTripleImportResponse(**result)
+
+
+@router.post("/internal/v1/upload-internal-csv", response_model=IngestResponse)
+async def upload_internal_csv(
+    request: Request,
+    file: Annotated[UploadFile, File()],
+    data_owner: str = Form(default="毕业设计内部资料"),
+    source_type: str = Form(default="rct"),
+    source_classification: str = Form(default="internal_rct"),
+    activate: bool = Form(default=False),
+    x_internal_token: str | None = Header(default=None),
+) -> IngestResponse:
+    _assert_internal_token(request, x_internal_token)
+    output_dir = request.app.state.settings.runtime_dir / "uploads"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    suffix = Path(file.filename or "internal.csv").suffix or ".csv"
+    upload_path = output_dir / f"internal-{uuid.uuid4().hex}{suffix}"
+    upload_path.write_bytes(await file.read())
+    try:
+        result = IngestionService(
+            request.app.state.settings,
+            _manager(request),
+        ).ingest(
+            upload_path,
+            source_title=file.filename,
+            source_type=source_type,
+            data_origin="internal",
+            data_owner=data_owner,
+            access_scope="private",
+            source_classification=source_classification,
+            activate=activate,
+        )
+    finally:
+        upload_path.unlink(missing_ok=True)
+    return IngestResponse(**result)
 
 
 @router.get("/internal/v1/review")

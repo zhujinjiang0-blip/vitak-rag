@@ -7,6 +7,7 @@ const { chromium } = require(
 
 const baseUrl = process.env.VITAK_WEB_URL || "https://zhujinjiang0-blip.github.io/vitak-rag";
 const questions = [
+  "维生素K有几种亚型？",
   "维生素K有哪些食物来源？",
   "华法林和维生素K有什么关系？",
   "维生素K1和K2有什么区别？",
@@ -73,6 +74,17 @@ if (
   warfarinAnswer.text.includes("Dihydro phylloquinone")
 ) {
   throw new Error("华法林问答未形成机制、饮食和监测层面的证据综合回答");
+}
+
+const formsAnswer = results.find(
+  (item) => item.question === "维生素K有几种亚型？"
+);
+if (
+  !formsAnswer?.text.includes("两大类") ||
+  !formsAnswer.text.includes("MK-4") ||
+  !formsAnswer.text.includes("MK-7")
+) {
+  throw new Error("维生素K亚型问题未形成分类层面的回答");
 }
 
 await browser.close();

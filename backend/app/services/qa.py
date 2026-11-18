@@ -185,6 +185,15 @@ def display_entity(value: str) -> str:
     return value
 
 
+def equivalent_entity_key(value: str) -> str:
+    key = re.sub(r"\s+", " ", value or "").strip().lower()
+    if key == "vitamin k1" or "phylloquinone" in key:
+        return "vitamin-k1"
+    if key in {"vitamin k2", "menaquinone", "menaquinones"}:
+        return "vitamin-k2"
+    return key
+
+
 def natural_evidence_sentence(subject: str, predicate: str, target: str) -> str:
     source = display_entity(subject)
     object_name = display_entity(target)
@@ -412,6 +421,17 @@ class GraphAnswerEngine:
         intent = self._detect_intent(query)
         related = self._related_entities(query, entities)
         if not self.snapshot.data_version.is_demo:
+            forms_answer = self._vitamin_k_forms_answer(
+                query=query,
+                normalized=normalized,
+                session_id=session_id,
+                intent=intent,
+                entities=entities,
+                related=related,
+                started=started,
+            )
+            if forms_answer:
+                return forms_answer
             synthesized = self._warfarin_vitamin_k_answer(
                 query=query,
                 normalized=normalized,
@@ -777,6 +797,8 @@ class GraphAnswerEngine:
             target = str(metadata.get("object_label") or "").strip()
             if not subject or not predicate or not target:
                 continue
+            if equivalent_entity_key(subject) == equivalent_entity_key(target):
+                continue
             text = natural_evidence_sentence(subject, predicate, target)
             origin = str(evidence.get("data_origin") or "")
             if text in seen_claims:
@@ -918,6 +940,151 @@ class GraphAnswerEngine:
             for evidence in self.metadata.get_evidence_many(evidence_ids)
             if bool(evidence.get("answer_eligible", 1))
         ]
+
+    def _vitamin_k_forms_answer(
+        self,
+        *,
+        query: str,
+        normalized: str,
+        session_id: str,
+        intent: str,
+        entities: list[GraphNode],
+        related: list[GraphNode],
+        started: float,
+    ) -> Answer | None:
+        if "vitamink" not in normalized:
+            return None
+        if not any(
+            term in normalized
+            for term in ("几种", "亚型", "类型", "分类", "形式")
+        ):
+            return None
+        evidence_ids = self.metadata.search_evidence_phrases(
+            [
+                "two major forms of Vitamin K",
+                "two main isoforms",
+                "two main forms",
+                "side chain",
+                "menaquinone-n",
+                "two subtypes of vitamin K2",
+                "MK-4 and MK-7",
+                "intermediate vitamin K3",
+            ],
+            limit=80,
+            source_types={"literature"},
+        )
+        evidence_items = self.metadata.get_evidence_many(evidence_ids)
+
+        def find(patterns: tuple[re.Pattern[str], ...]) -> dict[str, Any] | None:
+            for pattern in patterns:
+                for evidence in evidence_items:
+                    text = (
+                        f"{evidence.get('chunk_text', '')} "
+                        f"{evidence.get('source_locator', '')}"
+                    )
+                    if pattern.search(text):
+                        return evidence
+            return None
+
+        main_forms = find(
+            (
+                re.compile(r"two major forms of Vitamin K", re.IGNORECASE),
+                re.compile(r"two main isoforms", re.IGNORECASE),
+                re.compile(r"two main forms", re.IGNORECASE),
+            )
+        )
+        k2_group = find(
+            (
+                re.compile(r"side chain.*units varying", re.IGNORECASE),
+                re.compile(r"menaquinone-n.*MK-n", re.IGNORECASE),
+                re.compile(r"side chain.*prenyl units", re.IGNORECASE),
+            )
+        )
+        common_subtypes = find(
+            (
+                re.compile(
+                    r"two subtypes of vitamin K2.*MK-4 and MK-7",
+                    re.IGNORECASE,
+                ),
+                re.compile(r"MK-4 and MK-7.*clinical trials", re.IGNORECASE),
+            )
+        )
+        k3_intermediate = find(
+            (
+                re.compile(r"intermediate vitamin K3", re.IGNORECASE),
+                re.compile(
+                    r"vitamin K3.*menadione.*intermediate",
+                    re.IGNORECASE,
+                ),
+            )
+        )
+        selected = [
+            evidence
+            for evidence in (main_forms, k2_group, common_subtypes, k3_intermediate)
+            if evidence
+        ]
+        if not main_forms or len(selected) < 3:
+            return None
+
+        claim_specs = [
+            (
+                "如果按营养学和当前文献里常用的分类，维生素K最核心的两大类是"
+                "维生素K1和维生素K2。",
+                [main_forms],
+            ),
+            (
+                "维生素K1又叫叶绿醌或phytonadione；维生素K2属于甲萘醌类，"
+                "是另一大类别。",
+                [main_forms],
+            ),
+            (
+                "K2内部按侧链中异戊二烯单位的数量命名，形成MK-4、MK-7、MK-8、"
+                "MK-9等不同menaquinone亚型。",
+                [k2_group],
+            ),
+            (
+                "临床和营养研究中较常讨论的K2亚型是MK-4和MK-7。",
+                [common_subtypes],
+            ),
+        ]
+        if k3_intermediate:
+            claim_specs.append(
+                (
+                    "K3（甲萘醌）更多作为合成或代谢中间体讨论，"
+                    "不属于文献中并列的两大天然膳食形式。",
+                    [k3_intermediate],
+                )
+            )
+        claims = [
+            Claim(
+                id=f"claim-{uuid.uuid4().hex[:10]}",
+                text=text,
+                evidence_ids=[evidence["id"] for evidence in evidence_group if evidence],
+                relation="vitamin_k_forms_synthesis",
+            )
+            for text, evidence_group in claim_specs
+        ]
+        answer = Answer(
+            session_id=session_id,
+            query=query,
+            normalized_query=normalized,
+            intent=intent,
+            answer_text=(
+                "如果按营养学和当前文献里常用的分类，维生素K最核心的两大类是"
+                "维生素K1和维生素K2。\n\n"
+                + "".join(claim.text for claim in claims[2:])
+                + "\n\n所以，大类上通常说两种；但K2内部并不是单一物质，"
+                "而是包含多个MK-n亚型。"
+            ),
+            claims=claims,
+            citations=self._citations_for_claims(claims),
+            sufficiency=EvidenceSufficiency.SUFFICIENT,
+            related_entities=related[:6],
+            data_version=self.snapshot.data_version,
+            elapsed_ms=int((time.perf_counter() - started) * 1000),
+        )
+        self._finish_answer(answer)
+        return answer
 
     def _warfarin_vitamin_k_answer(
         self,

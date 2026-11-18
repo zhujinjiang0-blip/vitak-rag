@@ -529,6 +529,15 @@ function displayEntity(value: string): string {
   return value;
 }
 
+function equivalentEntityKey(value: string): string {
+  const key = value.trim().toLowerCase();
+  if (key === "vitamin k1" || key.includes("phylloquinone")) return "vitamin-k1";
+  if (key === "vitamin k2" || key === "menaquinone" || key === "menaquinones") {
+    return "vitamin-k2";
+  }
+  return key;
+}
+
 function isFoodName(value: string): boolean {
   return /vegetable|oil|cheese|meat|egg|natto|fermented|spinach|broccoli|kale|food/i.test(
     value
@@ -980,6 +989,56 @@ function topicSynthesisAnswer(
   const normalizedQuery = normalize(query);
 
   if (
+    normalizedQuery.includes("vitamink") &&
+    ["几种", "亚型", "类型", "分类", "形式"].some((term) =>
+      normalizedQuery.includes(term)
+    )
+  ) {
+    return buildTopicAnswer(
+      query,
+      data,
+      entities,
+      intent,
+      sessionId,
+      started,
+      "如果按营养学和当前文献里常用的分类，维生素K最核心的两大类是维生素K1和维生素K2。",
+      "所以，大类上通常说两种；但K2内部并不是单一物质，而是包含多个MK-n亚型。",
+      [
+        {
+          text: "维生素K1又叫叶绿醌或phytonadione；维生素K2属于甲萘醌类，是另一大类别。",
+          patterns: [
+            /two major forms of Vitamin K/i,
+            /two main isoforms.*phylloquinone.*menaquinone/i,
+            /two main forms.*phylloquinone.*menaquinone/i
+          ]
+        },
+        {
+          text: "K2内部按侧链中异戊二烯单位的数量命名，形成MK-4、MK-7、MK-8、MK-9等不同menaquinone亚型。",
+          patterns: [
+            /side chain.*units varying/i,
+            /menaquinone-n.*MK-n/i,
+            /side chain.*prenyl units/i
+          ]
+        },
+        {
+          text: "临床和营养研究中较常讨论的K2亚型是MK-4和MK-7。",
+          patterns: [
+            /two subtypes of vitamin K2.*MK-4 and MK-7/i,
+            /MK-4 and MK-7.*clinical trials/i
+          ]
+        },
+        {
+          text: "K3（甲萘醌）更多作为合成或代谢中间体讨论，不属于文献中并列的两大天然膳食形式。",
+          patterns: [
+            /intermediate vitamin K3/i,
+            /vitamin K3.*menadione.*intermediate/i
+          ]
+        }
+      ]
+    );
+  }
+
+  if (
     normalizedQuery.includes("vitamink1") &&
     (normalizedQuery.includes("vitamink2") || /(^|[^a-z])k2([^a-z]|$)/.test(normalizedQuery))
   ) {
@@ -1225,6 +1284,7 @@ export async function askStaticQuestion(query: string): Promise<Answer> {
     const source = nodeById.get(edge.source);
     const target = nodeById.get(edge.target);
     if (!source || !target) continue;
+    if (equivalentEntityKey(source.name) === equivalentEntityKey(target.name)) continue;
     const text = naturalEvidenceSentence(edge, source, target);
     if (seen.has(text)) continue;
     seen.add(text);

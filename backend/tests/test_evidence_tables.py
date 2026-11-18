@@ -175,3 +175,70 @@ def test_evidence_audit_counts_literal_and_ineligible_rows(tmp_path):
     assert stats["graph_edges"] == 2
     assert stats["answer_eligible"] == 1
     assert stats["answer_ineligible"] == 1
+
+
+def test_vitamin_k_form_question_is_synthesized_from_evidence(tmp_path):
+    settings = Settings(data_dir=tmp_path / "data", _env_file=None)
+    settings.ensure_dirs()
+    manager = SnapshotManager(settings)
+    literature = tmp_path / "literature.csv"
+    write_table(
+        literature,
+        [
+            make_row(
+                edge_id="FORM-1",
+                subject_label="Vitamin K",
+                object_label="Vitamin K1 and Vitamin K2",
+                source_locator=(
+                    "PMID 21674202 | There are two major forms of Vitamin K: "
+                    "vitamin K1 (phylloquinone or phytonadione) and vitamin K2 "
+                    "(menaquinone)."
+                ),
+            ),
+            make_row(
+                edge_id="FORM-2",
+                subject_label="Vitamin K2",
+                object_label="Menaquinones",
+                source_locator=(
+                    "PMID 29882816 | Vitamin K2 has side chain units varying from "
+                    "1 to 14 repeats, hence named menaquinone-4, menaquinone-7 etc."
+                ),
+            ),
+            make_row(
+                edge_id="FORM-3",
+                subject_label="Vitamin K2",
+                object_label="MK-4 and MK-7",
+                source_locator=(
+                    "PMID 32060566 | Two subtypes of vitamin K2 are commonly used "
+                    "in clinical trials, MK-4 and MK-7."
+                ),
+            ),
+            make_row(
+                edge_id="FORM-4",
+                subject_label="Vitamin K1",
+                object_label="Vitamin K3",
+                source_locator=(
+                    "PMID 29891757 | Vitamin K1 can be converted into vitamin K2 "
+                    "through the intermediate vitamin K3 (menadione)."
+                ),
+            ),
+        ],
+    )
+    version = f"test-forms-{uuid.uuid4().hex[:8]}"
+    EvidenceTableImporter(manager).import_files(
+        [literature],
+        version=version,
+        build_vectors=False,
+    )
+    snapshot = manager.open(version)
+    try:
+        answer = GraphAnswerEngine(settings, snapshot).answer("维生素K有几种亚型？")
+        assert answer.sufficiency == "sufficient"
+        assert "维生素K1" in answer.answer_text
+        assert "维生素K2" in answer.answer_text
+        assert "MK-4" in answer.answer_text
+        assert "MK-7" in answer.answer_text
+        assert "甲萘醌" in answer.answer_text
+        assert len(answer.citations) >= 3
+    finally:
+        snapshot.close()

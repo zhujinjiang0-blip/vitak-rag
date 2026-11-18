@@ -126,6 +126,11 @@ def test_unified_evidence_import_keeps_literals_and_status(tmp_path):
         assert result["origins"] == {"external": 3, "internal": 1}
         assert result["answer_eligible"] == 3
         assert snapshot.graph.stats()["edges"] == 4
+        phrase_matches = snapshot.metadata.search_evidence_phrases(
+            ["step4.csv"],
+            source_types={"internal"},
+        )
+        assert phrase_matches
 
         with snapshot.metadata.connect() as connection:
             pending = connection.execute(

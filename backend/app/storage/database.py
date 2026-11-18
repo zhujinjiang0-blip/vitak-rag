@@ -548,6 +548,39 @@ class MetadataStore:
             ).fetchall()
         return [dict(row) for row in rows]
 
+    def search_evidence_phrases(
+        self,
+        phrases: list[str],
+        *,
+        limit: int = 100,
+        source_types: set[str] | None = None,
+    ) -> list[str]:
+        phrases = [phrase for phrase in phrases if phrase.strip()]
+        if not phrases:
+            return []
+        phrase_clause = " OR ".join("c.text LIKE ?" for _ in phrases)
+        source_clause = ""
+        parameters: list[Any] = [f"%{phrase}%" for phrase in phrases]
+        if source_types:
+            placeholders = ",".join("?" for _ in source_types)
+            source_clause = f"AND e.source_type IN ({placeholders})"
+            parameters.extend(sorted(source_types))
+        parameters.append(limit)
+        with self.connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT e.id
+                FROM evidence e
+                JOIN chunks c ON c.id = e.chunk_id
+                WHERE ({phrase_clause})
+                  AND e.answer_eligible = 1
+                  {source_clause}
+                LIMIT ?
+                """,
+                parameters,
+            ).fetchall()
+        return [str(row["id"]) for row in rows]
+
     def get_chunk(self, chunk_id: str) -> dict[str, Any] | None:
         with self.connect() as connection:
             row = connection.execute(

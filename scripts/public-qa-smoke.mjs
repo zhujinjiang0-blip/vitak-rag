@@ -42,4 +42,16 @@ for (const question of questions) {
 }
 
 console.log(JSON.stringify(results, null, 2));
+
+const warfarinAnswer = results.find(
+  (item) => item.question === "华法林和维生素K有什么关系？"
+);
+if (
+  !warfarinAnswer?.text.includes("VKORC1") ||
+  !warfarinAnswer.text.includes("INR") ||
+  warfarinAnswer.text.includes("Dihydro phylloquinone")
+) {
+  throw new Error("华法林问答未形成机制、饮食和监测层面的证据综合回答");
+}
+
 await browser.close();

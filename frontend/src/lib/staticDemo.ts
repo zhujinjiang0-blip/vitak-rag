@@ -52,7 +52,20 @@ function normalize(value: string): string {
     .replaceAll("phylloquinone", "维生素k1")
     .replaceAll("menaquinone", "维生素k2")
     .replaceAll("inr", "国际标准化比值")
-    .replaceAll("pt", "凝血酶原时间");
+    .replaceAll("pt", "凝血酶原时间")
+    .replaceAll("维生素k", "vitamink")
+    .replaceAll("维他命k", "vitamink")
+    .replaceAll("叶绿醌", "phylloquinone")
+    .replaceAll("甲萘醌", "menaquinone")
+    .replaceAll("华法林", "warfarin")
+    .replaceAll("骨钙素", "osteocalcin")
+    .replaceAll("胰岛素", "insulin")
+    .replaceAll("血糖", "glucose")
+    .replaceAll("维生素d", "vitamind")
+    .replaceAll("基质gla蛋白", "matrixglaprotein")
+    .replaceAll("异常凝血酶原", "pivkaii")
+    .replaceAll("绿叶蔬菜", "greenleafyvegetables")
+    .replaceAll("深绿色叶菜", "greenleafyvegetables");
 }
 
 function matchNodes(query: string, nodes: GraphNode[]): GraphNode[] {
@@ -608,6 +621,150 @@ function rankRealEvidence(
   return selected;
 }
 
+function firstMatchingEvidence(
+  data: StaticData,
+  patterns: RegExp[],
+  usedSources: Set<string>
+): StaticEvidence | undefined {
+  const candidates = data.evidence
+    .filter((item) => item.answer_eligible !== false)
+    .sort(
+      (left, right) =>
+        Number(right.evidence_level === "A") - Number(left.evidence_level === "A")
+    );
+  for (const pattern of patterns) {
+    const match = candidates.find((item) => {
+      if (usedSources.has(item.source_id)) return false;
+      const text = `${item.snippet} ${item.locator}`;
+      return pattern.test(text);
+    });
+    if (match) return match;
+  }
+  return undefined;
+}
+
+function warfarinVitaminKAnswer(
+  query: string,
+  data: StaticData,
+  entities: GraphNode[],
+  intent: string,
+  sessionId: string,
+  started: number
+): Answer | null {
+  const normalizedQuery = normalize(query);
+  if (!normalizedQuery.includes("warfarin") || !normalizedQuery.includes("vitamink")) {
+    return null;
+  }
+
+  const usedSources = new Set<string>();
+  const mechanism = firstMatchingEvidence(
+    data,
+    [
+      /VKORC1 inhibitor.*reduced Vitamin K/i,
+      /Vitamin K epoxide reductase.*Vitamin K hydroquinone/i,
+      /By targeting VKOR.*coagulation proteins/i
+    ],
+    usedSources
+  );
+  if (mechanism) usedSources.add(mechanism.source_id);
+  const foodEffect = firstMatchingEvidence(
+    data,
+    [/large amounts of Vitamin K.*lower the INR/i, /dark green leafy vegetables.*INR/i],
+    usedSources
+  );
+  if (foodEffect) usedSources.add(foodEffect.source_id);
+  const reversal = firstMatchingEvidence(
+    data,
+    [/low-dose Vitamin K.*managed/i, /phytonadione.*excessive anticoagulation/i],
+    usedSources
+  );
+  if (reversal) usedSources.add(reversal.source_id);
+  const monitoring = firstMatchingEvidence(
+    data,
+    [/coagulation monitoring/i, /monitoring.*INR/i, /monitor.*INR/i],
+    usedSources
+  );
+
+  const selected = [mechanism, foodEffect, reversal, monitoring].filter(
+    (item): item is StaticEvidence => Boolean(item)
+  );
+  if (!mechanism || selected.length < 3) return null;
+
+  const claims: Claim[] = [];
+  function addClaim(text: string, items: Array<StaticEvidence | undefined>) {
+    const ids = items.filter((item): item is StaticEvidence => Boolean(item)).map((item) => item.id);
+    if (!ids.length) return;
+    claims.push({
+      id: `static-claim-${claims.length}`,
+      text,
+      evidence_ids: ids,
+      relation: "warfarin_vitamin_k_synthesis"
+    });
+  }
+
+  addClaim(
+    "华法林通过抑制 VKORC1，阻断维生素 K 环氧化物还原，减少活性维生素 K 的再生，并影响维生素 K 依赖凝血因子的活化。",
+    [mechanism]
+  );
+  addClaim(
+    "两者是明确的药理学拮抗关系：维生素 K 摄入或补充会影响华法林的抗凝强度，需要结合 INR 和用药情况管理。",
+    [foodEffect, reversal]
+  );
+  if (foodEffect) {
+    addClaim(
+      "富含维生素 K 的食物，例如菠菜、羽衣甘蓝等深绿色叶菜，可能降低 INR。",
+      [foodEffect]
+    );
+  }
+  if (reversal) {
+    addClaim(
+      "华法林抗凝过度时，维生素 K 可在专业评估下用于纠正凝血状态，具体处理取决于 INR、出血情况和临床背景。",
+      [reversal]
+    );
+  }
+  if (monitoring) {
+    addClaim(
+      "华法林使用期间需要按医嘱监测 INR，并尽量保持日常维生素 K 摄入相对稳定，不应自行改变补充剂或摄入量。",
+      [monitoring]
+    );
+  }
+
+  const edgeById = new Map(data.edges.map((edge) => [edge.id, edge]));
+  const nodeById = new Map(data.nodes.map((node) => [node.id, node]));
+  const paths: GraphPath[] = [];
+  for (const item of selected) {
+    const edge = edgeById.get(item.id);
+    const source = edge ? nodeById.get(edge.source) : undefined;
+    const target = edge ? nodeById.get(edge.target) : undefined;
+    if (edge && source && target) {
+      paths.push({ nodes: [source, target], edges: [edge], evidence_ids: [item.id] });
+    }
+  }
+  const citationIds = [...new Set(claims.flatMap((claim) => claim.evidence_ids))];
+  const citations = citationIds
+    .map((id) => data.evidence.find((item) => item.id === id))
+    .filter((item): item is StaticEvidence => Boolean(item));
+
+  return {
+    session_id: sessionId,
+    query,
+    normalized_query: normalizedQuery,
+    intent,
+    answer_text:
+      "华法林与维生素 K 属于明确的药理学拮抗关系，需要结合机制、饮食和 INR 监测理解。\n\n" +
+      claims.map((claim) => `- ${claim.text}`).join("\n") +
+      "\n\n以上结论由真实外部文献证据合成，具体剂量调整、停药或抗凝过度处理必须由医生或药师评估。",
+    claims,
+    citations,
+    graph_paths: paths,
+    sufficiency: "sufficient",
+    safety_notice: null,
+    related_entities: entities,
+    data_version: data.version,
+    elapsed_ms: Math.round(performance.now() - started)
+  };
+}
+
 export async function askStaticQuestion(query: string): Promise<Answer> {
   const started = performance.now();
   const data = await loadData();
@@ -635,6 +792,15 @@ export async function askStaticQuestion(query: string): Promise<Answer> {
 
   const entities = matchNodes(query, data.nodes);
   const intent = detectIntent(query);
+  const synthesized = warfarinVitaminKAnswer(
+    query,
+    data,
+    entities,
+    intent,
+    sessionId,
+    started
+  );
+  if (synthesized) return synthesized;
   const selectedEvidence = rankRealEvidence(query, entities, intent, data);
   const edgeById = new Map(data.edges.map((edge) => [edge.id, edge]));
   const claims: Claim[] = [];

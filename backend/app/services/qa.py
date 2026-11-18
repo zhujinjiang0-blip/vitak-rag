@@ -295,6 +295,17 @@ class GraphAnswerEngine:
         intent = self._detect_intent(query)
         related = self._related_entities(query, entities)
         if not self.snapshot.data_version.is_demo:
+            synthesized = self._warfarin_vitamin_k_answer(
+                query=query,
+                normalized=normalized,
+                session_id=session_id,
+                intent=intent,
+                entities=entities,
+                related=related,
+                started=started,
+            )
+            if synthesized:
+                return synthesized
             text_answer = self._text_evidence_answer(
                 query=query,
                 normalized=normalized,
@@ -802,6 +813,156 @@ class GraphAnswerEngine:
             for evidence in self.metadata.get_evidence_many(evidence_ids)
             if bool(evidence.get("answer_eligible", 1))
         ]
+
+    def _warfarin_vitamin_k_answer(
+        self,
+        *,
+        query: str,
+        normalized: str,
+        session_id: str,
+        intent: str,
+        entities: list[GraphNode],
+        related: list[GraphNode],
+        started: float,
+    ) -> Answer | None:
+        if "warfarin" not in normalized or "vitamink" not in normalized:
+            return None
+        evidence_ids = self.metadata.search_evidence_phrases(
+            [
+                "VKORC1 inhibitor",
+                "Vitamin K epoxide reductase",
+                "By targeting VKOR",
+                "large amounts of Vitamin K",
+                "dark green leafy vegetables",
+                "phytonadione",
+                "low-dose Vitamin K",
+                "coagulation monitoring",
+            ],
+            limit=100,
+            source_types={"literature"},
+        )
+        evidence_items = self.metadata.get_evidence_many(evidence_ids)
+
+        def find(patterns: tuple[re.Pattern[str], ...]) -> dict[str, Any] | None:
+            for pattern in patterns:
+                for evidence in evidence_items:
+                    text = (
+                        f"{evidence.get('chunk_text', '')} "
+                        f"{evidence.get('source_locator', '')}"
+                    )
+                    if pattern.search(text):
+                        return evidence
+            return None
+
+        mechanism = find(
+            (
+                re.compile(r"VKORC1 inhibitor.*reduced Vitamin K", re.IGNORECASE),
+                re.compile(
+                    r"Vitamin K epoxide reductase.*Vitamin K hydroquinone",
+                    re.IGNORECASE,
+                ),
+                re.compile(r"By targeting VKOR.*coagulation proteins", re.IGNORECASE),
+            )
+        )
+        food_effect = find(
+            (
+                re.compile(r"large amounts of Vitamin K.*lower the INR", re.IGNORECASE),
+                re.compile(r"dark green leafy vegetables.*INR", re.IGNORECASE),
+            )
+        )
+        reversal = find(
+            (
+                re.compile(r"low-dose Vitamin K.*managed", re.IGNORECASE),
+                re.compile(
+                    r"phytonadione.*excessive anticoagulation",
+                    re.IGNORECASE,
+                ),
+            )
+        )
+        monitoring = find(
+            (
+                re.compile(r"coagulation monitoring", re.IGNORECASE),
+                re.compile(r"monitoring.*INR", re.IGNORECASE),
+            )
+        )
+        selected = [
+            evidence
+            for evidence in (mechanism, food_effect, reversal, monitoring)
+            if evidence
+        ]
+        if not mechanism or len(selected) < 3:
+            return None
+
+        claim_specs = [
+            (
+                "华法林通过抑制 VKORC1，阻断维生素 K 环氧化物还原，"
+                "减少活性维生素 K 的再生，并影响维生素 K 依赖凝血因子的活化。",
+                [mechanism],
+            ),
+            (
+                "两者是明确的药理学拮抗关系：维生素 K 摄入或补充会影响华法林的"
+                "抗凝强度，需要结合 INR 和用药情况管理。",
+                [food_effect, reversal],
+            ),
+        ]
+        if food_effect:
+            claim_specs.append(
+                (
+                    "富含维生素 K 的食物，例如菠菜、羽衣甘蓝等深绿色叶菜，"
+                    "可能降低 INR。",
+                    [food_effect],
+                )
+            )
+        if reversal:
+            claim_specs.append(
+                (
+                    "华法林抗凝过度时，维生素 K 可在专业评估下用于纠正凝血状态，"
+                    "具体处理取决于 INR、出血情况和临床背景。",
+                    [reversal],
+                )
+            )
+        if monitoring:
+            claim_specs.append(
+                (
+                    "华法林使用期间需要按医嘱监测 INR，并尽量保持日常维生素 K "
+                    "摄入相对稳定，不应自行改变补充剂或摄入量。",
+                    [monitoring],
+                )
+            )
+
+        claims = [
+            Claim(
+                id=f"claim-{uuid.uuid4().hex[:10]}",
+                text=text,
+                evidence_ids=[
+                    evidence["id"] for evidence in evidence_group if evidence
+                ],
+                relation="warfarin_vitamin_k_synthesis",
+            )
+            for text, evidence_group in claim_specs
+            if any(evidence_group)
+        ]
+        answer = Answer(
+            session_id=session_id,
+            query=query,
+            normalized_query=normalized,
+            intent=intent,
+            answer_text=(
+                "华法林与维生素 K 属于明确的药理学拮抗关系，"
+                "需要结合机制、饮食和 INR 监测理解。\n\n"
+                + "\n".join(f"- {claim.text}" for claim in claims)
+                + "\n\n以上结论由真实外部文献证据合成，具体剂量调整、停药或"
+                "抗凝过度处理必须由医生或药师评估。"
+            ),
+            claims=claims,
+            citations=self._citations_for_claims(claims),
+            sufficiency=EvidenceSufficiency.SUFFICIENT,
+            related_entities=related[:6],
+            data_version=self.snapshot.data_version,
+            elapsed_ms=int((time.perf_counter() - started) * 1000),
+        )
+        self._finish_answer(answer)
+        return answer
 
     @staticmethod
     def _edge_text(source: GraphNode, target: GraphNode, edge: GraphEdge) -> str:

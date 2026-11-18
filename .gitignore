@@ -19,4 +19,6 @@ frontend/vite.config.d.ts
 data/runtime/
 data/snapshots/
 data/review/
+data/private_handoff/
+data/private_reports/
 *.log

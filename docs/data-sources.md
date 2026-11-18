@@ -1,100 +1,145 @@
 # 维生素 K 项目数据来源与分类
 
-## 数据来源总览
+## 数据口径
 
-项目数据分为外部文献数据和内部干预队列数据两大类。
+项目按“两种来源、三张全量三元组表”组织数据：
 
-| 类别 | 内容 | 规模 | 处理方式 | 数据来源标签 |
+| 数据类型 | 文件 | 行数 | 来源标签 | 说明 |
 | --- | --- | ---: | --- | --- |
-| 外部数据 | 已发表维生素 K 相关研究文献 | 564 篇，13,118 条对齐三元组，6,297 个唯一实体 | 大模型抽取、标准化、本体对齐 | `external` |
-| 内部数据 | 项目组 395 人干预队列研究 | 395 名参与者的标准化个体证据 | 结构化读取和统计分析 | `internal` |
+| 外部结构化／半结构化 | `structured_triples_final.csv` | 60,030 | `external/public` | FDC、USDA、PubChem、FooDB、KEGG、ClinicalTrials 等来源实例化后的逻辑关系 |
+| 外部文献 | `literature_triples_final.csv` | 13,118 | `external/public` | 保留研究编号、PMID、来源定位、关系等级和审核状态 |
+| 内部 RCT 证据 | `internal_evidence_final.csv` | 248 | `internal/private` | 395 人队列的横断面、纵向、餐后、交互、剂量、中介及反向探索测试证据 |
 
-外部数据提供“已发表研究说了什么”的文献证据，内部数据提供“本项目队列发现了什么”的个体化证据。
+三张表合并后共 73,396 条记录。外部数据回答“已发表研究和公开数据库说了什么”，内部数据回答“本项目队列发现了什么”。
 
-## 外部数据
+`aligned_triples.csv` 是早期外部文献抽取产物，可作为历史中间文件；当前统一导入入口使用 42 列三表格式。
 
-外部数据来自 564 篇维生素 K 研究文献。抽取结果保存为 `aligned_triples.csv`，每行是一条知识三元组，包含：
+## 统一 42 列字段
+
+### 三元组核心
 
 | 字段 | 含义 |
 | --- | --- |
-| `record_id` | 文献编号，例如 `VK0350` |
-| `pmid` | PubMed ID，例如 `26875489` |
-| `subject` | 主语原始名称 |
-| `subject_normalized` | 主语标准化名称 |
-| `subject_matched_class` | 主语匹配的本体类 |
-| `subject_match_type` | 主语匹配类型 |
-| `predicate` | 关系类型，例如 `improves`、`decreases`、`increases` |
-| `object` | 宾语原始名称 |
-| `object_normalized` | 宾语标准化名称 |
-| `object_matched_class` | 宾语匹配的本体类 |
-| `object_match_type` | 宾语匹配类型 |
-| `source_sentence` | 文献中的原文支持句 |
-| `evidence_score` | 证据等级分数 |
-| `evidence_grade` | 证据等级标签 |
-| `confidence_score` | 抽取置信度分数 |
-| `confidence_grade` | 置信度等级 |
+| `edge_id` | 全局唯一关系标识 |
+| `subject_id` | 规范主体实体 ID |
+| `subject_label` | 主体规范名称 |
+| `subject_type` | 主体实体类别 |
+| `predicate` | 本体关系词 |
+| `object_id` | 规范客体实体 ID；字面值可为空 |
+| `object_label` | 客体名称或原始值 |
+| `object_type` | 客体实体类别或字面值类型 |
 
-当前本体匹配覆盖率为 99.86%：
+当 `object_id` 为空时，导入器使用 `object_label + object_type` 生成稳定字面值节点。
 
-| 匹配类型 | 数量 | 占比 |
-| --- | ---: | ---: |
-| 精确匹配 | 234 | 3.7% |
-| 别名匹配 | 20 | 0.3% |
-| 语义匹配 | 124 | 2.0% |
-| 类型类兜底 | 5,910 | 93.9% |
-| 候选新类 | 9 | 0.1% |
+### 来源追踪
 
-高比例的类型类兜底说明当前图谱已经覆盖大部分实体，但细粒度本体子类仍需继续精化。
+| 字段 | 含义 |
+| --- | --- |
+| `source_type` | `structured`、`literature` 或 `internal` |
+| `source_record_id` | 原始记录编号 |
+| `source_locator` | 原字段定位或 `PMID｜原文证据句` |
+| `source_version` | 来源文件及版本标识 |
+| `source_sha256` | 来源文件哈希 |
+| `source_file` | 原始结果表名称 |
+| `source_row_value` | 原始结果表行号 |
 
-导入命令：
+### 证据信息
+
+| 字段 | 含义 |
+| --- | --- |
+| `evidence_score` | 原始证据评分 |
+| `evidence_grade` | 原始等级，如 A、B、C、Negative |
+| `confidence_score` | 抽取或匹配置信度 |
+| `effect_size` | β、OR、HR、相关系数等效应量 |
+| `ci_low` / `ci_high` | 效应量置信区间 |
+| `p_value` | 原始 P 值 |
+| `q_value` | FDR 校正值 |
+| `sample_n` | 模型或研究有效样本量 |
+| `model_type` | OLS、robust、混合效应、交互、中介等 |
+
+### 上下文
+
+| 字段 | 含义 |
+| --- | --- |
+| `population_context` | 人群、物种或基线特征 |
+| `dose_context` | 剂量、频次和干预方式 |
+| `time_context` | 基线、纵向、餐后或随访时间窗 |
+| `test_family` | 横断面、纵向、餐后、交互等分析族 |
+| `analysis_context` | 具体分析语境 |
+| `qualifiers_json` | 源字段、原始对象、映射状态及来源特有属性 |
+
+### 融合与审核
+
+| 字段 | 含义 |
+| --- | --- |
+| `fusion_status` | `accepted`、`provisional`、`conflict` 或 `merged` |
+| `retention_status` | 内部证据的保留方式 |
+| `conflict_id` | 对应冲突记录编号 |
+| `review_status` | 审核状态 |
+| `review_reason` | 暂定、冲突或复核原因 |
+| `input_status` | 输入采纳、延迟或合并状态 |
+| `modification_codes` | 规范化、合并或扩展记录 |
+| `merged_into` | 被合并到的目标关系 |
+| `evidence_status` | 阳性、阴性、候选或模型不一致等状态 |
+| `core_48_flag` | 是否为 48 条核心展示证据 |
+| `graph_display_role` | 核心边、次要证据、阴性对照或附录证据 |
+
+## 内外部来源映射
+
+导入器按每行 `source_type` 自动生成来源标签：
+
+| `source_type` | `data_origin` | `access_scope` | `source_classification` |
+| --- | --- | --- | --- |
+| `internal` | `internal` | `private` | `internal_rct_evidence` |
+| `literature` | `external` | `public` | `external_literature_triple` |
+| `structured` | `external` | `public` | `external_structured_triple` |
+
+前端证据卡会同时展示来源标签、访问范围和来源细分类型。
+
+## 回答资格
+
+- `accepted`、`adopted_with_warning`、`accepted_internal_ledger` 和已采纳的内部冲突保留证据可进入正式回答。
+- `manual_pending`、`provisional`、`deferred` 等记录保留在研究检索和审计数据中，但默认不进入正式回答。
+- `merged_duplicate` 保留原始证据行，但不重复创建图谱关系边。
+- 内部负向证据会保留为“未观察到显著关系”，不会转换成正向健康结论。
+
+## 导入与审计
+
+先执行 dry-run，只解析、校验和输出统计，不写入数据库：
 
 ```bash
 cd backend
-../.venv/bin/python -m app.cli import-external-triples path/to/aligned_triples.csv
+../.venv/bin/python -m app.cli audit-evidence-tables \
+  path/to/internal_evidence_final.csv \
+  path/to/literature_triples_final.csv \
+  path/to/structured_triples_final.csv
 ```
 
-导入器会：
-
-- 保留全部 17 个字段及原文支持句。
-- 将来源标记为 `data_origin=external`、`access_scope=public`。
-- 设置 `source_classification=external_literature_triple`。
-- 按 `subject_normalized + subject_matched_class` 和 `object_normalized + object_matched_class` 生成稳定实体 ID。
-- 将 `evidence_grade` 和 `confidence_score` 写入证据边。
-- 生成新的版本快照，不会直接覆盖当前数据。
-
-## 内部数据
-
-内部数据来自项目组开展的前瞻性 395 人干预队列研究。数据的特点是格式统一、变量定义明确、无需再次抽取，并且每条证据具有强度标签。
-
-内部数据导入时必须使用：
-
-- `data_origin=internal`
-- `access_scope=private`
-- `data_owner=毕业设计内部资料` 或实际项目组名称
-- `source_classification=internal_rct`、`internal_database` 或 `internal_document`
-
-通用内部文档导入示例：
+确认后写入独立私有快照：
 
 ```bash
-cd backend
-../.venv/bin/python -m app.cli ingest path/to/internal-data.csv \
-  --source-type rct \
-  --data-origin internal \
-  --data-owner "维生素K项目组" \
-  --access-scope private \
-  --source-classification internal_rct
+../.venv/bin/python -m app.cli import-evidence-tables \
+  --version vitak-real-next \
+  path/to/internal_evidence_final.csv \
+  path/to/literature_triples_final.csv \
+  path/to/structured_triples_final.csv
 ```
 
-395 人队列中“参与者、变量、关系、结局指标、效应值和证据强度”的最终列名映射，需要在拿到实际导出表后按列确认，不能仅凭现有描述猜测。
+本地页面 `http://127.0.0.1:5173/#/import` 也支持逐表上传 42 列 CSV，但需要同时运行 FastAPI，并提交内部接口令牌。
 
-## 回答中的来源标识
+## 当前审计结果
 
-后端 `Citation` 和前端证据卡会同时展示：
+| 指标 | 结果 |
+| --- | ---: |
+| 总记录 | 73,396 |
+| 图谱实体 | 36,638 |
+| 图谱关系边 | 73,279 |
+| 来源记录 | 566 |
+| 字面值节点 | 25,527 |
+| 合并重复证据 | 117 |
+| 正式回答可用 | 54,249 |
+| 仅研究检索 | 19,147 |
+| 空必填字段 | 0 |
+| 重复 `edge_id` | 0 |
 
-- `data_origin`：内部、外部、公开或合成。
-- `source_classification`：更细的数据类型。
-- `data_owner`：资料所属团队、机构或公开来源方。
-- `access_scope`：数据访问范围。
-
-这样用户在查看任何回答时，都能判断证据是来自已发表文献、本项目内部队列，还是演示数据。
-
+原始 CSV、内部证据、全量私有快照和审计明细只保存在本机，不进入 GitHub、GitHub Pages 或飞书。

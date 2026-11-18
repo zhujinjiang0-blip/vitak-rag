@@ -9,6 +9,7 @@ import uvicorn
 
 from app.config import PROJECT_ROOT, get_settings
 from app.services.evaluation import EvaluationService
+from app.services.evidence_tables import EvidenceTableImporter
 from app.services.external_triples import ExternalTripleImporter
 from app.services.ingest import IngestionService
 from app.services.snapshot import DEMO_VERSION, SnapshotManager
@@ -71,6 +72,39 @@ def _parser() -> argparse.ArgumentParser:
     external_triples.add_argument("--data-owner", default="已发表维生素 K 研究文献")
     external_triples.add_argument("--activate", action="store_true")
     external_triples.set_defaults(handler=_import_external_triples)
+
+    audit_evidence = subparsers.add_parser(
+        "audit-evidence-tables",
+        help="audit one or more unified 42-column evidence CSV files",
+    )
+    audit_evidence.add_argument("paths", nargs="+")
+    audit_evidence.set_defaults(handler=_audit_evidence_tables)
+
+    import_evidence = subparsers.add_parser(
+        "import-evidence-tables",
+        help="import one or more unified 42-column evidence CSV files",
+    )
+    import_evidence.add_argument("paths", nargs="+")
+    import_evidence.add_argument("--version", default="vitak-real-2026.11")
+    import_evidence.add_argument("--activate", action="store_true")
+    import_evidence.add_argument("--limit-per-file", type=int, default=None)
+    import_evidence.add_argument("--skip-vectors", action="store_true")
+    import_evidence.add_argument(
+        "--report",
+        default=str(PROJECT_ROOT / "data/private_reports/vitak-real-2026.11-audit.json"),
+    )
+    import_evidence.set_defaults(handler=_import_evidence_tables)
+
+    import_single = subparsers.add_parser(
+        "import-evidence-table",
+        help="import a single unified 42-column evidence CSV file",
+    )
+    import_single.add_argument("path")
+    import_single.add_argument("--version", required=True)
+    import_single.add_argument("--activate", action="store_true")
+    import_single.add_argument("--limit", type=int, default=None)
+    import_single.add_argument("--skip-vectors", action="store_true")
+    import_single.set_defaults(handler=_import_evidence_table)
 
     review_export = subparsers.add_parser(
         "review-export",
@@ -173,6 +207,43 @@ def _import_external_triples(args: argparse.Namespace) -> int:
         Path(args.path),
         data_owner=args.data_owner,
         activate=args.activate,
+    )
+    _print(result)
+    return 0
+
+
+def _audit_evidence_tables(args: argparse.Namespace) -> int:
+    settings = get_settings()
+    manager = SnapshotManager(settings)
+    result = EvidenceTableImporter(manager).audit(Path(path) for path in args.paths)
+    _print(result)
+    return 0
+
+
+def _import_evidence_tables(args: argparse.Namespace) -> int:
+    settings = get_settings()
+    manager = SnapshotManager(settings)
+    result = EvidenceTableImporter(manager).import_files(
+        [Path(path) for path in args.paths],
+        version=args.version,
+        activate=args.activate,
+        max_rows_per_file=args.limit_per_file,
+        build_vectors=not args.skip_vectors,
+        report_path=Path(args.report),
+    )
+    _print(result)
+    return 0
+
+
+def _import_evidence_table(args: argparse.Namespace) -> int:
+    settings = get_settings()
+    manager = SnapshotManager(settings)
+    result = EvidenceTableImporter(manager).import_files(
+        [Path(args.path)],
+        version=args.version,
+        activate=args.activate,
+        max_rows_per_file=args.limit,
+        build_vectors=not args.skip_vectors,
     )
     _print(result)
     return 0

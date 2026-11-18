@@ -135,6 +135,16 @@ class SearchResult(BaseModel):
     data_origin: DataOrigin = DataOrigin.PUBLIC
     data_owner: str = ""
     access_scope: AccessScope = AccessScope.PUBLIC
+    source_type: str = ""
+    review_status: str = "accepted"
+    input_status: str = "adopted"
+    fusion_status: str = "accepted"
+    evidence_status: str = ""
+    graph_display_role: str = ""
+    answer_eligible: bool = True
+    source_record_id: str = ""
+    source_version: str = ""
+    source_locator: str = ""
     snippet: str
     entity_ids: list[str] = Field(default_factory=list)
     score: float
@@ -181,6 +191,13 @@ class ExternalTripleImportResponse(BaseModel):
     nodes_added: int
     edges_added: int
     warnings: list[str] = Field(default_factory=list)
+
+
+class EvidenceTableImportRequest(BaseModel):
+    paths: list[str] = Field(min_length=1)
+    version: str = "vitak-real-2026.11"
+    activate: bool = False
+    build_vectors: bool = True
 
 
 class ReviewDecisionRequest(BaseModel):

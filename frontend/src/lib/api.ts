@@ -67,11 +67,15 @@ export function searchEvidence(query: string): Promise<{
 }
 
 interface ImportResult {
-  snapshot_version: string;
+  version?: string;
+  snapshot_version?: string;
   rows?: number;
-  chunks?: number;
+  graph_edges?: number;
   edges_added?: number;
+  chunks?: number;
   candidates?: number;
+  nodes?: number;
+  sources?: number;
   warnings: string[];
 }
 
@@ -99,7 +103,6 @@ async function uploadRequest(
 
 export function uploadExternalTriples(
   file: File,
-  dataOwner: string,
   activate: boolean,
   token: string
 ): Promise<ImportResult> {
@@ -107,7 +110,6 @@ export function uploadExternalTriples(
     "/internal/v1/upload-external-triples",
     file,
     {
-      data_owner: dataOwner,
       activate: String(activate)
     },
     token
@@ -116,9 +118,6 @@ export function uploadExternalTriples(
 
 export function uploadInternalCsv(
   file: File,
-  dataOwner: string,
-  sourceType: string,
-  sourceClassification: string,
   activate: boolean,
   token: string
 ): Promise<ImportResult> {
@@ -126,9 +125,6 @@ export function uploadInternalCsv(
     "/internal/v1/upload-internal-csv",
     file,
     {
-      data_owner: dataOwner,
-      source_type: sourceType,
-      source_classification: sourceClassification,
       activate: String(activate)
     },
     token

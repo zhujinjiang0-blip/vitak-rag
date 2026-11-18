@@ -83,11 +83,24 @@ class MetadataStore:
 
                 CREATE TABLE IF NOT EXISTS evidence (
                     id TEXT PRIMARY KEY,
+                    edge_id TEXT NOT NULL DEFAULT '',
                     chunk_id TEXT NOT NULL,
                     source_id TEXT NOT NULL,
                     claim TEXT NOT NULL,
                     evidence_level TEXT NOT NULL DEFAULT 'demo',
                     confidence REAL NOT NULL DEFAULT 0.5,
+                    source_type TEXT NOT NULL DEFAULT '',
+                    review_status TEXT NOT NULL DEFAULT '',
+                    input_status TEXT NOT NULL DEFAULT '',
+                    fusion_status TEXT NOT NULL DEFAULT '',
+                    evidence_status TEXT NOT NULL DEFAULT '',
+                    graph_display_role TEXT NOT NULL DEFAULT '',
+                    answer_eligible INTEGER NOT NULL DEFAULT 1,
+                    source_record_id TEXT NOT NULL DEFAULT '',
+                    source_version TEXT NOT NULL DEFAULT '',
+                    source_locator TEXT NOT NULL DEFAULT '',
+                    source_file TEXT NOT NULL DEFAULT '',
+                    source_row_value TEXT NOT NULL DEFAULT '',
                     metadata_json TEXT NOT NULL DEFAULT '{}',
                     FOREIGN KEY(chunk_id) REFERENCES chunks(id),
                     FOREIGN KEY(source_id) REFERENCES sources(id)
@@ -153,6 +166,16 @@ class MetadataStore:
                 """
             )
             self._migrate_source_columns(connection)
+            self._migrate_evidence_columns(connection)
+            connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_evidence_review ON evidence(review_status)"
+            )
+            connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_evidence_source_type ON evidence(source_type)"
+            )
+            connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_evidence_answer_eligible ON evidence(answer_eligible)"
+            )
 
     @staticmethod
     def _migrate_source_columns(connection: sqlite3.Connection) -> None:
@@ -203,6 +226,47 @@ class MetadataStore:
             """
         )
 
+    @staticmethod
+    def _migrate_evidence_columns(connection: sqlite3.Connection) -> None:
+        columns = {
+            row["name"]
+            for row in connection.execute("PRAGMA table_info(evidence)").fetchall()
+        }
+        additions = {
+            "edge_id": "TEXT NOT NULL DEFAULT ''",
+            "source_type": "TEXT NOT NULL DEFAULT ''",
+            "review_status": "TEXT NOT NULL DEFAULT ''",
+            "input_status": "TEXT NOT NULL DEFAULT ''",
+            "fusion_status": "TEXT NOT NULL DEFAULT ''",
+            "evidence_status": "TEXT NOT NULL DEFAULT ''",
+            "graph_display_role": "TEXT NOT NULL DEFAULT ''",
+            "answer_eligible": "INTEGER NOT NULL DEFAULT 1",
+            "source_record_id": "TEXT NOT NULL DEFAULT ''",
+            "source_version": "TEXT NOT NULL DEFAULT ''",
+            "source_locator": "TEXT NOT NULL DEFAULT ''",
+            "source_file": "TEXT NOT NULL DEFAULT ''",
+            "source_row_value": "TEXT NOT NULL DEFAULT ''",
+        }
+        added_any = False
+        for name, definition in additions.items():
+            if name not in columns:
+                connection.execute(f"ALTER TABLE evidence ADD COLUMN {name} {definition}")
+                added_any = True
+        if added_any:
+            connection.execute(
+                """
+                UPDATE evidence
+                SET source_type = 'legacy'
+                WHERE source_type = ''
+                """
+            )
+            connection.execute(
+                """
+                UPDATE evidence
+                SET review_status = 'accepted'
+                WHERE review_status = ''
+                """
+            )
     def has_demo_data(self) -> bool:
         with self.connect() as connection:
             row = connection.execute("SELECT COUNT(*) AS count FROM sources").fetchone()
@@ -321,21 +385,53 @@ class MetadataStore:
         evidence_level: str = "demo",
         confidence: float = 0.5,
         metadata: dict[str, Any] | None = None,
+        edge_id: str = "",
+        source_type: str = "",
+        review_status: str = "accepted",
+        input_status: str = "adopted",
+        fusion_status: str = "accepted",
+        evidence_status: str = "",
+        graph_display_role: str = "",
+        answer_eligible: bool = True,
+        source_record_id: str = "",
+        source_version: str = "",
+        source_locator: str = "",
+        source_file: str = "",
+        source_row_value: str = "",
     ) -> None:
         with self.connect() as connection:
             connection.execute(
                 """
                 INSERT OR REPLACE INTO evidence
-                (id, chunk_id, source_id, claim, evidence_level, confidence, metadata_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (
+                    id, edge_id, chunk_id, source_id, claim, evidence_level,
+                    confidence, source_type, review_status, input_status,
+                    fusion_status, evidence_status, graph_display_role,
+                    answer_eligible, source_record_id, source_version,
+                    source_locator, source_file, source_row_value, metadata_json
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     evidence_id,
+                    edge_id,
                     chunk_id,
                     source_id,
                     claim,
                     evidence_level,
                     confidence,
+                    source_type,
+                    review_status,
+                    input_status,
+                    fusion_status,
+                    evidence_status,
+                    graph_display_role,
+                    int(answer_eligible),
+                    source_record_id,
+                    source_version,
+                    source_locator,
+                    source_file,
+                    source_row_value,
                     json.dumps(metadata or {}, ensure_ascii=False),
                 ),
             )
@@ -376,6 +472,25 @@ class MetadataStore:
             by_id = {row["id"]: dict(row) for row in rows}
             return [by_id[item] for item in evidence_ids if item in by_id]
 
+    def get_evidence_by_edge_ids(self, edge_ids: list[str]) -> dict[str, dict[str, Any]]:
+        if not edge_ids:
+            return {}
+        placeholders = ",".join("?" for _ in edge_ids)
+        with self.connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT *
+                FROM evidence
+                WHERE edge_id IN ({placeholders})
+                ORDER BY id
+                """,
+                edge_ids,
+            ).fetchall()
+        result: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            result.setdefault(row["edge_id"], dict(row))
+        return result
+
     def all_evidence(self) -> list[dict[str, Any]]:
         with self.connect() as connection:
             rows = connection.execute(
@@ -403,10 +518,15 @@ class MetadataStore:
                 SELECT c.id, c.document_id, c.source_id, c.text, c.entity_ids_json,
                        c.locator, s.title, s.source_classification,
                        s.data_origin, s.data_owner, s.access_scope, s.is_demo,
+                       e.source_type, e.review_status, e.input_status,
+                       e.fusion_status, e.evidence_status, e.graph_display_role,
+                       e.answer_eligible, e.source_record_id, e.source_version,
+                       e.source_locator,
                        bm25(chunk_fts) AS rank
                 FROM chunk_fts
                 JOIN chunks c ON c.id = chunk_fts.chunk_id
                 JOIN sources s ON s.id = c.source_id
+                LEFT JOIN evidence e ON e.chunk_id = c.id
                 WHERE chunk_fts MATCH ?
                 ORDER BY rank
                 LIMIT ?
@@ -421,8 +541,14 @@ class MetadataStore:
                 """
                 SELECT c.*, s.title, s.source_type, s.source_classification,
                        s.data_origin, s.data_owner, s.access_scope,
-                       s.publisher, s.published_at, s.url, s.is_demo
-                FROM chunks c JOIN sources s ON s.id = c.source_id
+                       s.publisher, s.published_at, s.url, s.is_demo,
+                       e.id AS evidence_id, e.edge_id, e.source_type AS evidence_source_type,
+                       e.review_status, e.input_status, e.fusion_status,
+                       e.evidence_status, e.graph_display_role, e.answer_eligible,
+                       e.source_record_id, e.source_version, e.source_locator
+                FROM chunks c
+                JOIN sources s ON s.id = c.source_id
+                LEFT JOIN evidence e ON e.chunk_id = c.id
                 WHERE c.id = ?
                 """,
                 (chunk_id,),
@@ -435,8 +561,14 @@ class MetadataStore:
                 """
                 SELECT c.*, s.title, s.source_type, s.source_classification,
                        s.data_origin, s.data_owner, s.access_scope,
-                       s.publisher, s.published_at, s.url, s.is_demo
-                FROM chunks c JOIN sources s ON s.id = c.source_id
+                       s.publisher, s.published_at, s.url, s.is_demo,
+                       e.source_type AS evidence_source_type,
+                       e.review_status, e.input_status, e.fusion_status,
+                       e.evidence_status, e.graph_display_role, e.answer_eligible,
+                       e.source_record_id, e.source_version, e.source_locator
+                FROM chunks c
+                JOIN sources s ON s.id = c.source_id
+                LEFT JOIN evidence e ON e.chunk_id = c.id
                 ORDER BY c.id
                 """
             ).fetchall()

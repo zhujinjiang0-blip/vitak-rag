@@ -24,6 +24,14 @@ page.on("console", (message) => {
 });
 page.on("pageerror", (error) => consoleErrors.push(error.message));
 
+await page.goto(`${baseUrl}/`, { waitUntil: "networkidle" });
+await page.getByRole("heading", { name: "维生素 K 知识图谱检索与证据追溯" }).waitFor();
+await page.getByText("预答辩演示口径").waitFor();
+await page.screenshot({
+  path: `${outputDir}/overview-desktop.png`,
+  fullPage: true
+});
+
 await page.goto(`${baseUrl}/#/chat`, { waitUntil: "networkidle" });
 await page.getByText("从一个具体问题开始").waitFor();
 await page.screenshot({
@@ -38,6 +46,20 @@ await page.locator(".origin-pill.public").first().waitFor({ timeout: 15_000 });
 await page.locator(".origin-legend.compact").waitFor();
 await page.screenshot({
   path: `${outputDir}/chat-answer-desktop.png`,
+  fullPage: true
+});
+
+await page.getByPlaceholder("输入关于维生素K的问题...").fill(
+  "服用华法林时应该吃多少维生素K？"
+);
+await page.getByRole("button", { name: "发送问题" }).click();
+await page.locator(".safety-panel").waitFor({ timeout: 15_000 });
+await page.getByText("涉及处方、停药或剂量调整的问题必须由医生或药师评估。", {
+  exact: false
+}).last().waitFor();
+await page.locator(".message-meta").last().getByText("demo-2026.10.4").waitFor();
+await page.screenshot({
+  path: `${outputDir}/chat-safety-desktop.png`,
   fullPage: true
 });
 
@@ -61,7 +83,7 @@ await page.screenshot({
 });
 
 await page.goto(`${baseUrl}/#/import`, { waitUntil: "networkidle" });
-await page.getByRole("heading", { name: "知识库导入" }).waitFor();
+await page.getByRole("heading", { name: /知识库导入|42 列证据表导入/ }).waitFor();
 await page.screenshot({
   path: `${outputDir}/import-desktop.png`,
   fullPage: true
@@ -78,8 +100,10 @@ const mobileOverflow = await page.evaluate(
 );
 
 const screenshots = [
+  "overview-desktop.png",
   "chat-desktop.png",
   "chat-answer-desktop.png",
+  "chat-safety-desktop.png",
   "graph-desktop.png",
   "evidence-desktop.png",
   "import-desktop.png",

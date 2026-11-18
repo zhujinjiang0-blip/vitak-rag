@@ -39,6 +39,22 @@ SAFETY_RULES = [
     ),
 ]
 
+MEDICATION_SAFETY_PATTERNS = [
+    re.compile(
+        r"(华法林|抗凝药).{0,20}(多少|几片|几粒|几毫克|剂量|毫克|mg)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(我|本人|患者|孩子|老人|孕妇).{0,16}(吃|服用|补充|摄入|用药)"
+        r".{0,16}(多少|几片|几粒|几毫克|剂量|毫克|mg)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(怎么|可以|能|需要|想).{0,8}(停药|停用|换药|加量|减量)",
+        re.IGNORECASE,
+    ),
+]
+
 
 INTENT_RULES: list[tuple[str, set[str]]] = [
     ("comparison", {"区别", "比较", "不同", "差异", "哪个好", "对比"}),
@@ -89,6 +105,14 @@ RELATION_TEXT = {
     "RELATED_TO": "{source}与{target}存在知识库关联。",
     "DEMO_RELATED_TO": "{source}与{target}是演示主题关联。",
     "CAN_ASSESS": "{source}可用于评估{target}。",
+    "no_significant_interaction_observed_with": "当前队列分析未观察到{source}与{target}之间存在显著交互。",
+    "no_significant_association_observed_with": "当前队列分析未观察到{source}与{target}之间存在显著关联。",
+    "no_supported_mediation_via": "当前分析未支持{source}通过{target}形成中介路径。",
+    "moderates_effect_on": "{source}对{target}表现出调节作用。",
+    "cross_sectionally_associated_with": "{source}与{target}存在横断面关联。",
+    "has_longitudinal_effect_on": "{source}与{target}存在纵向效应关联。",
+    "shows_dose_response_with": "{source}与{target}呈现剂量反应关系。",
+    "modulates_postprandial_kinetics_of": "{source}与{target}的餐后动力学变化相关。",
 }
 
 
@@ -227,6 +251,24 @@ class GraphAnswerEngine:
             return answer
 
         claims = self._build_claims(facts, paths)
+        if not claims:
+            answer_text = (
+                "当前知识库没有足够可正式引用的证据回答这个问题。"
+                "候选或待审核证据可在研究检索中查看，但不会用于正式回答。"
+            )
+            answer = Answer(
+                session_id=session_id,
+                query=query,
+                normalized_query=normalized,
+                intent=intent,
+                answer_text=answer_text,
+                sufficiency=EvidenceSufficiency.NONE,
+                related_entities=related,
+                data_version=self.snapshot.data_version,
+                elapsed_ms=int((time.perf_counter() - started) * 1000),
+            )
+            self._finish_answer(answer)
+            return answer
         citations = self._citations_for_claims(claims)
         sufficiency = (
             EvidenceSufficiency.SUFFICIENT
@@ -286,6 +328,9 @@ class GraphAnswerEngine:
         for terms, message, intent in SAFETY_RULES:
             if any(term in compact for term in terms):
                 return message, intent
+        for pattern in MEDICATION_SAFETY_PATTERNS:
+            if pattern.search(compact):
+                return SAFETY_RULES[1][1], "medication"
         return None
 
     def _detect_intent(self, query: str) -> str:
@@ -448,7 +493,8 @@ class GraphAnswerEngine:
 
         for path in paths:
             for edge in path.edges:
-                if not edge.evidence_ids:
+                eligible_ids = self._answer_eligible_ids(edge.evidence_ids)
+                if not eligible_ids:
                     continue
                 source = self.graph.get_node(edge.source)
                 target = self.graph.get_node(edge.target)
@@ -462,13 +508,14 @@ class GraphAnswerEngine:
                     Claim(
                         id=f"claim-{uuid.uuid4().hex[:10]}",
                         text=text,
-                        evidence_ids=edge.evidence_ids[:3],
+                        evidence_ids=eligible_ids[:3],
                         relation=edge.predicate,
                     )
                 )
 
         for fact in facts:
-            if not fact.edge.evidence_ids:
+            eligible_ids = self._answer_eligible_ids(fact.edge.evidence_ids)
+            if not eligible_ids:
                 continue
             edge_source = self.graph.get_node(fact.edge.source)
             edge_target = self.graph.get_node(fact.edge.target)
@@ -482,13 +529,22 @@ class GraphAnswerEngine:
                 Claim(
                     id=f"claim-{uuid.uuid4().hex[:10]}",
                     text=text,
-                    evidence_ids=fact.edge.evidence_ids[:3],
+                    evidence_ids=eligible_ids[:3],
                     relation=fact.edge.predicate,
                 )
             )
             if len(claims) >= 8:
                 break
         return claims[:8]
+
+    def _answer_eligible_ids(self, evidence_ids: list[str]) -> list[str]:
+        if not evidence_ids:
+            return []
+        return [
+            evidence["id"]
+            for evidence in self.metadata.get_evidence_many(evidence_ids)
+            if bool(evidence.get("answer_eligible", 1))
+        ]
 
     @staticmethod
     def _edge_text(source: GraphNode, target: GraphNode, edge: GraphEdge) -> str:

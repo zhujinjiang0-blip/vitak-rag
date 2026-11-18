@@ -144,6 +144,7 @@ function ChatPage() {
                       <div className="message-meta">
                         <span>{intentLabel(message.answer.intent)}</span>
                         <span>{sufficiencyLabel(message.answer.sufficiency)}</span>
+                        <span>{message.answer.data_version.version}</span>
                         <span>{message.answer.elapsed_ms} ms</span>
                         <span>{message.answer.citations.length} 条证据</span>
                       </div>

@@ -103,6 +103,38 @@ class SnapshotManager:
         payload = json.loads(self.settings.active_manifest.read_text(encoding="utf-8"))
         return self.open(payload["version"])
 
+    def create_empty_snapshot(
+        self,
+        version: str,
+        *,
+        is_demo: bool = False,
+    ) -> SnapshotContext:
+        root = self.settings.snapshots_dir / version
+        if root.exists():
+            raise FileExistsError(f"snapshot already exists: {root}")
+        root.mkdir(parents=True)
+        metadata = MetadataStore(root / "metadata.sqlite3")
+        metadata.initialize()
+        graph = KuzuGraphStore(root / "graph.kuzu")
+        graph.initialize()
+        ChromaVectorStore(root / "vectors")
+        manifest = {
+            "version": version,
+            "created_at": datetime.now(UTC).isoformat(),
+            "is_demo": is_demo,
+            "entity_count": 0,
+            "relation_count": 0,
+            "source_count": 0,
+            "chunk_count": 0,
+        }
+        (root / "manifest.json").write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        metadata.add_snapshot(version, str(root), "staged", is_demo)
+        graph.database.close()
+        return self.open(version)
+
     def activate(self, version: str) -> dict[str, Any]:
         root = self.settings.snapshots_dir / version
         manifest_path = root / "manifest.json"

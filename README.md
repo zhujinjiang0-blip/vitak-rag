@@ -1,8 +1,11 @@
 # 维K智问 VitaK-RAG
 
-VitaK-RAG 是一个面向公众科普的维生素 K 知识图谱问答原型。系统使用 FastAPI、React、Kuzu、Chroma 和 SQLite，问答运行时**不调用生成式大模型**。回答由经过版本化管理的实体关系、证据路径和来源片段确定性组装。
+VitaK-RAG 是一个面向营养学、临床、药学和医学信息学研究人员的维生素 K 知识图谱检索与证据追溯原型。系统使用 FastAPI、React、Kuzu、Chroma 和 SQLite，问答运行时**不调用生成式大模型**。回答由经过版本化管理的实体关系、证据路径和来源片段确定性组装。
 
-当前演示库采用“公开可核验事实 + 明确标记的合成 RCT 样例”，尚未导入毕业设计真实数据库、内部 RCT 统计结果和完整文献集。
+预答辩版本采用两层数据口径：
+
+- **在线问答层**：使用公开可核验事实和明确标记的合成 RCT 精编快照，保证公网演示稳定且不暴露内部数据。
+- **真实数据审计层**：73,396 条外部文献、外部结构化和内部队列证据已在本地私有快照完成导入、校验和聚合审计；公网只展示脱敏聚合数字。
 
 ## 在线演示
 
@@ -12,16 +15,27 @@ GitHub Pages 版本会把演示快照导出到浏览器，直接运行同一套�
 
 在线演示不包含 FastAPI 文件入库和内部审核接口；这些能力仍通过仓库中的完整后端在本地运行。
 
-![问答界面](docs/screenshots/chat-desktop.png)
+预答辩建议从“项目概览”进入，页面会展示真实三表的聚合审计结果、内外部来源说明、问答演示口径和建议演示路径。
+
+```text
+structured_triples_final.csv   60,030 条
+literature_triples_final.csv   13,118 条
+internal_evidence_final.csv       248 条
+合计                            73,396 条
+```
+
+真实 CSV、内部证据和全量私有快照只保存在本机，不进入 GitHub、GitHub Pages 或飞书。完整演示流程见 [`docs/pre-defense-demo.md`](docs/pre-defense-demo.md)。
+
+![问答界面](docs/screenshots/chat-answer-desktop.png)
 
 ## 已实现能力
 
 - 六领域维生素 K 属性图：生理代谢、食物营养、药物相互作用、临床疾病、检测评估、指南与 RCT。
-- 124 个演示实体、438 条带证据关系、40 个来源、120 个知识片段和 80 道评测问题。
+- 124 个精编演示实体、438 条带证据关系、40 个来源、120 个知识片段和 80 道评测问题。
 - 实体别名链接、规则意图识别、白名单图查询、1-2 跳路径检索和模板化回答。
 - 每条回答均绑定来源片段；证据不足时明确拒答，不使用模型补写。
 - 药物剂量、停药、诊断和紧急症状规则优先于普通知识检索。
-- React 三页应用：智能问答、知识图谱和证据检索。
+- React 五页应用：项目概览、智能问答、知识图谱、证据检索和本地数据入口。
 - 文档入库、审核队列、版本快照、索引重建和三方案评测命令行。
 - 匿名临时会话、SSE 流式事件、localhost 内部 API 和本地离线演示数据。
 
@@ -49,10 +63,11 @@ scripts/
 
 内部导入默认标记为 `internal/private`，公开资料标记为 `public`，合成 RCT 标记为 `synthetic`。这些字段会随 Citation 一并返回并展示在证据卡片中。
 
-项目真实数据按以下来源组织：
+项目真实数据按以下三张表组织：
 
-- 外部数据：564 篇已发表维生素 K 研究文献，经抽取和对齐形成 13,118 条三元组、6,297 个唯一实体，统一标记为 `external/public`。
-- 内部数据：项目组 395 人前瞻性干预队列，使用标准化个体证据和强度标签，统一标记为 `internal/private`。
+- 外部结构化／半结构化数据：60,030 条逻辑关系，统一标记为 `external/public`。
+- 外部文献数据：564 项研究形成 13,118 条三元组，保留 PMID、原文证据句和等级，统一标记为 `external/public`。
+- 内部数据：项目组 395 人前瞻性干预队列形成 248 条统计证据，统一标记为 `internal/private`。
 
 完整字段和导入说明见 [`docs/data-sources.md`](docs/data-sources.md)。
 
@@ -69,8 +84,8 @@ make web
 
 本地数据入口位于 `http://127.0.0.1:5173/#/import`：
 
-- “外部数据”入口用于上传 `aligned_triples.csv`，并直接生成外部文献三元组。
-- “内部数据”入口用于上传内部 CSV，默认以 `internal/private` 证据入库并进入审核流程。
+- 页面支持上传 42 列统一三元组表，按每行 `source_type` 自动标记内外部来源。
+- `internal` 映射为内部/私有；`literature` 和 `structured` 映射为外部/公开。
 - GitHub Pages 在线版是只读演示，文件上传必须在本地全栈模式运行。
 
 也可以在一个终端启动前后端：
@@ -102,6 +117,19 @@ cd backend
 
 # 导入外部文献 aligned_triples.csv
 ../.venv/bin/python -m app.cli import-external-triples path/to/aligned_triples.csv
+
+# 预检三张 42 列真实证据表，不写入数据库
+../.venv/bin/python -m app.cli audit-evidence-tables \
+  path/to/internal_evidence_final.csv \
+  path/to/literature_triples_final.csv \
+  path/to/structured_triples_final.csv
+
+# 将三张表写入独立私有快照
+../.venv/bin/python -m app.cli import-evidence-tables \
+  --version vitak-real-next \
+  path/to/internal_evidence_final.csv \
+  path/to/literature_triples_final.csv \
+  path/to/structured_triples_final.csv
 
 # 导入文本型 PDF、DOCX、TXT、Markdown、JSON、XML、HTML、CSV 或 XLSX
 ../.venv/bin/python -m app.cli ingest path/to/document.pdf --title "材料名称"
@@ -177,7 +205,8 @@ node scripts/visual-check.mjs
 
 ## 当前边界
 
-- 无用户注册、公开上传、数据管理后台、公网部署和 HTTPS。
+- 无用户账号、公开文件上传和开放式数据管理后台。
+- 公网只提供 GitHub Pages 只读静态演示，FastAPI 后端不暴露到公网。
 - 无扫描件 OCR 和复杂 PDF 版面还原。
 - 演示来源与合成 RCT 不可用于临床决策。
 - 所有内容仅用于知识检索和科普演示，不能替代医生诊断、处方或个体化用药建议。

@@ -14,9 +14,6 @@ import { STATIC_DEMO_MODE } from "../lib/staticDemo";
 function ImportPage() {
   const [mode, setMode] = useState<"external" | "internal">("external");
   const [file, setFile] = useState<File | null>(null);
-  const [owner, setOwner] = useState("已发表维生素 K 研究文献");
-  const [classification, setClassification] = useState("internal_rct");
-  const [sourceType, setSourceType] = useState("rct");
   const [activate, setActivate] = useState(false);
   const [token, setToken] = useState("change-me-in-local-development");
   const [loading, setLoading] = useState(false);
@@ -32,7 +29,6 @@ function ImportPage() {
 
   function switchMode(nextMode: "external" | "internal") {
     setMode(nextMode);
-    setOwner(nextMode === "external" ? "已发表维生素 K 研究文献" : "毕业设计内部资料");
     setMessage("");
     setError("");
   }
@@ -46,19 +42,13 @@ function ImportPage() {
     try {
       const result =
         mode === "external"
-          ? await uploadExternalTriples(file, owner, activate, token)
-          : await uploadInternalCsv(
-              file,
-              owner,
-              sourceType,
-              classification,
-              activate,
-              token
-            );
+          ? await uploadExternalTriples(file, activate, token)
+          : await uploadInternalCsv(file, activate, token);
       setMessage(
-        `导入完成：快照 ${result.snapshot_version}，` +
+        `导入完成：快照 ${result.version ?? result.snapshot_version}，` +
           `${result.rows ?? result.chunks ?? 0} 条数据，` +
-          `${result.edges_added ?? result.candidates ?? 0} 条图谱关系或候选关系。`
+          `${result.graph_edges ?? result.edges_added ?? result.candidates ?? 0} 条图谱关系或候选关系，` +
+          `${result.nodes ?? 0} 个实体。`
       );
       setFile(null);
     } catch (requestError) {
@@ -97,8 +87,8 @@ function ImportPage() {
       <section className="page-heading">
         <div>
           <span className="eyebrow">数据入口</span>
-          <h1>知识库导入</h1>
-          <p>外部文献三元组直接写入图谱；内部 CSV 以内部私有证据入库并进入审核流程。</p>
+          <h1>42 列证据表导入</h1>
+          <p>按每行的 source_type 自动标记内外部来源，并写入版本化证据快照。</p>
         </div>
         <DatabaseZap size={34} />
       </section>
@@ -113,7 +103,7 @@ function ImportPage() {
             onClick={() => switchMode("external")}
           >
             <span className="origin-pill external">外部数据</span>
-            <small>aligned_triples.csv</small>
+            <small>literature / structured · 42 列</small>
           </button>
           <button
             type="button"
@@ -121,42 +111,27 @@ function ImportPage() {
             onClick={() => switchMode("internal")}
           >
             <span className="origin-pill internal">内部数据</span>
-            <small>395 人队列结构化 CSV</small>
+            <small>internal · private · 42 列</small>
           </button>
         </div>
 
         <label className="file-drop">
           <FileSpreadsheet size={30} />
           <strong>{file ? file.name : "选择 CSV 文件"}</strong>
-          <span>支持 UTF-8 编码的 CSV，原始文件仅用于本次本地导入。</span>
+          <span>支持 UTF-8 编码的 42 列统一三元组表，原始文件仅用于本次本地导入。</span>
           <input type="file" accept=".csv,text/csv" onChange={selectFile} />
         </label>
 
+        <div className="import-classification-note">
+          <LockKeyhole size={17} />
+          <p>
+            <strong>来源自动标注：</strong>
+            `internal` 映射为内部/私有；`literature` 与 `structured` 映射为外部/公开。
+            三张表可分别导入，也可在本地使用 `import-evidence-tables` 一次批量导入。
+          </p>
+        </div>
+
         <div className="import-fields">
-          <label>
-            <span>数据归属方</span>
-            <input value={owner} onChange={(event) => setOwner(event.target.value)} />
-          </label>
-          {mode === "internal" && (
-            <>
-              <label>
-                <span>来源类型</span>
-                <select value={sourceType} onChange={(event) => setSourceType(event.target.value)}>
-                  <option value="rct">内部 RCT</option>
-                  <option value="database">内部数据库</option>
-                  <option value="document">内部文档</option>
-                </select>
-              </label>
-              <label>
-                <span>细分类</span>
-                <input
-                  value={classification}
-                  onChange={(event) => setClassification(event.target.value)}
-                  placeholder="internal_rct"
-                />
-              </label>
-            </>
-          )}
           <label>
             <span>内部接口令牌</span>
             <input
@@ -199,4 +174,3 @@ function ImportPage() {
 }
 
 export default ImportPage;
-

@@ -1,0 +1,55 @@
+{
+  "audit_date": "2026-11-19",
+  "total_records": 73396,
+  "graph_edges": 73279,
+  "merged_duplicate_records": 117,
+  "answer_eligible_records": 54249,
+  "review_only_records": 19147,
+  "unique_entities": 36638,
+  "literal_nodes": 25527,
+  "sources": 566,
+  "datasets": [
+    {
+      "id": "structured",
+      "name": "外部结构化／半结构化",
+      "records": 60030,
+      "origin": "external",
+      "description": "FDC、USDA、PubChem、FooDB、KEGG、ClinicalTrials 等来源实例化后的逻辑关系"
+    },
+    {
+      "id": "literature",
+      "name": "外部文献证据",
+      "records": 13118,
+      "origin": "external",
+      "description": "564 项文献研究记录，保留 PMID、来源定位、关系等级与审核状态"
+    },
+    {
+      "id": "internal",
+      "name": "内部 RCT 证据",
+      "records": 248,
+      "origin": "internal",
+      "description": "395 人队列的横断面、纵向、餐后、交互、剂量、中介及反向探索测试证据"
+    }
+  ],
+  "review_statuses": {
+    "accepted": 53980,
+    "adopted_with_warning": 21,
+    "accepted_internal_ledger": 204,
+    "conflict_retained_internal": 44,
+    "manual_pending": 12519,
+    "provisional": 6511,
+    "merged_duplicate": 117
+  },
+  "mvp_pages": [
+    "项目概览",
+    "知识图谱",
+    "证据检索",
+    "智能问答"
+  ],
+  "limits": [
+    "在线版本只读取演示快照，不上传真实文件",
+    "正式回答不引用候选、暂定或重复合并证据",
+    "内部原始队列数据只保存在本地私有快照",
+    "当前问答采用确定性图谱检索和模板回答，不使用运行时生成模型"
+  ]
+}

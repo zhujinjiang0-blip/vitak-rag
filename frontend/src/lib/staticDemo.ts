@@ -194,6 +194,19 @@ function isGeneralFollowup(query: string, entities: GraphNode[]): boolean {
 
 function safetyCheck(query: string): { notice: string; intent: string } | null {
   const compact = query.replace(/\s+/g, "");
+  if (
+    /(华法林|抗凝药).{0,20}(多少|几片|几粒|几毫克|剂量|毫克|mg)/i.test(compact) ||
+    /(我|本人|患者|孩子|老人|孕妇).{0,16}(吃|服用|补充|摄入|用药).{0,16}(多少|几片|几粒|几毫克|剂量|毫克|mg)/i.test(
+      compact
+    ) ||
+    /(怎么|可以|能|需要|想).{0,8}(停药|停用|换药|加量|减量)/i.test(compact)
+  ) {
+    return {
+      notice:
+        "涉及处方、停药或剂量调整的问题必须由医生或药师评估。本系统不能提供个体化用药决定。",
+      intent: "medication"
+    };
+  }
   const rules: Array<[string[], string, string]> = [
     [
       ["出血不止", "止不住血", "大量出血", "黑便", "血便", "呕血", "严重头痛", "呼吸困难"],

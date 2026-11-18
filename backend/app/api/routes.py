@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -10,6 +11,7 @@ from fastapi.responses import StreamingResponse
 
 from app.schemas import (
     Answer,
+    EvidenceTableImportRequest,
     ExternalTripleImportRequest,
     ExternalTripleImportResponse,
     GraphSearchResponse,
@@ -23,6 +25,7 @@ from app.schemas import (
     SubgraphRequest,
     SubgraphResponse,
 )
+from app.services.evidence_tables import EvidenceTableImporter
 from app.services.external_triples import ExternalTripleImporter
 from app.services.ingest import IngestionService
 
@@ -127,6 +130,16 @@ def search(
             data_origin=row["data_origin"],
             data_owner=row["data_owner"],
             access_scope=row["access_scope"],
+            source_type=row["source_type"] or "",
+            review_status=row["review_status"] or "",
+            input_status=row["input_status"] or "",
+            fusion_status=row["fusion_status"] or "",
+            evidence_status=row["evidence_status"] or "",
+            graph_display_role=row["graph_display_role"] or "",
+            answer_eligible=bool(row["answer_eligible"]),
+            source_record_id=row["source_record_id"] or "",
+            source_version=row["source_version"] or "",
+            source_locator=row["source_locator"] or "",
             snippet=row["text"][:360],
             entity_ids=json.loads(row["entity_ids_json"] or "[]"),
             score=score,
@@ -154,6 +167,16 @@ def search(
             data_origin=chunk["data_origin"],
             data_owner=chunk["data_owner"],
             access_scope=chunk["access_scope"],
+            source_type=chunk["evidence_source_type"] or "",
+            review_status=chunk["review_status"] or "",
+            input_status=chunk["input_status"] or "",
+            fusion_status=chunk["fusion_status"] or "",
+            evidence_status=chunk["evidence_status"] or "",
+            graph_display_role=chunk["graph_display_role"] or "",
+            answer_eligible=bool(chunk["answer_eligible"]),
+            source_record_id=chunk["source_record_id"] or "",
+            source_version=chunk["source_version"] or "",
+            source_locator=chunk["source_locator"] or "",
             snippet=chunk["text"][:360],
             entity_ids=json.loads(chunk["entity_ids_json"] or "[]"),
             score=max(score, previous.score if previous else 0.0),
@@ -269,7 +292,6 @@ def import_external_triples(
 
 @router.post(
     "/internal/v1/upload-external-triples",
-    response_model=ExternalTripleImportResponse,
 )
 async def upload_external_triples(
     request: Request,
@@ -277,25 +299,16 @@ async def upload_external_triples(
     data_owner: str = Form(default="已发表维生素 K 研究文献"),
     activate: bool = Form(default=False),
     x_internal_token: str | None = Header(default=None),
-) -> ExternalTripleImportResponse:
+) -> dict:
     _assert_internal_token(request, x_internal_token)
-    output_dir = request.app.state.settings.runtime_dir / "uploads"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    suffix = Path(file.filename or "aligned_triples.csv").suffix or ".csv"
-    upload_path = output_dir / f"external-{uuid.uuid4().hex}{suffix}"
-    upload_path.write_bytes(await file.read())
-    try:
-        result = ExternalTripleImporter(_manager(request)).import_csv(
-            upload_path,
-            data_owner=data_owner,
-            activate=activate,
-        )
-    finally:
-        upload_path.unlink(missing_ok=True)
-    return ExternalTripleImportResponse(**result)
+    return await _import_uploaded_evidence_table(
+        request,
+        file,
+        activate=activate,
+    )
 
 
-@router.post("/internal/v1/upload-internal-csv", response_model=IngestResponse)
+@router.post("/internal/v1/upload-internal-csv")
 async def upload_internal_csv(
     request: Request,
     file: Annotated[UploadFile, File()],
@@ -306,28 +319,50 @@ async def upload_internal_csv(
     x_internal_token: str | None = Header(default=None),
 ) -> IngestResponse:
     _assert_internal_token(request, x_internal_token)
+    return await _import_uploaded_evidence_table(
+        request,
+        file,
+        activate=activate,
+    )
+
+
+async def _import_uploaded_evidence_table(
+    request: Request,
+    file: UploadFile,
+    *,
+    activate: bool,
+) -> dict:
     output_dir = request.app.state.settings.runtime_dir / "uploads"
     output_dir.mkdir(parents=True, exist_ok=True)
-    suffix = Path(file.filename or "internal.csv").suffix or ".csv"
-    upload_path = output_dir / f"internal-{uuid.uuid4().hex}{suffix}"
+    suffix = Path(file.filename or "evidence.csv").suffix or ".csv"
+    upload_path = output_dir / f"evidence-{uuid.uuid4().hex}{suffix}"
     upload_path.write_bytes(await file.read())
+    version = f"upload-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
     try:
-        result = IngestionService(
-            request.app.state.settings,
-            _manager(request),
-        ).ingest(
-            upload_path,
-            source_title=file.filename,
-            source_type=source_type,
-            data_origin="internal",
-            data_owner=data_owner,
-            access_scope="private",
-            source_classification=source_classification,
+        result = EvidenceTableImporter(_manager(request)).import_files(
+            [upload_path],
+            version=version,
             activate=activate,
         )
     finally:
         upload_path.unlink(missing_ok=True)
-    return IngestResponse(**result)
+    return result
+
+
+@router.post("/internal/v1/import-evidence-tables")
+def import_evidence_tables(
+    payload: EvidenceTableImportRequest,
+    request: Request,
+    x_internal_token: str | None = Header(default=None),
+):
+    _assert_internal_token(request, x_internal_token)
+    result = EvidenceTableImporter(_manager(request)).import_files(
+        [Path(path).expanduser().resolve() for path in payload.paths],
+        version=payload.version,
+        activate=payload.activate,
+        build_vectors=payload.build_vectors,
+    )
+    return result
 
 
 @router.get("/internal/v1/review")

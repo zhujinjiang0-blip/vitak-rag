@@ -36,6 +36,15 @@ def test_medication_safety_rule_precedes_graph_retrieval(engine):
     assert answer.claims == []
 
 
+def test_medication_safety_pattern_catches_varied_dosing_questions(engine):
+    answer = engine.answer("服用华法林时应该吃多少维生素K？")
+
+    assert answer.intent == "medication"
+    assert answer.safety_notice
+    assert answer.citations == []
+    assert answer.graph_paths == []
+
+
 def test_every_claim_has_traceable_citation(engine):
     answer = engine.answer("维生素K1和K2有什么区别？")
     citation_ids = {citation.id for citation in answer.citations}

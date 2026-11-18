@@ -136,14 +136,29 @@ export async function askQuestion(
   sessionId: string | null,
   handlers: {
     status?: (message: string) => void;
-    onAnswer: (answer: Answer) => void;
+    onAnswer: (answer: Answer) => Promise<void> | void;
   }
 ): Promise<void> {
+  async function emitThinkingSteps() {
+    const steps = [
+      "正在理解问题并识别询问意图",
+      "正在匹配维生素K实体与别名",
+      "正在检索真实证据、图谱关系和文献来源",
+      "正在核对审核状态、证据充分性与安全边界"
+    ];
+    for (const step of steps) {
+      handlers.status?.(step);
+      await new Promise((resolve) => window.setTimeout(resolve, 110));
+    }
+  }
+
   if (STATIC_DEMO_MODE) {
-    handlers.status?.("正在加载浏览器端知识库");
-    handlers.onAnswer(await askStaticQuestion(query));
+    await emitThinkingSteps();
+    handlers.status?.("正在组织可追溯回答");
+    await handlers.onAnswer(await askStaticQuestion(query));
     return;
   }
+  await emitThinkingSteps();
   const response = await fetch("/api/v1/qa/stream", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -174,7 +189,7 @@ export async function askQuestion(
       const event = eventLine.slice(7);
       const payload = JSON.parse(dataLine.slice(6));
       if (event === "status") handlers.status?.(payload.message);
-      if (event === "done") handlers.onAnswer(payload as Answer);
+      if (event === "done") await handlers.onAnswer(payload as Answer);
     }
   }
 }

@@ -2,6 +2,7 @@ import { FormEvent, useRef, useState } from "react";
 import {
   ArrowUp,
   BookOpen,
+  CheckCircle2,
   ExternalLink,
   GitBranch,
   Info,
@@ -19,6 +20,8 @@ interface Message {
   role: "user" | "assistant";
   text: string;
   answer?: Answer;
+  trace?: string[];
+  streaming?: boolean;
 }
 
 const PUBLIC_SUGGESTIONS = [
@@ -46,7 +49,37 @@ function ChatPage() {
   const [activeAnswer, setActiveAnswer] = useState<Answer | null>(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
+  const [thinkingSteps, setThinkingSteps] = useState<string[]>([]);
   const messageSequence = useRef(0);
+  const thinkingStepsRef = useRef<string[]>([]);
+
+  function appendThinkingStep(message: string) {
+    if (!message || message === "正在检索知识图谱与证据") return;
+    if (thinkingStepsRef.current.includes(message)) return;
+    thinkingStepsRef.current = [...thinkingStepsRef.current, message];
+    setThinkingSteps(thinkingStepsRef.current);
+  }
+
+  async function revealAnswer(messageId: string, text: string) {
+    const chunks = text.match(/[^。！？\n]+[。！？]?|\n+/g) ?? [text];
+    let rendered = "";
+    for (const chunk of chunks) {
+      rendered += chunk;
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === messageId ? { ...message, text: rendered.trimStart() } : message
+        )
+      );
+      if (chunk.trim()) {
+        await new Promise((resolve) => window.setTimeout(resolve, 75));
+      }
+    }
+    setMessages((current) =>
+      current.map((message) =>
+        message.id === messageId ? { ...message, streaming: false } : message
+      )
+    );
+  }
 
   async function submit(query: string) {
     const trimmed = query.trim();
@@ -60,23 +93,33 @@ function ChatPage() {
     setMessages((current) => [...current, userMessage]);
     setInput("");
     setLoading(true);
-    setStatus("正在连接本地知识库");
+    setStatus("正在准备检索");
+    setThinkingSteps([]);
+    thinkingStepsRef.current = [];
 
     try {
       await askQuestion(trimmed, sessionId, {
-        status: setStatus,
-        onAnswer: (answer) => {
+        status: (message) => {
+          setStatus(message);
+          appendThinkingStep(message);
+        },
+        onAnswer: async (answer) => {
           setSessionId(answer.session_id);
           setActiveAnswer(answer);
+          const messageId = `message-${messageSequence.current++}`;
+          const trace = [...thinkingStepsRef.current, "已完成来源核对并生成回答"];
           setMessages((current) => [
             ...current,
             {
-              id: `message-${messageSequence.current++}`,
+              id: messageId,
               role: "assistant",
-              text: answer.answer_text,
-              answer
+              text: "",
+              answer,
+              trace,
+              streaming: true
             }
           ]);
+          await revealAnswer(messageId, answer.answer_text);
         }
       });
     } catch (error) {
@@ -94,6 +137,8 @@ function ChatPage() {
     } finally {
       setLoading(false);
       setStatus("");
+      setThinkingSteps([]);
+      thinkingStepsRef.current = [];
     }
   }
 
@@ -148,12 +193,21 @@ function ChatPage() {
                 <article
                   key={message.id}
                   className={`message ${message.role === "user" ? "user-message" : "assistant-message"}`}
+                  data-streaming={
+                    message.streaming ? "true" : undefined
+                  }
                 >
                   <div className="message-avatar">
                     {message.role === "user" ? "你" : "K"}
                   </div>
                   <div className="message-content">
-                    <div className="message-text">{message.text}</div>
+                    <div
+                      className={`message-text ${
+                        message.streaming ? "streaming" : ""
+                      }`}
+                    >
+                      {message.text}
+                    </div>
                     {message.answer && (
                       <div className="message-meta">
                         <span>{intentLabel(message.answer.intent)}</span>
@@ -163,15 +217,41 @@ function ChatPage() {
                         <span>{message.answer.citations.length} 条证据</span>
                       </div>
                     )}
+                    {message.answer && message.trace && message.trace.length > 0 && (
+                      <details className="reasoning-trace">
+                        <summary>查看检索过程</summary>
+                        <ol>
+                          {message.trace.map((step) => (
+                            <li key={step}>{step}</li>
+                          ))}
+                        </ol>
+                      </details>
+                    )}
                   </div>
                 </article>
               ))}
-              {loading && (
+              {loading && !messages.some((message) => message.streaming) && (
                 <article className="message assistant-message">
                   <div className="message-avatar">K</div>
-                  <div className="loading-line">
-                    <LoaderCircle size={18} className="spin" />
-                    <span>{status || "正在查询图谱"}</span>
+                  <div className="thinking-panel" aria-live="polite">
+                    <div className="thinking-heading">
+                      <LoaderCircle size={18} className="spin" />
+                      <strong>{status || "正在整理答案"}</strong>
+                    </div>
+                    <ol>
+                      {thinkingSteps.map((step, index) => (
+                        <li key={step}>
+                          <span className="thinking-index">
+                            {index < thinkingSteps.length - 1 ? (
+                              <CheckCircle2 size={14} />
+                            ) : (
+                              <LoaderCircle size={14} className="spin" />
+                            )}
+                          </span>
+                          <span>{step}</span>
+                        </li>
+                      ))}
+                    </ol>
                   </div>
                 </article>
               )}

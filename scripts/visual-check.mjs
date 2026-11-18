@@ -44,6 +44,23 @@ await page.screenshot({
 await page.getByPlaceholder("输入关于维生素K的问题...").fill("维生素K有哪些食物来源？");
 await page.getByRole("button", { name: "发送问题" }).click();
 await page.locator(".assistant-message").last().waitFor({ timeout: 15_000 });
+await page.locator(".thinking-panel").waitFor({ timeout: 15_000 });
+await page.screenshot({
+  path: `${outputDir}/chat-thinking-desktop.png`,
+  fullPage: true
+});
+await page.waitForFunction(
+  () =>
+    !document.querySelector(".thinking-panel") &&
+    Boolean(document.querySelector(".assistant-message .message-text")?.textContent),
+  null,
+  { timeout: 15_000 }
+);
+await page.waitForFunction(
+  () => !document.querySelector('[data-streaming="true"]'),
+  null,
+  { timeout: 15_000 }
+);
 await page.locator(".citation-card").first().waitFor({ timeout: 15_000 });
 await page.locator(".origin-pill.external").first().waitFor({ timeout: 15_000 });
 await page.locator(".origin-legend.compact").waitFor();
@@ -57,6 +74,18 @@ await page.getByPlaceholder("输入关于维生素K的问题...").fill(
 );
 await page.getByRole("button", { name: "发送问题" }).click();
 await page.locator(".safety-panel").waitFor({ timeout: 15_000 });
+await page.waitForFunction(
+  () =>
+    !document.querySelector(".thinking-panel") &&
+    Boolean(document.querySelector(".assistant-message .message-text")?.textContent),
+  null,
+  { timeout: 15_000 }
+);
+await page.waitForFunction(
+  () => !document.querySelector('[data-streaming="true"]'),
+  null,
+  { timeout: 15_000 }
+);
 await page.getByText("涉及处方、停药或剂量调整的问题必须由医生或药师评估。", {
   exact: false
 }).last().waitFor();
@@ -71,7 +100,12 @@ if (checkInternal) {
     "内部队列中VK1和HOMA-IR有什么关系？"
   );
   await page.getByRole("button", { name: "发送问题" }).click();
-  await page.getByText("真实内部队列证据", { exact: false }).waitFor({ timeout: 15_000 });
+  await page.getByText("从本项目内部队列", { exact: false }).waitFor({ timeout: 15_000 });
+  await page.waitForFunction(
+    () => !document.querySelector('[data-streaming="true"]'),
+    null,
+    { timeout: 15_000 }
+  );
   await page.locator(".origin-pill.internal").first().waitFor({ timeout: 15_000 });
   await page.getByText("基线横断面", { exact: false }).first().waitFor({ timeout: 15_000 });
   await page.screenshot({
@@ -120,6 +154,7 @@ const mobileOverflow = await page.evaluate(
 const screenshots = [
   "overview-desktop.png",
   "chat-desktop.png",
+  "chat-thinking-desktop.png",
   "chat-answer-desktop.png",
   "chat-safety-desktop.png",
   ...(checkInternal ? ["chat-internal-desktop.png"] : []),

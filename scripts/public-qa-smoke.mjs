@@ -29,7 +29,18 @@ for (const question of questions) {
   await page.getByPlaceholder("输入关于维生素K的问题...").fill(question);
   await page.getByRole("button", { name: "发送问题" }).click();
   await page.locator(".assistant-message").last().waitFor({ timeout: 15_000 });
-  await page.locator(".loading-line").waitFor({ state: "detached", timeout: 15_000 }).catch(() => {});
+  await page.waitForFunction(
+    () =>
+      !document.querySelector(".thinking-panel") &&
+      Boolean(document.querySelector(".assistant-message .message-text")?.textContent),
+    null,
+    { timeout: 15_000 }
+  );
+  await page.waitForFunction(
+    () => !document.querySelector('[data-streaming="true"]'),
+    null,
+    { timeout: 15_000 }
+  );
   const text = await page.locator(".assistant-message .message-text").last().innerText();
   const meta = await page.locator(".message-meta").last().innerText().catch(() => "");
   results.push({

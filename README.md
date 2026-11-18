@@ -28,6 +28,8 @@ internal_evidence_final.csv       248 条
 
 ![问答界面](docs/screenshots/chat-answer-desktop.png)
 
+![问答检索过程](docs/screenshots/chat-thinking-desktop.png)
+
 ## 已实现能力
 
 - 六领域维生素 K 属性图：生理代谢、食物营养、药物相互作用、临床疾病、检测评估、指南与 RCT。

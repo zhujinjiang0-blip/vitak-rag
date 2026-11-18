@@ -145,6 +145,123 @@ REAL_PREDICATE_TEXT = {
     "measured_vitamin_k_form": "测量维生素 K 形式",
 }
 
+ENTITY_LABELS = {
+    "vitamin k": "维生素K",
+    "vitamin k1": "维生素K1",
+    "phylloquinone": "叶绿醌（维生素K1）",
+    "vitamin k2": "维生素K2",
+    "menaquinone": "甲萘醌类（维生素K2）",
+    "mk-7": "MK-7",
+    "mk-4": "MK-4",
+    "warfarin": "华法林",
+    "osteocalcin": "骨钙素",
+    "matrix gla protein": "基质Gla蛋白",
+    "dp-ucmgp": "dp-ucMGP",
+    "ucoc": "未羧化骨钙素（ucOC）",
+    "pivka-ii": "PIVKA-II",
+    "green leafy vegetables": "深绿色叶菜",
+    "plant oil": "植物油",
+    "vegetable oils": "植物油",
+    "fermented soy products": "发酵豆制品",
+    "vkorc1": "VKORC1",
+    "ggcx": "GGCX",
+    "insulin": "胰岛素",
+    "homa-ir": "HOMA-IR",
+}
+
+
+def display_entity(value: str) -> str:
+    key = re.sub(r"\s+", " ", value or "").strip().lower()
+    if key in ENTITY_LABELS:
+        return ENTITY_LABELS[key]
+    if "green leafy" in key:
+        return "深绿色叶菜"
+    if "plant oil" in key or "vegetable oil" in key:
+        return "植物油"
+    if "phylloquinone" in key:
+        return "叶绿醌（维生素K1）"
+    if "menaquinone" in key:
+        return "甲萘醌类（维生素K2）"
+    return value
+
+
+def natural_evidence_sentence(subject: str, predicate: str, target: str) -> str:
+    source = display_entity(subject)
+    object_name = display_entity(target)
+    template = RELATION_TEXT.get(predicate)
+    if template:
+        return template.format(source=source, target=object_name)
+    if predicate == "contains":
+        return f"{source}与{object_name}之间存在食物来源关系。"
+    if predicate == "is_synthesized_by":
+        return f"{source}可从{object_name}中获得，或与{object_name}有关。"
+    if predicate == "is_antagonized_by":
+        return f"{source}与{object_name}存在拮抗关系。"
+    if predicate == "deficiency_causes":
+        return f"{source}缺乏可能导致{object_name}。"
+    if predicate == "excess_causes":
+        return f"{source}过量可能与{object_name}有关。"
+    if predicate == "regulates_expression_of":
+        return f"{source}参与调节{object_name}。"
+    if predicate == "activates_protein":
+        return f"{source}参与{object_name}的活化或羧化。"
+    if predicate == "has_outcome_biomarker":
+        return f"{source}相关研究关注{object_name}这一结局或指标。"
+    if predicate == "measured_by":
+        return f"{source}可以通过{object_name}进行评估。"
+    if predicate == "reflects_status_of":
+        return f"{source}可以反映{object_name}的状态。"
+    if predicate == "indicates_risk_of":
+        return f"研究提示{source}与{object_name}风险相关。"
+    if predicate == "targets_tissue":
+        return f"{source}与{object_name}等组织或部位有关。"
+    if predicate == "supported_by":
+        return f"关于{source}的证据来自{object_name}。"
+    if predicate == "cross_sectionally_associated_with":
+        return f"横断面分析显示{source}与{object_name}存在关联。"
+    if predicate == "has_longitudinal_effect_on":
+        return f"纵向分析提示{source}与{object_name}存在效应关联。"
+    if predicate == "shows_dose_response_with":
+        return f"分析显示{source}与{object_name}之间存在剂量反应关系。"
+    if predicate.startswith("no_"):
+        return f"当前分析未观察到{source}与{object_name}之间存在明确显著关系。"
+    return f"现有证据记录了{source}与{object_name}之间的关系。"
+
+
+def human_opening(intent: str, internal: bool) -> str:
+    if internal:
+        return "从本项目内部队列的分析结果看，可以确认以下信息。"
+    openings = {
+        "food_sources": "维生素K的食物来源可以从不同维生素K形式来理解。",
+        "drug_interactions": "这类问题的重点是药物与维生素K之间的药理作用、饮食影响和监测要求。",
+        "deficiency": "维生素K不足主要会影响依赖维生素K的凝血和骨代谢相关过程。",
+        "functions": "维生素K在体内主要作为多种蛋白质活化所需的辅因子。",
+        "lab_tests": "这个指标通常需要结合它反映的生理过程和具体检测背景来解释。",
+        "recommendations": "相关建议需要区分一般营养信息和个体化医疗决定。",
+        "research": "从现有真实研究看，证据主要集中在研究人群、干预方式和结局指标上。",
+        "comparison": "比较不同维生素K形式时，需要同时看食物来源、化学结构和生理作用。",
+        "definition": "维生素K不是一个单一化合物，而是一组结构相关、功能重要的脂溶性维生素。",
+    }
+    return openings.get(intent, "从现有真实证据看，可以确认以下信息。")
+
+
+def human_closing(intent: str, internal: bool) -> str:
+    if internal:
+        return "这些结果属于内部队列的统计关联或阴性发现，不能直接等同于临床因果结论。"
+    closings = {
+        "food_sources": "食物中的维生素K含量会受品种、部位、加工和烹饪方式影响，实际饮食应结合个人情况安排。",
+        "drug_interactions": "如果正在使用华法林等抗凝药，不要仅凭一次问答自行调整饮食、补充剂或用药。",
+        "deficiency": "是否存在缺乏需要结合膳食、症状、用药和实验室检查由专业人员判断。",
+        "functions": "这些机制说明维生素K的重要性，但不能直接推导出某种补充剂适合所有人。",
+        "lab_tests": "检测结果需要结合参考区间、检测方法和临床背景解释。",
+        "recommendations": "涉及孕妇、儿童、老年人或用药人群时，应由医生或药师给出个体化建议。",
+        "research": "研究结果提示的是证据方向，不等同于已经形成面向所有人的临床治疗建议。",
+        "comparison": "不同形式不能简单按“哪一种更好”判断，应结合具体健康目标和证据场景。",
+        "definition": "以上是当前真实证据能够支持的基础解释。",
+    }
+    return closings.get(intent, "以上内容仅代表当前真实证据能够支持的范围。")
+
+
 QUERY_EXPANSIONS = [
     ("华法林", ("Warfarin", "antagonist")),
     ("维生素k", ("Vitamin K", "phylloquinone", "menaquinone")),
@@ -335,8 +452,9 @@ class GraphAnswerEngine:
             if text_answer:
                 return text_answer
             answer_text = (
-                "当前知识库没有足够证据回答这个问题。"
-                "系统不会使用生成模型补写医学结论。你可以查看下面的相关实体，或换一种更具体的问法。"
+                "我查了当前知识库，暂时没有找到足够可靠的证据来回答这个问题。"
+                "为了避免猜测医学结论，我不会继续补充。"
+                "你可以换一种更具体的问法，或查看下面的相关实体。"
             )
             answer = Answer(
                 session_id=session_id,
@@ -366,8 +484,8 @@ class GraphAnswerEngine:
             if text_answer:
                 return text_answer
             answer_text = (
-                "当前知识库没有足够可正式引用的证据回答这个问题。"
-                "候选或待审核证据可在研究检索中查看，但不会用于正式回答。"
+                "我找到了相关资料，但它们还没有达到可以正式回答的审核标准。"
+                "你可以到研究检索中查看候选证据，我不会把待审核内容当成确定结论。"
             )
             answer = Answer(
                 session_id=session_id,
@@ -659,25 +777,15 @@ class GraphAnswerEngine:
             target = str(metadata.get("object_label") or "").strip()
             if not subject or not predicate or not target:
                 continue
-            relation = REAL_PREDICATE_TEXT.get(predicate)
-            if relation:
-                text = f"真实证据记录：{subject} {relation} {target}。"
-            else:
-                template = RELATION_TEXT.get(predicate)
-                if template:
-                    text = template.format(source=subject, target=target)
-                else:
-                    text = f"真实证据抽取关系：{subject} — {predicate} → {target}。"
+            text = natural_evidence_sentence(subject, predicate, target)
             origin = str(evidence.get("data_origin") or "")
-            origin_label = "内部队列" if origin == "internal" else "外部文献"
-            claim_text = f"{origin_label}：{text}"
-            if claim_text in seen_claims:
+            if text in seen_claims:
                 continue
-            seen_claims.add(claim_text)
+            seen_claims.add(text)
             claims.append(
                 Claim(
                     id=f"claim-{uuid.uuid4().hex[:10]}",
-                    text=claim_text,
+                    text=text,
                     evidence_ids=[evidence_id],
                     relation=predicate,
                 )
@@ -689,14 +797,11 @@ class GraphAnswerEngine:
         if not claims:
             return None
         citations = self._citations_for_claims(claims)
-        origin_text = "、".join(
-            "内部队列" if origin == "internal" else "外部文献"
-            for origin in sorted(origins)
-        )
+        internal = "internal" in origins
         answer_text = (
-            f"在真实{origin_text}证据中检索到 {len(claims)} 条已审核记录：\n\n"
-            + "\n".join(f"- {claim.text}" for claim in claims)
-            + "\n\n右侧证据卡保留来源定位和审核状态；内部证据仅在本地私有快照中使用。"
+            f"{human_opening(intent, internal)}\n\n"
+            + "".join(claim.text for claim in claims)
+            + f"\n\n{human_closing(intent, internal)}"
         )
         answer = Answer(
             session_id=session_id,
@@ -950,7 +1055,7 @@ class GraphAnswerEngine:
             answer_text=(
                 "华法林与维生素 K 属于明确的药理学拮抗关系，"
                 "需要结合机制、饮食和 INR 监测理解。\n\n"
-                + "\n".join(f"- {claim.text}" for claim in claims)
+                + "".join(claim.text for claim in claims)
                 + "\n\n以上结论由真实外部文献证据合成，具体剂量调整、停药或"
                 "抗凝过度处理必须由医生或药师评估。"
             ),

@@ -24,7 +24,7 @@ def test_no_evidence_question_is_refused(engine):
     answer = engine.answer("维生素K能预测明天天气吗？")
 
     assert answer.sufficiency == EvidenceSufficiency.NONE
-    assert "没有足够证据" in answer.answer_text
+    assert "没有找到足够可靠" in answer.answer_text
     assert answer.claims == []
 
 

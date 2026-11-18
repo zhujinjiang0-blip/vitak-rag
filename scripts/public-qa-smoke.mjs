@@ -43,6 +43,16 @@ for (const question of questions) {
 
 console.log(JSON.stringify(results, null, 2));
 
+for (const result of results) {
+  if (
+    ["真实文献抽取关系", "检索到", " — ", "→"].some((phrase) =>
+      result.text.includes(phrase)
+    )
+  ) {
+    throw new Error(`问答仍包含机器化表达：${result.question}`);
+  }
+}
+
 const warfarinAnswer = results.find(
   (item) => item.question === "华法林和维生素K有什么关系？"
 );

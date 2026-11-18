@@ -489,6 +489,143 @@ const PREDICATE_LABELS: Record<string, string> = {
   measured_vitamin_k_form: "测量维生素K形式"
 };
 
+const ENTITY_LABELS: Record<string, string> = {
+  "vitamin k": "维生素K",
+  "vitamin k1": "维生素K1",
+  phylloquinone: "叶绿醌（维生素K1）",
+  "vitamin k2": "维生素K2",
+  menaquinone: "甲萘醌类（维生素K2）",
+  "mk-7": "MK-7",
+  "mk-4": "MK-4",
+  warfarin: "华法林",
+  osteocalcin: "骨钙素",
+  "matrix gla protein": "基质Gla蛋白",
+  "dp-ucmgp": "dp-ucMGP",
+  ucoc: "未羧化骨钙素（ucOC）",
+  "pivka-ii": "PIVKA-II",
+  "green leafy vegetables": "深绿色叶菜",
+  "green vegetables": "绿色蔬菜",
+  "plant oil": "植物油",
+  "vegetable oils": "植物油",
+  "fermented soy products": "发酵豆制品",
+  vkorc1: "VKORC1",
+  ggcx: "GGCX",
+  insulin: "胰岛素",
+  "homa-ir": "HOMA-IR",
+  "randomized controlled trial": "随机对照试验",
+  "premenopausal women": "绝经前女性",
+  "postmenopausal women": "绝经后女性",
+  bacteroidetes: "拟杆菌门",
+  bone: "骨组织"
+};
+
+function displayEntity(value: string): string {
+  const key = value.trim().toLowerCase();
+  if (ENTITY_LABELS[key]) return ENTITY_LABELS[key];
+  if (key.includes("green leafy")) return "深绿色叶菜";
+  if (key.includes("plant oil") || key.includes("vegetable oil")) return "植物油";
+  if (key.includes("phylloquinone")) return "叶绿醌（维生素K1）";
+  if (key.includes("menaquinone")) return "甲萘醌类（维生素K2）";
+  return value;
+}
+
+function isFoodName(value: string): boolean {
+  return /vegetable|oil|cheese|meat|egg|natto|fermented|spinach|broccoli|kale|food/i.test(
+    value
+  );
+}
+
+function naturalEvidenceSentence(edge: GraphEdge, source: GraphNode, target: GraphNode): string {
+  const sourceName = displayEntity(source.name);
+  const targetName = displayEntity(target.name);
+  if (edge.predicate === "contains") {
+    if (isFoodName(target.name)) {
+      return `${targetName}是${sourceName}的食物来源之一。`;
+    }
+    if (isFoodName(source.name)) {
+      return `${sourceName}是${targetName}的食物来源之一。`;
+    }
+    return `${sourceName}含有${targetName}。`;
+  }
+  if (edge.predicate === "is_synthesized_by") {
+    return isFoodName(target.name)
+      ? `${sourceName}可从${targetName}中获得，或与${targetName}有关。`
+      : `${sourceName}与${targetName}的合成过程有关。`;
+  }
+  if (edge.predicate === "is_antagonized_by") {
+    return `${sourceName}与${targetName}存在拮抗关系。`;
+  }
+  if (edge.predicate === "deficiency_causes" || edge.predicate === "CAN_CAUSE") {
+    return `${sourceName}缺乏可能导致${targetName}。`;
+  }
+  if (edge.predicate === "excess_causes") {
+    return `${sourceName}过量可能与${targetName}有关。`;
+  }
+  if (edge.predicate === "regulates_expression_of") {
+    return `${sourceName}参与调节${targetName}。`;
+  }
+  if (edge.predicate === "activates_protein" || edge.predicate === "ACTIVATES") {
+    return `${sourceName}参与${targetName}的活化或羧化。`;
+  }
+  if (edge.predicate === "has_outcome_biomarker") {
+    return `${sourceName}相关研究关注${targetName}这一结局或指标。`;
+  }
+  if (edge.predicate === "measured_by") {
+    return `${sourceName}可以通过${targetName}进行评估。`;
+  }
+  if (edge.predicate === "reflects_status_of") {
+    return `${sourceName}可以反映${targetName}的状态。`;
+  }
+  if (edge.predicate === "indicates_risk_of") {
+    return `研究提示${sourceName}与${targetName}风险相关。`;
+  }
+  if (edge.predicate === "targets_tissue") {
+    return `${sourceName}与${targetName}等组织或部位有关。`;
+  }
+  if (edge.predicate === "has_subject") {
+    return `${sourceName}的相关研究涉及${targetName}。`;
+  }
+  if (edge.predicate === "requires") {
+    return `${sourceName}相关判断通常需要结合${targetName}。`;
+  }
+  if (edge.predicate === "supported_by") {
+    return `关于${sourceName}的证据来自${targetName}。`;
+  }
+  return `现有文献记录了${sourceName}与${targetName}之间的关系。`;
+}
+
+function humanOpening(intent: string): string {
+  const openings: Record<string, string> = {
+    food_sources: "维生素K的食物来源可以从不同维生素K形式来理解。",
+    drug_interactions: "这类问题的重点是药物与维生素K之间的药理作用、饮食影响和监测要求。",
+    deficiency: "维生素K不足主要会影响依赖维生素K的凝血和骨代谢相关过程。",
+    functions: "维生素K在体内主要作为多种蛋白质活化所需的辅因子。",
+    lab_tests: "这个指标通常需要结合它反映的生理过程和具体检测背景来解释。",
+    recommendations: "相关建议需要区分一般营养信息和个体化医疗决定。",
+    research: "从现有真实研究看，证据主要集中在研究人群、干预方式和结局指标上。",
+    comparison: "比较不同维生素K形式时，需要同时看食物来源、化学结构和生理作用。",
+    definition: "简单来说，维生素K不是一个单一化合物，而是一组结构相关、功能重要的脂溶性维生素。",
+    general: "从现有真实证据看，可以确认的信息如下。"
+  };
+  return openings[intent] ?? openings.general;
+}
+
+function humanClosing(intent: string): string {
+  const closings: Record<string, string> = {
+    food_sources: "食物中的维生素K含量会受品种、部位、加工和烹饪方式影响，实际饮食应结合个人情况安排。",
+    drug_interactions: "如果正在使用华法林等抗凝药，不要仅凭一次问答自行调整饮食、补充剂或用药。",
+    deficiency: "是否存在缺乏需要结合膳食、症状、用药和实验室检查由专业人员判断。",
+    functions: "这些机制说明维生素K的重要性，但不能直接推导出某种补充剂适合所有人。",
+    lab_tests: "检测结果需要结合参考区间、检测方法和临床背景解释。",
+    recommendations: "涉及孕妇、儿童、老年人或用药人群时，应由医生或药师给出个体化建议。",
+    research: "研究结果提示的是证据方向，不等同于已经形成面向所有人的临床治疗建议。",
+    comparison: "不同形式不能简单按“哪一种更好”判断，应结合具体健康目标和证据场景。",
+    definition: "以上是知识库真实证据能够支持的基础解释。",
+    general: "以上内容仅代表当前真实证据能够支持的范围。"
+  };
+  return closings[intent] ?? closings.general;
+}
+
 const SEMANTIC_EXPANSIONS: Array<[string, string[]]> = [
   ["食物", ["food", "diet", "vegetable", "leafy", "oil", "source", "intake"]],
   ["来源", ["food", "diet", "vegetable", "leafy", "oil", "source"]],
@@ -752,7 +889,7 @@ function warfarinVitaminKAnswer(
     intent,
     answer_text:
       "华法林与维生素 K 属于明确的药理学拮抗关系，需要结合机制、饮食和 INR 监测理解。\n\n" +
-      claims.map((claim) => `- ${claim.text}`).join("\n") +
+      claims.map((claim) => claim.text).join("") +
       "\n\n以上结论由真实外部文献证据合成，具体剂量调整、停药或抗凝过度处理必须由医生或药师评估。",
     claims,
     citations,
@@ -763,6 +900,273 @@ function warfarinVitaminKAnswer(
     data_version: data.version,
     elapsed_ms: Math.round(performance.now() - started)
   };
+}
+
+interface SynthesisSpec {
+  text: string;
+  patterns: RegExp[];
+}
+
+function buildTopicAnswer(
+  query: string,
+  data: StaticData,
+  entities: GraphNode[],
+  intent: string,
+  sessionId: string,
+  started: number,
+  opening: string,
+  closing: string,
+  specs: SynthesisSpec[]
+): Answer | null {
+  const usedSources = new Set<string>();
+  const claims: Claim[] = [];
+  const selected: StaticEvidence[] = [];
+  for (const spec of specs) {
+    const evidence = firstMatchingEvidence(data, spec.patterns, usedSources);
+    if (!evidence) continue;
+    usedSources.add(evidence.source_id);
+    selected.push(evidence);
+    claims.push({
+      id: `static-claim-${claims.length}`,
+      text: spec.text,
+      evidence_ids: [evidence.id],
+      relation: "evidence_synthesis"
+    });
+  }
+  if (claims.length < 2) return null;
+
+  const edgeById = new Map(data.edges.map((edge) => [edge.id, edge]));
+  const nodeById = new Map(data.nodes.map((node) => [node.id, node]));
+  const paths: GraphPath[] = [];
+  for (const item of selected) {
+    const edge = edgeById.get(item.id);
+    const source = edge ? nodeById.get(edge.source) : undefined;
+    const target = edge ? nodeById.get(edge.target) : undefined;
+    if (edge && source && target) {
+      paths.push({ nodes: [source, target], edges: [edge], evidence_ids: [item.id] });
+    }
+  }
+  const citations = selected
+    .map((item) => data.evidence.find((candidate) => candidate.id === item.id))
+    .filter((item): item is StaticEvidence => Boolean(item));
+  return {
+    session_id: sessionId,
+    query,
+    normalized_query: normalize(query),
+    intent,
+    answer_text:
+      `${opening}\n\n` +
+      claims.map((claim) => claim.text).join("") +
+      `\n\n${closing}`,
+    claims,
+    citations,
+    graph_paths: paths,
+    sufficiency: claims.length >= 2 ? "sufficient" : "partial",
+    safety_notice: null,
+    related_entities: entities,
+    data_version: data.version,
+    elapsed_ms: Math.round(performance.now() - started)
+  };
+}
+
+function topicSynthesisAnswer(
+  query: string,
+  data: StaticData,
+  entities: GraphNode[],
+  intent: string,
+  sessionId: string,
+  started: number
+): Answer | null {
+  const normalizedQuery = normalize(query);
+
+  if (
+    normalizedQuery.includes("vitamink1") &&
+    (normalizedQuery.includes("vitamink2") || /(^|[^a-z])k2([^a-z]|$)/.test(normalizedQuery))
+  ) {
+    return buildTopicAnswer(
+      query,
+      data,
+      entities,
+      intent,
+      sessionId,
+      started,
+      "维生素K1和维生素K2都属于维生素K家族，但它们是不同形式，来源和体内行为并不完全相同。",
+      "实际比较时不能简单判断哪一种更好，还要看食物来源、吸收、半衰期和具体健康目标。",
+      [
+        {
+          text: "维生素K1又称叶绿醌，是植物性食物中的主要形式，常见于深绿色叶菜和植物油。",
+          patterns: [
+            /Phylloquinone.*(leafy green|dark-green|vegetable oils)/i,
+            /Vitamin K1.*(green leafy|vegetable oils)/i
+          ]
+        },
+        {
+          text: "维生素K2是一组甲萘醌类形式，包括MK-4和MK-7，常见于肉类、蛋类、奶酪和纳豆等食物。",
+          patterns: [
+            /Vitamin K2.*(cheese|meat|eggs|fermented|natto)/i,
+            /menaquinones.*(meat|egg yolk|fermented foods)/i
+          ]
+        },
+        {
+          text: "两类形式都参与维生素K依赖蛋白的羧化，但侧链长度、半衰期和组织分布存在差异。",
+          patterns: [
+            /side chain.*(length|units)/i,
+            /longer half-life|higher bioavailability/i
+          ]
+        }
+      ]
+    );
+  }
+
+  if (intent === "food_sources" && normalizedQuery.includes("vitamink")) {
+    return buildTopicAnswer(
+      query,
+      data,
+      entities,
+      intent,
+      sessionId,
+      started,
+      "维生素K的食物来源要区分维生素K1和维生素K2两类。",
+      "日常饮食更重要的是来源多样和摄入相对稳定，具体食物含量还会受品种、加工和烹饪方式影响。",
+      [
+        {
+          text: "维生素K1（叶绿醌）主要来自深绿色叶菜和植物油。",
+          patterns: [
+            /Phylloquinone.*(leafy green|dark-green|vegetable oils)/i,
+            /Vitamin K1.*(green leafy|vegetable oils)/i
+          ]
+        },
+        {
+          text: "维生素K2（甲萘醌类）可见于肉类、蛋类、奶酪和纳豆等发酵食品。",
+          patterns: [
+            /Vitamin K2.*(cheese|meat|eggs|fermented|natto)/i,
+            /menaquinones.*(meat|egg yolk|fermented foods)/i
+          ]
+        },
+        {
+          text: "纳豆是MK-7较典型、含量较高的天然食物来源。",
+          patterns: [
+            /Natto.*(richest natural source|large amount).*MK-7/i,
+            /MK-7.*fermented soybean/i
+          ]
+        }
+      ]
+    );
+  }
+
+  if (normalizedQuery.includes("mk-7") && intent === "research") {
+    return buildTopicAnswer(
+      query,
+      data,
+      entities,
+      intent,
+      sessionId,
+      started,
+      "MK-7是维生素K2的一种长链形式，现有真实文献已经涉及多个随机对照研究场景。",
+      "这些研究关注的结局并不一致，不能简单概括为MK-7对所有人群都有确定疗效。",
+      [
+        {
+          text: "MK-7常见于纳豆等发酵食品，与较短链形式相比具有更长半衰期和较高生物利用度。",
+          patterns: [
+            /MK-7.*(long half-life|higher bioavailability)/i,
+            /Natto.*richest natural source.*MK-7/i
+          ]
+        },
+        {
+          text: "随机对照研究关注的指标包括骨钙素羧化、dp-ucMGP、骨代谢以及血管钙化等。",
+          patterns: [
+            /randomized.*(bone|osteocalcin|dp-ucmgp|vascular calcification)/i,
+            /(bone metabolism|osteocalcin activation|vascular calcification).*randomi/i
+          ]
+        },
+        {
+          text: "研究结果并不完全一致，例如有试验观察到血管钙化指标与预期不同的变化。",
+          patterns: [
+            /contrast to our hypothesis.*vascular calcification/i,
+            /literature is contradictory.*vitamin K/i
+          ]
+        }
+      ]
+    );
+  }
+
+  if (normalizedQuery.includes("pivkaii") || normalizedQuery.includes("pivka-ii")) {
+    return buildTopicAnswer(
+      query,
+      data,
+      entities,
+      intent,
+      sessionId,
+      started,
+      "PIVKA-II是维生素K缺乏或拮抗时出现的一种未羧化凝血酶原，可作为维生素K状态的功能性指标。",
+      "PIVKA-II升高并不只由维生素K缺乏引起，还需要结合华法林、肝病、饮酒和抗生素使用等情况解释。",
+      [
+        {
+          text: "维生素K耗竭可使PIVKA-II从正常范围升高，因此它能够反映维生素K依赖凝血因子的羧化状态。",
+          patterns: [
+            /PIVKA-II increased.*Vitamin K depletion/i,
+            /functional outcome measures.*PIVKA-II/i
+          ]
+        },
+        {
+          text: "除维生素K缺乏外，华法林等VKOR抑制剂、肝病、饮酒和广谱抗生素也可能导致PIVKA-II升高。",
+          patterns: [
+            /elevated PIVKA-II.*liver disease.*warfarin.*antibiotics/i,
+            /VKOR inhibitors like warfarin.*antibiotics/i
+          ]
+        },
+        {
+          text: "较高PIVKA-II水平可能提示凝血异常和出血风险增加，需要结合其他凝血指标判断。",
+          patterns: [
+            /PIVKA-II.*abnormal coagulopathy.*bleeding/i
+          ]
+        }
+      ]
+    );
+  }
+
+  if (
+    normalizedQuery.includes("osteocalcin") &&
+    (normalizedQuery.includes("vitamink2") ||
+      /(^|[^a-z])k2([^a-z]|$)/.test(normalizedQuery))
+  ) {
+    return buildTopicAnswer(
+      query,
+      data,
+      entities,
+      intent,
+      sessionId,
+      started,
+      "维生素K2与骨钙素的关系，主要体现在维生素K2参与骨钙素的羧化活化。",
+      "这属于机制和功能指标层面的证据，不能直接等同于补充维生素K2一定能预防骨折或治疗骨质疏松。",
+      [
+        {
+          text: "维生素K2参与骨钙素的γ-羧化，使未羧化骨钙素向羧化形式转化。",
+          patterns: [
+            /Vitamin K2.*activates osteocalcin.*carboxylation/i,
+            /Vitamin K2.*carboxylation of osteocalcin/i,
+            /Vitamin K2 supplementation decreases.*ucOC/i
+          ]
+        },
+        {
+          text: "维生素K2不足时，循环中的未羧化骨钙素可能升高。",
+          patterns: [
+            /deficiency may increase.*undercarboxylated osteocalcin/i,
+            /under.?carboxylated osteocalcin.*Vitamin K2/i
+          ]
+        },
+        {
+          text: "未羧化骨钙素和羧化骨钙素的比例，常被研究用作反映维生素K功能状态的指标。",
+          patterns: [
+            /ucOC.*(Vitamin K status|Vitamin K2 group)/i,
+            /carboxylated osteocalcin.*undercarboxylated osteocalcin.*ratio/i
+          ]
+        }
+      ]
+    );
+  }
+
+  return null;
 }
 
 export async function askStaticQuestion(query: string): Promise<Answer> {
@@ -801,6 +1205,15 @@ export async function askStaticQuestion(query: string): Promise<Answer> {
     started
   );
   if (synthesized) return synthesized;
+  const topicSynthesis = topicSynthesisAnswer(
+    query,
+    data,
+    entities,
+    intent,
+    sessionId,
+    started
+  );
+  if (topicSynthesis) return topicSynthesis;
   const selectedEvidence = rankRealEvidence(query, entities, intent, data);
   const edgeById = new Map(data.edges.map((edge) => [edge.id, edge]));
   const claims: Claim[] = [];
@@ -812,7 +1225,7 @@ export async function askStaticQuestion(query: string): Promise<Answer> {
     const source = nodeById.get(edge.source);
     const target = nodeById.get(edge.target);
     if (!source || !target) continue;
-    const text = `真实文献抽取关系：${source.name} — ${predicateLabel(edge.predicate)} → ${target.name}。`;
+    const text = naturalEvidenceSentence(edge, source, target);
     if (seen.has(text)) continue;
     seen.add(text);
     claims.push({
@@ -833,19 +1246,15 @@ export async function askStaticQuestion(query: string): Promise<Answer> {
     const citations = citationIds
       .map((id) => evidenceById.get(id))
       .filter((item): item is StaticEvidence => Boolean(item));
-    const sourceCount = new Set(citations.map((item) => item.source_id)).size;
-    const caution =
-      "\n\n以上内容是对真实外部文献三元组和原文片段的检索式整理，不构成诊断、处方或个体化用药建议。";
     return {
       session_id: sessionId,
       query,
       normalized_query: normalize(query),
       intent,
       answer_text:
-        `在真实外部文献证据中检索到 ${claims.length} 条已审核记录（涉及 ${sourceCount} 个来源）：\n\n` +
-        claims.map((claim) => `- ${claim.text}`).join("\n") +
-        "\n\n右侧证据卡保留了 PMID、原文片段、证据等级和 `external/public` 来源标签。" +
-        caution,
+        `${humanOpening(intent)}\n\n` +
+        claims.map((claim) => claim.text).join("") +
+        `\n\n${humanClosing(intent)}`,
       claims,
       citations,
       graph_paths: paths,
@@ -866,7 +1275,8 @@ export async function askStaticQuestion(query: string): Promise<Answer> {
     normalized_query: normalize(query),
     intent,
     answer_text:
-      "当前已审核真实外部文献证据中没有找到足够直接依据。系统不会使用生成模型补写医学结论，也不会把待审核证据用于正式回答。",
+      "我查了当前已审核的真实证据，暂时没有找到足以直接回答这个问题的材料。"
+      + "为了避免给出没有依据的医学结论，我不会凭常识猜测。你可以换一种更具体的维生素K相关问法。",
     claims: [],
     citations: [],
     graph_paths: [],

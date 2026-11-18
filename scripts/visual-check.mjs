@@ -43,10 +43,8 @@ await page.screenshot({
 
 await page.getByPlaceholder("输入关于维生素K的问题...").fill("维生素K有哪些食物来源？");
 await page.getByRole("button", { name: "发送问题" }).click();
-await page
-  .getByText(/真实(文献抽取关系|证据记录)/)
-  .first()
-  .waitFor({ timeout: 15_000 });
+await page.locator(".assistant-message").last().waitFor({ timeout: 15_000 });
+await page.locator(".citation-card").first().waitFor({ timeout: 15_000 });
 await page.locator(".origin-pill.external").first().waitFor({ timeout: 15_000 });
 await page.locator(".origin-legend.compact").waitFor();
 await page.screenshot({

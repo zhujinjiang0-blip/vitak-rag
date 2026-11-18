@@ -60,7 +60,7 @@ function App() {
               {health.isError
                 ? "知识库加载失败"
                 : STATIC_DEMO_MODE
-                  ? "在线静态演示"
+                  ? "在线真实证据"
                   : "本地知识库"}
             </strong>
             <small>

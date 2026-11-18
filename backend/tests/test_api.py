@@ -10,9 +10,11 @@ def test_public_api_contract_and_internal_auth():
             "/api/v1/qa/query",
             json={"query": "维生素K有哪些食物来源？"},
         )
+        graph_search = client.get("/api/v1/graph/search", params={"q": "Vitamin K"})
+        entity_ids = [item["id"] for item in graph_search.json()["items"][:1]]
         graph = client.post(
             "/api/v1/graph/subgraph",
-            json={"entity_ids": ["vitamin-k"], "depth": 1},
+            json={"entity_ids": entity_ids, "depth": 1},
         )
         protected = client.post(
             "/internal/v1/ingest",
@@ -28,6 +30,8 @@ def test_public_api_contract_and_internal_auth():
         in {"internal", "external", "public", "synthetic"}
         for citation in answer.json()["citations"]
     )
+    assert graph_search.status_code == 200
+    assert entity_ids
     assert graph.status_code == 200
     assert graph.json()["nodes"]
     assert protected.status_code == 401

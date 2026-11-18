@@ -11,6 +11,8 @@ const sharp = require(
 
 const outputDir = "/private/tmp/vitak-rag-visual";
 const baseUrl = process.env.VITAK_WEB_URL || "http://127.0.0.1:5173";
+const expectedVersion = process.env.VITAK_EXPECT_VERSION || "real-public-2026.11";
+const checkInternal = process.env.VITAK_CHECK_INTERNAL === "true";
 await mkdir(outputDir, { recursive: true });
 
 const browser = await chromium.launch({
@@ -41,8 +43,11 @@ await page.screenshot({
 
 await page.getByPlaceholder("输入关于维生素K的问题...").fill("维生素K有哪些食物来源？");
 await page.getByRole("button", { name: "发送问题" }).click();
-await page.getByText("鸡蛋含有维生素K。").waitFor({ timeout: 15_000 });
-await page.locator(".origin-pill.public").first().waitFor({ timeout: 15_000 });
+await page
+  .getByText(/真实(文献抽取关系|证据记录)/)
+  .first()
+  .waitFor({ timeout: 15_000 });
+await page.locator(".origin-pill.external").first().waitFor({ timeout: 15_000 });
 await page.locator(".origin-legend.compact").waitFor();
 await page.screenshot({
   path: `${outputDir}/chat-answer-desktop.png`,
@@ -57,11 +62,25 @@ await page.locator(".safety-panel").waitFor({ timeout: 15_000 });
 await page.getByText("涉及处方、停药或剂量调整的问题必须由医生或药师评估。", {
   exact: false
 }).last().waitFor();
-await page.locator(".message-meta").last().getByText("demo-2026.10.4").waitFor();
+await page.locator(".message-meta").last().getByText(expectedVersion).waitFor();
 await page.screenshot({
   path: `${outputDir}/chat-safety-desktop.png`,
   fullPage: true
 });
+
+if (checkInternal) {
+  await page.getByPlaceholder("输入关于维生素K的问题...").fill(
+    "内部队列中VK1和HOMA-IR有什么关系？"
+  );
+  await page.getByRole("button", { name: "发送问题" }).click();
+  await page.getByText("真实内部队列证据", { exact: false }).waitFor({ timeout: 15_000 });
+  await page.locator(".origin-pill.internal").first().waitFor({ timeout: 15_000 });
+  await page.getByText("基线横断面", { exact: false }).first().waitFor({ timeout: 15_000 });
+  await page.screenshot({
+    path: `${outputDir}/chat-internal-desktop.png`,
+    fullPage: true
+  });
+}
 
 await page.goto(`${baseUrl}/#/graph`, { waitUntil: "networkidle" });
 await page.getByRole("heading", { name: "知识图谱" }).waitFor();
@@ -75,7 +94,8 @@ await page.goto(`${baseUrl}/#/evidence`, { waitUntil: "networkidle" });
 await page.getByPlaceholder("输入关键词、实体或研究主题...").fill("华法林");
 await page.getByRole("button", { name: "检索" }).click();
 await page.locator(".evidence-result-card").first().waitFor({ timeout: 15_000 });
-await page.locator(".origin-pill.public").first().waitFor({ timeout: 15_000 });
+await page.locator(".origin-pill.external").first().waitFor({ timeout: 15_000 });
+await page.locator(".eligibility-pill").first().waitFor({ timeout: 15_000 });
 await page.locator(".origin-filter").waitFor();
 await page.screenshot({
   path: `${outputDir}/evidence-desktop.png`,
@@ -104,6 +124,7 @@ const screenshots = [
   "chat-desktop.png",
   "chat-answer-desktop.png",
   "chat-safety-desktop.png",
+  ...(checkInternal ? ["chat-internal-desktop.png"] : []),
   "graph-desktop.png",
   "evidence-desktop.png",
   "import-desktop.png",

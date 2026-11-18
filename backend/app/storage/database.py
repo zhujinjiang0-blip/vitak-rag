@@ -507,18 +507,30 @@ class MetadataStore:
             ).fetchall()
             return [dict(row) for row in rows]
 
-    def search_fts(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
+    def search_fts(
+        self,
+        query: str,
+        limit: int = 10,
+        source_types: set[str] | None = None,
+    ) -> list[dict[str, Any]]:
         terms = [term for term in tokenize(query).split() if term]
         if not terms:
             return []
         match_query = " OR ".join(f'"{term.replace(chr(34), "")}"' for term in terms)
+        source_clause = ""
+        parameters: list[Any] = [match_query]
+        if source_types:
+            placeholders = ",".join("?" for _ in source_types)
+            source_clause = f"AND e.source_type IN ({placeholders})"
+            parameters.extend(sorted(source_types))
+        parameters.append(limit)
         with self.connect() as connection:
             rows = connection.execute(
-                """
+                f"""
                 SELECT c.id, c.document_id, c.source_id, c.text, c.entity_ids_json,
                        c.locator, s.title, s.source_classification,
                        s.data_origin, s.data_owner, s.access_scope, s.is_demo,
-                       e.source_type, e.review_status, e.input_status,
+                       e.id AS evidence_id, e.source_type, e.review_status, e.input_status,
                        e.fusion_status, e.evidence_status, e.graph_display_role,
                        e.answer_eligible, e.source_record_id, e.source_version,
                        e.source_locator,
@@ -528,10 +540,11 @@ class MetadataStore:
                 JOIN sources s ON s.id = c.source_id
                 LEFT JOIN evidence e ON e.chunk_id = c.id
                 WHERE chunk_fts MATCH ?
+                {source_clause}
                 ORDER BY rank
                 LIMIT ?
                 """,
-                (match_query, limit),
+                parameters,
             ).fetchall()
         return [dict(row) for row in rows]
 

@@ -72,6 +72,18 @@ class Citation(BaseModel):
     locator: str = ""
     snippet: str
     is_demo: bool = True
+    review_status: str = ""
+    input_status: str = ""
+    fusion_status: str = ""
+    evidence_status: str = ""
+    source_version: str = ""
+    source_locator: str = ""
+    analysis_context: str = ""
+    effect_size: str = ""
+    p_value: str = ""
+    q_value: str = ""
+    sample_n: str = ""
+    model_type: str = ""
 
 
 class GraphPath(BaseModel):

@@ -49,6 +49,19 @@ export interface Citation {
   locator: string;
   snippet: string;
   is_demo: boolean;
+  review_status?: string;
+  input_status?: string;
+  fusion_status?: string;
+  evidence_status?: string;
+  answer_eligible?: boolean;
+  source_version?: string;
+  source_locator?: string;
+  analysis_context?: string;
+  effect_size?: string;
+  p_value?: string;
+  q_value?: string;
+  sample_n?: string;
+  model_type?: string;
 }
 
 export interface GraphPath {
@@ -98,6 +111,16 @@ export interface SearchResult {
   data_origin: DataOrigin;
   data_owner: string;
   access_scope: AccessScope;
+  source_type: string;
+  review_status: string;
+  input_status: string;
+  fusion_status: string;
+  evidence_status: string;
+  graph_display_role: string;
+  answer_eligible: boolean;
+  source_record_id: string;
+  source_version: string;
+  source_locator: string;
   snippet: string;
   entity_ids: string[];
   score: number;

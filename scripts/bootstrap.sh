@@ -12,4 +12,5 @@ cd "$ROOT"
 if ! PATH="$NODE_BIN_DIR:$PATH" "$PNPM_BIN" --dir frontend install; then
   PATH="$NODE_BIN_DIR:$PATH" "$PNPM_BIN" --dir frontend approve-builds --all
 fi
-.venv/bin/vitak seed-demo
+cd "$ROOT/backend"
+../.venv/bin/python -m app.cli seed-demo

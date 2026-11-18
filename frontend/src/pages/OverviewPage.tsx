@@ -23,6 +23,14 @@ interface OverviewData {
   unique_entities: number;
   literal_nodes: number;
   sources: number;
+  public_evidence_pack?: {
+    version: string;
+    eligible_literature_records: number;
+    research_only_literature_records: number;
+    internal_records: number;
+    nodes: number;
+    edges: number;
+  };
   datasets: Array<{
     id: string;
     name: string;
@@ -76,8 +84,8 @@ function OverviewPage() {
         <Info size={18} />
         <p>
           <strong>预答辩演示口径：</strong>
-          在线问答运行于精编演示快照（124 个实体、438 条关系）；
-          下方真实三表审计为本地私有导入结果，只公开聚合数字，不上传原始 CSV、内部证据或全量图谱。
+          在线问答读取 1,012 条已审核真实外部文献关系和 1,200 条仅研究检索记录；
+          内部 248 条队列证据只保留在本地私有快照，不上传原始 CSV、内部证据或全量图谱。
         </p>
       </div>
 

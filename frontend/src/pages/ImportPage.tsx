@@ -65,7 +65,7 @@ function ImportPage() {
           <div>
             <span className="eyebrow">数据入口</span>
             <h1>知识库导入</h1>
-            <p>上传功能需要本地 FastAPI 后端，在线 GitHub Pages 版本为只读演示。</p>
+            <p>上传功能需要本地 FastAPI 后端；在线 GitHub Pages 只读取真实外部证据包。</p>
           </div>
           <DatabaseZap size={34} />
         </section>

@@ -637,7 +637,9 @@ a {
 
 .source-type,
 .origin-pill,
-.demo-pill {
+.demo-pill,
+.review-pill,
+.eligibility-pill {
   padding: 3px 6px;
   border-radius: 4px;
   background: #edf2f5;
@@ -672,6 +674,21 @@ a {
   color: #9a5b0a;
 }
 
+.review-pill {
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.eligibility-pill.eligible {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.eligibility-pill.research-only {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
 .citation-card h4 {
   margin: 9px 0 6px;
   font-size: 13px;
@@ -687,6 +704,22 @@ a {
   line-height: 1.6;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
+}
+
+.citation-statline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 9px;
+}
+
+.citation-statline span {
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 9px;
+  line-height: 1.4;
 }
 
 .citation-footer,

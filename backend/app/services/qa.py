@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 import re
 import time
 import uuid
 from dataclasses import dataclass
 from difflib import SequenceMatcher
+from typing import Any
 
 from app.config import Settings
 from app.schemas import (
@@ -115,6 +117,59 @@ RELATION_TEXT = {
     "modulates_postprandial_kinetics_of": "{source}与{target}的餐后动力学变化相关。",
 }
 
+REAL_PREDICATE_TEXT = {
+    "contains": "含有或存在于",
+    "is_antagonized_by": "受到拮抗或存在拮抗关系",
+    "deficiency_causes": "缺乏可导致",
+    "excess_causes": "过量可导致",
+    "regulates_expression_of": "调节表达",
+    "activates_protein": "参与或激活蛋白功能",
+    "has_outcome_biomarker": "关联结局指标",
+    "indicates_risk_of": "提示风险",
+    "cross_sectionally_associated_with": "存在横断面关联",
+    "participates_in_cycle": "参与循环",
+    "is_carboxylated_by": "参与羧化",
+    "measured_by": "通过该指标测量",
+    "reflects_status_of": "反映状态",
+    "is_synthesized_by": "合成来源",
+    "targets_tissue": "作用于组织",
+    "prevents": "预防",
+    "increases": "增加",
+    "reduces": "降低",
+    "affects": "影响",
+    "has_subject": "研究对象或人群",
+    "requires": "需要",
+    "supported_by": "研究类型支持",
+    "has_exposure_intervention": "暴露或干预",
+    "has_exposure_dose_record": "暴露剂量记录",
+    "measured_vitamin_k_form": "测量维生素 K 形式",
+}
+
+QUERY_EXPANSIONS = [
+    ("华法林", ("Warfarin", "antagonist")),
+    ("维生素k", ("Vitamin K", "phylloquinone", "menaquinone")),
+    ("维生素 k", ("Vitamin K", "phylloquinone", "menaquinone")),
+    ("骨钙素", ("Osteocalcin", "carboxylation")),
+    ("血管钙化", ("vascular calcification", "matrix Gla protein")),
+    ("缺乏", ("deficiency", "deficient", "bleeding")),
+    ("食物", ("food", "diet", "vegetable", "leafy", "oil")),
+    ("来源", ("food", "diet", "vegetable", "leafy", "oil")),
+    ("检测", ("plasma", "serum", "biomarker", "measured")),
+    ("指标", ("plasma", "serum", "biomarker", "measured")),
+    ("新生儿", ("newborn", "infant", "neonatal")),
+    ("孕妇", ("pregnancy", "pregnant", "maternal")),
+    ("胰岛素", ("insulin",)),
+    ("血糖", ("glucose", "GLU")),
+    ("糖化", ("HbA1c",)),
+    ("维生素d", ("vitamin D",)),
+    ("肥胖", ("obesity", "BMI")),
+    ("内部", ("VK1", "MK-7", "MK-4", "GLU")),
+    ("队列", ("VK1", "MK-7", "MK-4", "GLU")),
+    ("绿叶蔬菜", ("green leafy vegetables", "vegetable", "leafy")),
+    ("mk-7", ("MK-7", "menaquinone-7")),
+    ("pivka", ("PIVKA-II", "proteins induced by vitamin K absence")),
+]
+
 
 INTENT_PREDICATES = {
     "functions": {"SUPPORTS", "PARTICIPATES_IN", "ACTIVATES", "DISRUPTS", "CAN_CAUSE", "CAN_ALTER"},
@@ -183,12 +238,24 @@ class GraphAnswerEngine:
         normalized = re.sub(r"\s+", "", query.strip().lower())
         replacements = {
             "维生素 k": "维生素k",
-            "维他命k": "维生素k",
             "维k": "维生素k",
             "phylloquinone": "维生素k1",
             "menaquinone": "维生素k2",
             "inr": "国际标准化比值",
             "pt": "凝血酶原时间",
+            "维生素k": "vitamink",
+            "维他命k": "vitamink",
+            "叶绿醌": "phylloquinone",
+            "甲萘醌": "menaquinone",
+            "华法林": "warfarin",
+            "骨钙素": "osteocalcin",
+            "胰岛素": "insulin",
+            "血糖": "glucose",
+            "维生素d": "vitamind",
+            "基质gla蛋白": "matrixglaprotein",
+            "异常凝血酶原": "pivkaii",
+            "绿叶蔬菜": "greenleafyvegetables",
+            "深绿色叶菜": "greenleafyvegetables",
         }
         for old, new in replacements.items():
             normalized = normalized.replace(old, new)
@@ -226,12 +293,36 @@ class GraphAnswerEngine:
             entities = [node for node in prior_entities if self.graph.get_node(node.id)]
 
         intent = self._detect_intent(query)
+        related = self._related_entities(query, entities)
+        if not self.snapshot.data_version.is_demo:
+            text_answer = self._text_evidence_answer(
+                query=query,
+                normalized=normalized,
+                session_id=session_id,
+                intent=intent,
+                entities=entities,
+                related=related,
+                started=started,
+            )
+            if text_answer:
+                return text_answer
+
         facts, paths = self._retrieve_facts(entities, intent, query)
         if facts and not paths:
             paths = self._facts_as_paths(facts)
-        related = self._related_entities(query, entities)
 
         if not facts and not paths:
+            text_answer = self._text_evidence_answer(
+                query=query,
+                normalized=normalized,
+                session_id=session_id,
+                intent=intent,
+                entities=entities,
+                related=related,
+                started=started,
+            )
+            if text_answer:
+                return text_answer
             answer_text = (
                 "当前知识库没有足够证据回答这个问题。"
                 "系统不会使用生成模型补写医学结论。你可以查看下面的相关实体，或换一种更具体的问法。"
@@ -252,6 +343,17 @@ class GraphAnswerEngine:
 
         claims = self._build_claims(facts, paths)
         if not claims:
+            text_answer = self._text_evidence_answer(
+                query=query,
+                normalized=normalized,
+                session_id=session_id,
+                intent=intent,
+                entities=entities,
+                related=related,
+                started=started,
+            )
+            if text_answer:
+                return text_answer
             answer_text = (
                 "当前知识库没有足够可正式引用的证据回答这个问题。"
                 "候选或待审核证据可在研究检索中查看，但不会用于正式回答。"
@@ -347,8 +449,9 @@ class GraphAnswerEngine:
 
     def _link_entities(self, query: str) -> list[GraphNode]:
         normalized = self.normalize(query)
-        matched: list[tuple[int, int, GraphNode]] = []
+        matched: list[tuple[int, int, int, GraphNode]] = []
         for node in self.graph.all_nodes():
+            source_priority = 0 if node.id.startswith("ENT_") else 1
             aliases = [node.name, node.id, *node.aliases]
             for alias in aliases:
                 candidate = self.normalize(alias)
@@ -356,12 +459,12 @@ class GraphAnswerEngine:
                     continue
                 start = normalized.find(candidate)
                 while start >= 0:
-                    matched.append((len(candidate), start, node))
+                    matched.append((len(candidate), start, source_priority, node))
                     start = normalized.find(candidate, start + 1)
-        matched.sort(key=lambda item: (-item[0], item[1]))
+        matched.sort(key=lambda item: (-item[0], item[1], item[2]))
         output: list[GraphNode] = []
         accepted_spans: list[tuple[int, int]] = []
-        for length, start, node in matched:
+        for length, start, _priority, node in matched:
             end = start + length
             if any(start < existing_end and end > existing_start for existing_start, existing_end in accepted_spans):
                 continue
@@ -449,6 +552,160 @@ class GraphAnswerEngine:
 
         facts.sort(key=lambda item: (-item.edge.confidence, item.neighbor.name))
         return facts[:12], []
+
+    @staticmethod
+    def _expanded_text_query(query: str) -> str:
+        lowered = query.lower()
+        terms: list[str] = []
+        for trigger, expansions in QUERY_EXPANSIONS:
+            if trigger in lowered:
+                terms.extend(expansions)
+        terms.extend(re.findall(r"[A-Za-z][A-Za-z0-9-]{2,}", query))
+        return " ".join(dict.fromkeys(term for term in terms if term))
+
+    def _text_evidence_answer(
+        self,
+        *,
+        query: str,
+        normalized: str,
+        session_id: str,
+        intent: str,
+        entities: list[GraphNode],
+        related: list[GraphNode],
+        started: float,
+    ) -> Answer | None:
+        expanded_query = self._expanded_text_query(query)
+        if not expanded_query:
+            return None
+        query_lower = query.lower()
+        source_types: set[str] | None = None
+        if "内部" in query_lower or "队列" in query_lower:
+            source_types = {"internal"}
+        elif "外部" in query_lower or "文献" in query_lower:
+            source_types = {"literature", "structured"}
+        rows = self.metadata.search_fts(
+            expanded_query,
+            limit=24,
+            source_types=source_types,
+        )
+
+        evidence_ids = list(
+            dict.fromkeys(
+                str(row["evidence_id"])
+                for row in rows
+                if row.get("evidence_id")
+                and bool(row.get("answer_eligible", 1))
+            )
+        )
+        if not evidence_ids:
+            return None
+
+        entity_names = {
+            self.normalize(value)
+            for node in entities
+            for value in [node.name, *node.aliases]
+            if value
+        }
+
+        def matches_entity(label: str) -> bool:
+            candidate = self.normalize(label)
+            return any(
+                name == candidate
+                or (len(name) >= 5 and candidate.startswith(name))
+                for name in entity_names
+            )
+
+        prepared: list[tuple[int, str, dict[str, Any], dict[str, Any]]] = []
+        for evidence in self.metadata.get_evidence_many(evidence_ids[:24]):
+            try:
+                metadata = json.loads(evidence.get("metadata_json") or "{}")
+            except (json.JSONDecodeError, TypeError):
+                metadata = {}
+            subject = str(metadata.get("subject_label") or "").strip()
+            target = str(metadata.get("object_label") or "").strip()
+            match_count = int(matches_entity(subject)) + int(matches_entity(target))
+            if entities and match_count == 0:
+                continue
+            prepared.append((match_count, str(evidence["id"]), evidence, metadata))
+
+        if entities and len(entities) >= 2:
+            pair_matches = [item for item in prepared if item[0] >= 2]
+            if pair_matches:
+                prepared = pair_matches
+        prepared.sort(
+            key=lambda item: (
+                -item[0],
+                0 if item[2].get("source_type") == "internal" and "内部" in query else 1,
+            )
+        )
+
+        claims: list[Claim] = []
+        seen_claims: set[str] = set()
+        origins: set[str] = set()
+        for _match_count, evidence_id, evidence, metadata in prepared:
+            subject = str(metadata.get("subject_label") or "").strip()
+            predicate = str(metadata.get("predicate") or "").strip()
+            target = str(metadata.get("object_label") or "").strip()
+            if not subject or not predicate or not target:
+                continue
+            relation = REAL_PREDICATE_TEXT.get(predicate)
+            if relation:
+                text = f"真实证据记录：{subject} {relation} {target}。"
+            else:
+                template = RELATION_TEXT.get(predicate)
+                if template:
+                    text = template.format(source=subject, target=target)
+                else:
+                    text = f"真实证据抽取关系：{subject} — {predicate} → {target}。"
+            origin = str(evidence.get("data_origin") or "")
+            origin_label = "内部队列" if origin == "internal" else "外部文献"
+            claim_text = f"{origin_label}：{text}"
+            if claim_text in seen_claims:
+                continue
+            seen_claims.add(claim_text)
+            claims.append(
+                Claim(
+                    id=f"claim-{uuid.uuid4().hex[:10]}",
+                    text=claim_text,
+                    evidence_ids=[evidence_id],
+                    relation=predicate,
+                )
+            )
+            origins.add(origin)
+            if len(claims) >= 5:
+                break
+
+        if not claims:
+            return None
+        citations = self._citations_for_claims(claims)
+        origin_text = "、".join(
+            "内部队列" if origin == "internal" else "外部文献"
+            for origin in sorted(origins)
+        )
+        answer_text = (
+            f"在真实{origin_text}证据中检索到 {len(claims)} 条已审核记录：\n\n"
+            + "\n".join(f"- {claim.text}" for claim in claims)
+            + "\n\n右侧证据卡保留来源定位和审核状态；内部证据仅在本地私有快照中使用。"
+        )
+        answer = Answer(
+            session_id=session_id,
+            query=query,
+            normalized_query=normalized,
+            intent=intent,
+            answer_text=answer_text,
+            claims=claims,
+            citations=citations,
+            sufficiency=(
+                EvidenceSufficiency.SUFFICIENT
+                if len(claims) >= 2
+                else EvidenceSufficiency.PARTIAL
+            ),
+            related_entities=related[:6],
+            data_version=self.snapshot.data_version,
+            elapsed_ms=int((time.perf_counter() - started) * 1000),
+        )
+        self._finish_answer(answer)
+        return answer
 
     def _facts_as_paths(self, facts: list[RetrievedFact]) -> list[GraphPath]:
         output: list[GraphPath] = []
@@ -575,6 +832,36 @@ class GraphAnswerEngine:
                     locator=evidence["locator"],
                     snippet=evidence["chunk_text"],
                     is_demo=bool(evidence["is_demo"]),
+                    review_status=evidence["review_status"] or "",
+                    input_status=evidence["input_status"] or "",
+                    fusion_status=evidence["fusion_status"] or "",
+                    evidence_status=evidence["evidence_status"] or "",
+                    source_version=evidence["source_version"] or "",
+                    source_locator=evidence["source_locator"] or "",
+                    analysis_context=json.loads(evidence["metadata_json"] or "{}").get(
+                        "analysis_context",
+                        "",
+                    ),
+                    effect_size=json.loads(evidence["metadata_json"] or "{}").get(
+                        "effect_size",
+                        "",
+                    ),
+                    p_value=json.loads(evidence["metadata_json"] or "{}").get(
+                        "p_value",
+                        "",
+                    ),
+                    q_value=json.loads(evidence["metadata_json"] or "{}").get(
+                        "q_value",
+                        "",
+                    ),
+                    sample_n=json.loads(evidence["metadata_json"] or "{}").get(
+                        "sample_n",
+                        "",
+                    ),
+                    model_type=json.loads(evidence["metadata_json"] or "{}").get(
+                        "model_type",
+                        "",
+                    ),
                 )
             )
         return citations
@@ -600,8 +887,6 @@ class GraphAnswerEngine:
             metadata = message.get("metadata_json")
             if not metadata:
                 continue
-            import json
-
             payload = json.loads(metadata)
             nodes = [
                 node

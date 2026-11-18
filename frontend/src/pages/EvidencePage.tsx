@@ -41,7 +41,7 @@ function EvidencePage() {
         <div>
           <span className="eyebrow">来源片段检索</span>
           <h1>证据检索</h1>
-          <p>同时使用中文全文索引和向量召回，结果中的所有来源均来自当前版本。</p>
+          <p>检索真实外部文献证据，并区分可用于正式回答与仅用于研究审核的记录。</p>
         </div>
         <BookOpenText size={34} />
       </section>
@@ -68,8 +68,7 @@ function EvidencePage() {
             ["all", "全部"],
             ["internal", "内部"],
             ["external", "外部"],
-            ["public", "公开"],
-            ["synthetic", "合成"]
+            ["public", "公开"]
           ].map(([value, label]) => (
             <button
               type="button"
@@ -90,7 +89,7 @@ function EvidencePage() {
         <div className="evidence-empty">
           <BookOpenText size={42} />
           <h2>从知识库中查找来源</h2>
-          <p>尝试搜索“华法林”“食物来源”“新生儿”或“检测指标”。</p>
+          <p>尝试搜索“华法林”“骨钙素”“绿叶蔬菜”“MK-7”或“PIVKA-II”。</p>
         </div>
       ) : (
         <div className="evidence-results">
@@ -100,6 +99,11 @@ function EvidencePage() {
                 <span>{item.source_id}</span>
                 <span className={`origin-pill ${item.data_origin}`}>
                   {originLabel(item.data_origin)}
+                </span>
+                <span
+                  className={`eligibility-pill ${item.answer_eligible ? "eligible" : "research-only"}`}
+                >
+                  {item.answer_eligible ? "可用于正式回答" : "仅研究检索"}
                 </span>
                 {item.is_demo && <span className="demo-pill">演示数据</span>}
                 <span className="result-score">匹配度 {Math.round(item.score * 100)}%</span>
@@ -114,7 +118,9 @@ function EvidencePage() {
                 </div>
               )}
               <div className="result-link">
-                <span>{item.data_owner || item.source_classification || item.chunk_id}</span>
+                <span>
+                  {item.review_status} · {item.source_version || item.data_owner || item.chunk_id}
+                </span>
                 <ExternalLink size={14} />
               </div>
             </article>

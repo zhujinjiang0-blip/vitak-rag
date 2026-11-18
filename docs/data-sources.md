@@ -14,6 +14,19 @@
 
 `aligned_triples.csv` 是早期外部文献抽取产物，可作为历史中间文件；当前统一导入入口使用 42 列三表格式。
 
+## 部署数据边界
+
+| 运行环境 | 外部数据 | 内部数据 | 用途 |
+| --- | --- | --- | --- |
+| GitHub Pages 公网版 | 1,012 条已审核真实外部文献证据 + 1,200 条仅研究检索记录 | 不发布 | 导师可直接访问的真实外部证据演示 |
+| 本地 FastAPI 全栈版 | 73,148 条外部证据 | 248 条真实内部队列证据，`internal/private` | 完整内外数据联合检索与预答辩演示 |
+
+公网数据包由 [`scripts/export-public-evidence.py`](../scripts/export-public-evidence.py) 生成。脚本只读取外部文献表，并强制过滤：
+
+- 正式回答证据：`accepted` 或 `adopted_with_warning`，且 `input_status=adopted`。
+- 研究检索证据：最多 1,200 条 `manual_pending` 或 `provisional` 记录，明确标记为不可用于正式回答。
+- 不读取、不打包任何内部 CSV。
+
 ## 统一 42 列字段
 
 ### 三元组核心
@@ -127,6 +140,22 @@ cd backend
 
 本地页面 `http://127.0.0.1:5173/#/import` 也支持逐表上传 42 列 CSV，但需要同时运行 FastAPI，并提交内部接口令牌。
 
+生成本地演示使用的完整内外数据快照后，执行：
+
+```bash
+../.venv/bin/python -m app.cli snapshot-validate vitak-real-2026.11
+../.venv/bin/python -m app.cli snapshot-activate vitak-real-2026.11
+```
+
+生成公网真实外部证据包：
+
+```bash
+../.venv/bin/python ../scripts/export-public-evidence.py \
+  path/to/literature_triples_final.csv
+```
+
+输出文件为 `frontend/public/real-evidence.json`，不包含内部证据。
+
 ## 当前审计结果
 
 | 指标 | 结果 |
@@ -142,4 +171,4 @@ cd backend
 | 空必填字段 | 0 |
 | 重复 `edge_id` | 0 |
 
-原始 CSV、内部证据、全量私有快照和审计明细只保存在本机，不进入 GitHub、GitHub Pages 或飞书。
+内部证据卡会展示 `internal/private`、审核状态、分析语境、模型类型、样本量、效应量和 P 值。原始 CSV、内部证据、全量私有快照和审计明细只保存在本机，不进入 GitHub、GitHub Pages 或飞书。

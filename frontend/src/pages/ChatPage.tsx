@@ -10,6 +10,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { askQuestion } from "../lib/api";
+import { STATIC_DEMO_MODE } from "../lib/staticDemo";
 import type { Answer } from "../lib/types";
 import DataSourceLegend from "../components/DataSourceLegend";
 
@@ -20,13 +21,22 @@ interface Message {
   answer?: Answer;
 }
 
-const SUGGESTIONS = [
+const PUBLIC_SUGGESTIONS = [
   "维生素K有哪些食物来源？",
   "华法林和维生素K有什么关系？",
-  "维生素K缺乏会影响什么？",
-  "INR可以用来评估什么？",
-  "新生儿为什么需要维生素K预防？",
-  "维生素K1和K2有什么区别？"
+  "维生素K1和K2有什么区别？",
+  "骨钙素与维生素K2有什么关系？",
+  "MK-7有哪些随机对照研究证据？",
+  "PIVKA-II可以反映什么？"
+];
+
+const PRIVATE_SUGGESTIONS = [
+  "维生素K有哪些食物来源？",
+  "华法林和维生素K有什么关系？",
+  "骨钙素与维生素K2有什么关系？",
+  "MK-7有哪些随机对照研究证据？",
+  "内部队列中MK-7和胰岛素有什么关系？",
+  "内部队列中VK1和HOMA-IR有什么关系？"
 ];
 
 function ChatPage() {
@@ -99,7 +109,11 @@ function ChatPage() {
           <div>
             <span className="eyebrow">知识图谱检索</span>
             <h1>维K智问</h1>
-            <p>回答由已审核图谱关系和来源片段组装，不调用生成式模型。</p>
+            <p>
+              {STATIC_DEMO_MODE
+                ? "回答由真实外部文献证据和原文片段确定性组装，不调用生成式模型。"
+                : "回答可使用真实外部文献与本地内部队列证据，不调用生成式模型。"}
+            </p>
           </div>
           <div className="knowledge-badge">
             <Sparkles size={17} />
@@ -116,7 +130,7 @@ function ChatPage() {
                 系统会先定位实体，再查询图谱路径和原始证据。知识库无法支持的问题会明确拒答。
               </p>
               <div className="suggestion-grid">
-                {SUGGESTIONS.map((suggestion) => (
+                {(STATIC_DEMO_MODE ? PUBLIC_SUGGESTIONS : PRIVATE_SUGGESTIONS).map((suggestion) => (
                   <button
                     key={suggestion}
                     className="suggestion-button"
@@ -248,12 +262,33 @@ function ChatPage() {
                       <span className={`origin-pill ${citation.data_origin}`}>
                         {originLabel(citation.data_origin)}
                       </span>
+                      {citation.review_status && (
+                        <span className="review-pill">{citation.review_status}</span>
+                      )}
                       {citation.is_demo && <span className="demo-pill">演示</span>}
                     </div>
                     <h4>{citation.source_title}</h4>
                     <p>{citation.snippet}</p>
+                    {(citation.analysis_context ||
+                      citation.model_type ||
+                      citation.sample_n ||
+                      citation.effect_size ||
+                      citation.p_value) && (
+                      <div className="citation-statline">
+                        {citation.analysis_context && <span>分析：{citation.analysis_context}</span>}
+                        {citation.model_type && <span>模型：{citation.model_type}</span>}
+                        {citation.sample_n && <span>n={citation.sample_n}</span>}
+                        {citation.effect_size && <span>效应：{citation.effect_size}</span>}
+                        {citation.p_value && <span>P={citation.p_value}</span>}
+                      </div>
+                    )}
                     <div className="citation-footer">
-                      <span>{citation.data_owner || citation.locator || citation.source_id}</span>
+                      <span>
+                        {citation.source_version ||
+                          citation.data_owner ||
+                          citation.locator ||
+                          citation.source_id}
+                      </span>
                       {citation.url && (
                         <a href={citation.url} target="_blank" rel="noreferrer">
                           查看来源 <ExternalLink size={13} />

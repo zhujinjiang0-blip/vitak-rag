@@ -2,20 +2,20 @@
 
 VitaK-RAG 是一个面向营养学、临床、药学和医学信息学研究人员的维生素 K 知识图谱检索与证据追溯原型。系统使用 FastAPI、React、Kuzu、Chroma 和 SQLite，问答运行时**不调用生成式大模型**。回答由经过版本化管理的实体关系、证据路径和来源片段确定性组装。
 
-预答辩版本采用两层数据口径：
+预答辩版本采用双轨数据边界：
 
-- **在线问答层**：使用公开可核验事实和明确标记的合成 RCT 精编快照，保证公网演示稳定且不暴露内部数据。
-- **真实数据审计层**：73,396 条外部文献、外部结构化和内部队列证据已在本地私有快照完成导入、校验和聚合审计；公网只展示脱敏聚合数字。
+- **公网真实外部证据版**：GitHub Pages 使用 1,012 条已审核且可正式回答的真实外部文献关系，另含 1,200 条明确标记为“仅研究检索”的待审或暂定真实文献记录。
+- **本地真实内外数据版**：FastAPI 后端激活 `vitak-real-2026.11` 私有快照，可同时检索 73,148 条外部证据和 248 条内部队列证据。内部数据仍标记为 `internal/private`。
 
 ## 在线演示
 
-GitHub Pages 版本会把演示快照导出到浏览器，直接运行同一套确定性问答、图谱浏览和证据检索逻辑，无需安装环境：
+GitHub Pages 版本会把真实外部证据包加载到浏览器，直接运行确定性问答、图谱浏览和证据检索逻辑，无需安装环境：
 
 <https://zhujinjiang0-blip.github.io/vitak-rag/>
 
 在线演示不包含 FastAPI 文件入库和内部审核接口；这些能力仍通过仓库中的完整后端在本地运行。
 
-预答辩建议从“项目概览”进入，页面会展示真实三表的聚合审计结果、内外部来源说明、问答演示口径和建议演示路径。
+预答辩建议从“项目概览”进入，页面会展示真实三表的聚合审计结果、内外部来源说明和问答演示口径。
 
 ```text
 structured_triples_final.csv   60,030 条
@@ -24,16 +24,18 @@ internal_evidence_final.csv       248 条
 合计                            73,396 条
 ```
 
-真实 CSV、内部证据和全量私有快照只保存在本机，不进入 GitHub、GitHub Pages 或飞书。完整演示流程见 [`docs/pre-defense-demo.md`](docs/pre-defense-demo.md)。
+公网只发布经筛选的真实外部文献证据片段。原始 CSV、内部证据、个体级数据和全量私有快照只保存在本机，不进入 GitHub、GitHub Pages 或飞书。完整演示流程见 [`docs/pre-defense-demo.md`](docs/pre-defense-demo.md)。
 
 ![问答界面](docs/screenshots/chat-answer-desktop.png)
 
 ## 已实现能力
 
 - 六领域维生素 K 属性图：生理代谢、食物营养、药物相互作用、临床疾病、检测评估、指南与 RCT。
-- 124 个精编演示实体、438 条带证据关系、40 个来源、120 个知识片段和 80 道评测问题。
+- 公网真实外部证据包包含 1,012 条正式回答证据、1,200 条研究检索证据、962 个实体和 2,212 条关系。
+- 本地私有快照包含 73,396 条真实证据、36,638 个实体和 73,279 条关系，其中内部队列证据 248 条。
 - 实体别名链接、规则意图识别、白名单图查询、1-2 跳路径检索和模板化回答。
-- 每条回答均绑定来源片段；证据不足时明确拒答，不使用模型补写。
+- 每条回答均绑定 PMID 或内部统计来源定位；内部证据卡片显示分析语境、模型、样本量、效应量和 P 值。
+- 证据不足时明确拒答，不使用模型补写；待审核和暂定证据不进入正式回答。
 - 药物剂量、停药、诊断和紧急症状规则优先于普通知识检索。
 - React 五页应用：项目概览、智能问答、知识图谱、证据检索和本地数据入口。
 - 文档入库、审核队列、版本快照、索引重建和三方案评测命令行。
@@ -43,13 +45,15 @@ internal_evidence_final.csv       248 条
 
 ```text
 backend/                 FastAPI、图谱查询、RAG 检索、数据管道和评测
-frontend/                React + TypeScript + Vite 三页应用
+frontend/                React + TypeScript + Vite 五页应用
 data/snapshots/          版本化运行快照，首次启动自动生成
 data/eval/               评测题集与报告
 scripts/
   bootstrap.sh           安装依赖并生成演示快照
   dev.sh                 同时启动前后端
+  export-public-evidence.py  从真实文献表生成公网外部证据包
   visual-check.mjs       浏览器交互、截图和布局检查
+  public-qa-smoke.mjs    公网真实证据问答冒烟测试
 ```
 
 后端使用 Kuzu 存储属性图，Chroma 存储向量，SQLite FTS5 + Jieba 提供中文关键词检索。元数据和审核状态保存在同一快照的 SQLite 文件中。
@@ -61,7 +65,7 @@ scripts/
 - `access_scope`：`private`、`controlled` 或 `public`。
 - `source_classification`：`internal_rct`、`internal_database`、`guideline`、`review` 等细分类。
 
-内部导入默认标记为 `internal/private`，公开资料标记为 `public`，合成 RCT 标记为 `synthetic`。这些字段会随 Citation 一并返回并展示在证据卡片中。
+内部导入默认标记为 `internal/private`，外部文献和结构化资料标记为 `external/public`。旧演示快照仍保留 `synthetic` 兼容能力，但当前公网真实证据包不包含合成数据。
 
 项目真实数据按以下三张表组织：
 
@@ -73,7 +77,7 @@ scripts/
 
 ## 本地启动
 
-当前开发环境已经安装依赖并生成演示快照，可以直接启动：
+当前开发环境已激活包含真实外部和内部证据的私有快照，可以直接启动：
 
 ```bash
 make api
@@ -81,6 +85,8 @@ make web
 ```
 
 浏览器访问 `http://127.0.0.1:5173`，API 文档位于 `http://127.0.0.1:8000/docs`。
+
+本地问答主页同时提供外部证据问题和内部队列示例，例如“内部队列中 VK1 和 HOMA-IR 有什么关系？”。
 
 本地数据入口位于 `http://127.0.0.1:5173/#/import`：
 
@@ -107,13 +113,13 @@ make web
 ```bash
 cd backend
 
-# 创建或恢复演示快照
+# 创建或恢复旧演示快照
 ../.venv/bin/python -m app.cli seed-demo
 
 # 查看、校验、激活和回滚快照
 ../.venv/bin/python -m app.cli snapshot-list
-../.venv/bin/python -m app.cli snapshot-validate demo-2026.10.4
-../.venv/bin/python -m app.cli snapshot-activate demo-2026.10.4
+../.venv/bin/python -m app.cli snapshot-validate vitak-real-2026.11
+../.venv/bin/python -m app.cli snapshot-activate vitak-real-2026.11
 
 # 导入外部文献 aligned_triples.csv
 ../.venv/bin/python -m app.cli import-external-triples path/to/aligned_triples.csv
@@ -130,6 +136,10 @@ cd backend
   path/to/internal_evidence_final.csv \
   path/to/literature_triples_final.csv \
   path/to/structured_triples_final.csv
+
+# 从真实文献表生成可公开的静态外部证据包
+../.venv/bin/python ../scripts/export-public-evidence.py \
+  path/to/literature_triples_final.csv
 
 # 导入文本型 PDF、DOCX、TXT、Markdown、JSON、XML、HTML、CSV 或 XLSX
 ../.venv/bin/python -m app.cli ingest path/to/document.pdf --title "材料名称"
@@ -157,8 +167,9 @@ Kuzu 使用文件锁。运行 CLI 时若 API 正在访问同一快照，可能�
 2. 通过确定性规则识别食物来源、相互作用、缺乏风险、检测指标等意图。
 3. 从 Kuzu 查询白名单关系，最多扩展两跳路径。
 4. 从 SQLite FTS5 和 Chroma 召回来源片段。
-5. 根据来源、证据等级、抽取置信度和路径长度组装回答。
-6. 如果证据不足，返回拒答和相关实体，不生成未经知识库支持的内容。
+5. 真实数据快照优先使用实体别名扩展后的 FTS 和 Chroma 证据检索，并按 `answer_eligible` 过滤待审核记录。
+6. 根据来源、证据等级、抽取置信度和路径长度组装回答。
+7. 如果证据不足，返回拒答和相关实体，不生成未经知识库支持的内容。
 
 公共接口：
 
@@ -182,7 +193,7 @@ Kuzu 使用文件锁。运行 CLI 时若 API 正在访问同一快照，可能�
 
 ## 评测结果
 
-当前演示快照上运行 80 道分层问题的结果位于 `data/eval/report.json`：
+旧版 124 实体演示快照上运行 80 道分层问题的结果位于 `data/eval/report.json`：
 
 | 方法 | Recall@5 | MRR@10 | nDCG@10 | 路径命中率 | P95 |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -190,7 +201,7 @@ Kuzu 使用文件锁。运行 CLI 时若 API 正在访问同一快照，可能�
 | 纯图谱检索 | 0.762 | 0.734 | 0.764 | 0.813 | 24.7 ms |
 | KG混合检索 | 0.887 | 0.859 | 0.889 | 0.938 | 30.4 ms |
 
-无证据问题拒答准确率为 1.0。演示数据上的结果只能证明管线可运行，不能替代真实毕业设计数据上的最终实验结论。
+无证据问题拒答准确率为 1.0。该结果只能证明检索与评测管线可运行，新的真实证据问答仍需继续扩充人工标注题集。
 
 ## 测试与界面验收
 
@@ -208,5 +219,5 @@ node scripts/visual-check.mjs
 - 无用户账号、公开文件上传和开放式数据管理后台。
 - 公网只提供 GitHub Pages 只读静态演示，FastAPI 后端不暴露到公网。
 - 无扫描件 OCR 和复杂 PDF 版面还原。
-- 演示来源与合成 RCT 不可用于临床决策。
+- 文献抽取关系仍需持续进行谓词归一、人工复核和真实问题覆盖评测。
 - 所有内容仅用于知识检索和科普演示，不能替代医生诊断、处方或个体化用药建议。

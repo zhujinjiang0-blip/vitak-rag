@@ -8,6 +8,14 @@
   "unique_entities": 36638,
   "literal_nodes": 25527,
   "sources": 566,
+  "public_evidence_pack": {
+    "version": "real-public-2026.11",
+    "eligible_literature_records": 1012,
+    "research_only_literature_records": 1200,
+    "internal_records": 0,
+    "nodes": 962,
+    "edges": 2212
+  },
   "datasets": [
     {
       "id": "structured",
@@ -47,7 +55,7 @@
     "智能问答"
   ],
   "limits": [
-    "在线版本只读取演示快照，不上传真实文件",
+    "在线问答只读取真实外部文献证据包，不公开内部队列数据",
     "正式回答不引用候选、暂定或重复合并证据",
     "内部原始队列数据只保存在本地私有快照",
     "当前问答采用确定性图谱检索和模板回答，不使用运行时生成模型"

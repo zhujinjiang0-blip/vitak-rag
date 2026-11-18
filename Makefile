@@ -4,7 +4,7 @@ bootstrap:
 	./scripts/bootstrap.sh
 
 seed:
-	.venv/bin/vitak seed-demo
+	cd backend && ../.venv/bin/python -m app.cli seed-demo
 
 api:
 	cd backend && ../.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
@@ -22,4 +22,4 @@ build:
 	cd frontend && PATH="/Users/kevin/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$$PATH" /Users/kevin/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback/pnpm build
 
 evaluate:
-	.venv/bin/vitak evaluate
+	cd backend && ../.venv/bin/python -m app.cli evaluate

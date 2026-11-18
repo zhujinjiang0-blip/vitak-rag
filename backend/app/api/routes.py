@@ -119,7 +119,8 @@ def search(
 ) -> SearchResponse:
     snapshot = _snapshot(request)
     combined: dict[str, SearchResult] = {}
-    for row in snapshot.metadata.search_fts(q, limit=limit):
+    expanded_query = _engine(request)._expanded_text_query(q) or q
+    for row in snapshot.metadata.search_fts(expanded_query, limit=limit):
         score = 1.0 / (1.0 + abs(float(row["rank"] or 0.0)))
         combined[row["id"]] = SearchResult(
             chunk_id=row["id"],
@@ -146,10 +147,8 @@ def search(
             is_demo=bool(row["is_demo"]),
         )
 
-    for item in snapshot.vectors.search(q, limit=limit):
+    for item in snapshot.vectors.search(expanded_query, limit=limit):
         chunk_id = item["chunk_id"]
-        if not chunk_id.startswith(("src-", "pub-", "rct-demo-")):
-            continue
         vector_metadata = item.get("metadata") or {}
         if vector_metadata.get("kind") == "graph_summary":
             continue

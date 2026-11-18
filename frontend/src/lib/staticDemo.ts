@@ -17,6 +17,9 @@ export const STATIC_DEMO_MODE = import.meta.env.VITE_STATIC_DEMO === "true";
 interface StaticEvidence extends Citation {
   document_id: string;
   entity_ids: string[];
+  predicate?: string;
+  evidence_status?: string;
+  graph_display_role?: string;
 }
 
 interface StaticData {
@@ -30,7 +33,7 @@ let dataPromise: Promise<StaticData> | null = null;
 
 function loadData(): Promise<StaticData> {
   if (!dataPromise) {
-    dataPromise = fetch(`${import.meta.env.BASE_URL}demo-data.json`).then((response) => {
+    dataPromise = fetch(`${import.meta.env.BASE_URL}real-evidence.json`).then((response) => {
       if (!response.ok) throw new Error(`静态知识库加载失败：${response.status}`);
       return response.json() as Promise<StaticData>;
     });
@@ -393,12 +396,24 @@ export async function searchStaticEvidence(query: string): Promise<{
   total: number;
 }> {
   const data = await loadData();
-  const terms = normalize(query)
-    .split(/[，。！？、,.!?和与及]/)
-    .filter((term) => term.length > 0);
+  const nodeById = new Map(data.nodes.map((node) => [node.id, node]));
+  const terms = [
+    ...new Set([
+      ...normalize(query)
+        .split(/[，。！？、,.!?和与及]/)
+        .filter((term) => term.length > 0),
+      ...semanticTerms(query)
+    ])
+  ];
   const items = data.evidence
     .map((item) => {
-      const haystack = normalize(`${item.source_title}${item.snippet}${item.publisher}`);
+      const entities = item.entity_ids
+        .map((entityId) => nodeById.get(entityId))
+        .filter((node): node is GraphNode => Boolean(node));
+      const haystack = normalize(
+        `${item.source_title} ${item.snippet} ${item.publisher} ${item.predicate ?? ""} ` +
+          entities.flatMap((node) => [node.name, ...node.aliases]).join(" ")
+      );
       const score = terms.length
         ? terms.filter((term) => haystack.includes(term)).length / terms.length
         : 0;
@@ -411,6 +426,16 @@ export async function searchStaticEvidence(query: string): Promise<{
         data_origin: item.data_origin,
         data_owner: item.data_owner,
         access_scope: item.access_scope,
+        source_type: item.source_type,
+        review_status: item.review_status ?? "accepted",
+        input_status: item.input_status ?? "adopted",
+        fusion_status: item.fusion_status ?? "accepted",
+        evidence_status: item.evidence_status ?? "",
+        graph_display_role: item.graph_display_role ?? "",
+        answer_eligible: item.answer_eligible ?? true,
+        source_record_id: item.source_id,
+        source_version: item.source_version ?? "",
+        source_locator: item.source_locator ?? item.locator,
         snippet: item.snippet,
         entity_ids: item.entity_ids,
         score,
@@ -421,6 +446,166 @@ export async function searchStaticEvidence(query: string): Promise<{
     .sort((left, right) => right.score - left.score)
     .slice(0, 20);
   return { items, total: items.length };
+}
+
+const PREDICATE_LABELS: Record<string, string> = {
+  contains: "含有/存在于",
+  is_antagonized_by: "受到拮抗/存在拮抗关系",
+  deficiency_causes: "缺乏可导致",
+  excess_causes: "过量可导致",
+  regulates_expression_of: "调节表达",
+  activates_protein: "参与或激活蛋白功能",
+  has_outcome_biomarker: "关联结局指标",
+  indicates_risk_of: "提示风险",
+  cross_sectionally_associated_with: "存在横断面关联",
+  participates_in_cycle: "参与循环",
+  is_carboxylated_by: "参与羧化",
+  measured_by: "通过该指标测量",
+  reflects_status_of: "反映状态",
+  is_synthesized_by: "合成来源",
+  targets_tissue: "作用于组织",
+  prevents: "预防",
+  increases: "增加",
+  reduces: "降低",
+  affects: "影响",
+  has_subject: "研究对象或人群",
+  requires: "需要",
+  supported_by: "研究类型支持",
+  has_exposure_intervention: "暴露或干预",
+  has_exposure_dose_record: "暴露剂量记录",
+  measured_vitamin_k_form: "测量维生素K形式"
+};
+
+const SEMANTIC_EXPANSIONS: Array<[string, string[]]> = [
+  ["食物", ["food", "diet", "vegetable", "leafy", "oil", "source", "intake"]],
+  ["来源", ["food", "diet", "vegetable", "leafy", "oil", "source"]],
+  ["饮食", ["diet", "food", "intake"]],
+  ["华法林", ["warfarin", "antagonist", "anticoagulant"]],
+  ["抗凝", ["anticoagulant", "warfarin", "antagonist"]],
+  ["缺乏", ["deficiency", "deficient", "absence", "bleeding", "causes"]],
+  ["风险", ["risk", "bleeding", "deficiency", "association"]],
+  ["骨", ["bone", "osteocalcin", "carboxylation", "fracture"]],
+  ["骨钙素", ["osteocalcin", "carboxylation", "ucoc"]],
+  ["血管", ["vascular", "artery", "calcification"]],
+  ["钙化", ["calcification", "matrix gla", "mgp"]],
+  ["检测", ["plasma", "serum", "measure", "biomarker", "assay"]],
+  ["指标", ["biomarker", "plasma", "serum", "measure"]],
+  ["新生儿", ["infant", "newborn", "neonatal", "birth"]],
+  ["孕妇", ["pregnan", "gestation", "maternal"]],
+  ["儿童", ["children", "child", "pediatric"]],
+  ["老年人", ["older", "elderly", "aged"]],
+  ["功能", ["function", "cofactor", "protein", "role", "participates"]],
+  ["形式", ["form", "phylloquinone", "menaquinone", "mk-"]],
+  ["区别", ["phylloquinone", "menaquinone", "form", "vitamin k1", "vitamin k2"]],
+  ["研究", ["study", "trial", "randomized", "cohort"]],
+  ["指南", ["guideline", "recommendation", "consensus"]]
+];
+
+function predicateLabel(predicate: string): string {
+  return PREDICATE_LABELS[predicate] ?? `“${predicate}”关系`;
+}
+
+function evidenceHaystack(item: StaticEvidence): string {
+  return normalize(
+    [
+      item.source_title,
+      item.publisher,
+      item.snippet,
+      item.locator,
+      item.predicate ?? "",
+      item.review_status ?? ""
+    ].join(" ")
+  );
+}
+
+function semanticTerms(query: string): string[] {
+  const normalizedQuery = normalize(query);
+  const output = new Set<string>();
+  for (const [trigger, terms] of SEMANTIC_EXPANSIONS) {
+    if (normalizedQuery.includes(normalize(trigger))) {
+      for (const term of terms) output.add(term);
+    }
+  }
+  for (const term of normalizedQuery.match(/[a-z][a-z0-9-]{2,}/g) ?? []) {
+    output.add(term);
+  }
+  return [...output];
+}
+
+function rankRealEvidence(
+  query: string,
+  entities: GraphNode[],
+  intent: string,
+  data: StaticData
+): StaticEvidence[] {
+  const terms = semanticTerms(query);
+  const intentTerms = semanticTerms(intent === "food_sources" ? "食物来源" : query);
+  const ranked: Array<{ item: StaticEvidence; score: number; matchedEntities: number }> = [];
+
+  for (const item of data.evidence) {
+    if (item.answer_eligible === false || item.snippet.trim().length < 20) continue;
+    const haystack = evidenceHaystack(item);
+    let score = 0;
+
+    const directMatches = entities.filter((node) => item.entity_ids.includes(node.id));
+    const textMatches = entities.filter(
+      (node) =>
+        !directMatches.includes(node) &&
+        (haystack.includes(normalize(node.name)) ||
+          node.aliases.some((alias) => haystack.includes(normalize(alias))))
+    );
+    score += directMatches.length * 10 + textMatches.length * 2;
+    if (directMatches.length >= 2) score += 10;
+
+    for (const term of terms) {
+      if (haystack.includes(normalize(term))) score += 2.5;
+    }
+    if (intent === "food_sources") {
+      if (["contains", "is_synthesized_by"].includes(item.predicate ?? "")) score += 8;
+      if (["food", "diet", "vegetable", "leafy", "oil"].some((term) => haystack.includes(term))) {
+        score += 5;
+      }
+    }
+    if (intent === "drug_interactions" && haystack.includes("warfarin")) score += 6;
+    if (intent === "deficiency" && haystack.includes("deficiency")) score += 5;
+    if (intent === "lab_tests" && ["measured_by", "reflects_status_of", "has_outcome_biomarker"].includes(item.predicate ?? "")) {
+      score += 5;
+    }
+    if (intent === "research" && ["trial", "study", "randomized", "cohort"].some((term) => haystack.includes(term))) {
+      score += 4;
+    }
+    if (intent === "definition" && ["cofactor", "fat-soluble", "form", "protein"].some((term) => haystack.includes(term))) {
+      score += 3;
+    }
+    for (const term of intentTerms) {
+      if (haystack.includes(normalize(term))) score += 1.5;
+    }
+    if (item.evidence_level === "A") score += 2;
+    if (item.review_status === "accepted") score += 1;
+    if (score > 0) {
+      ranked.push({ item, score, matchedEntities: directMatches.length });
+    }
+  }
+
+  ranked.sort(
+    (left, right) =>
+      right.score - left.score ||
+      Number(right.item.evidence_level === "A") - Number(left.item.evidence_level === "A")
+  );
+  const minimumScore = entities.length ? 8 : 6;
+  const pairMatches = ranked.filter((item) => item.matchedEntities >= 2);
+  const candidates = entities.length >= 2 && pairMatches.length >= 1 ? pairMatches : ranked;
+  const selected: StaticEvidence[] = [];
+  const seen = new Set<string>();
+  for (const { item, score } of candidates) {
+    if (score < minimumScore) continue;
+    const key = `${item.predicate ?? ""}:${item.snippet.slice(0, 140).toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    selected.push(item);
+    if (selected.length >= 5) break;
+  }
+  return selected;
 }
 
 export async function askStaticQuestion(query: string): Promise<Answer> {
@@ -448,67 +633,56 @@ export async function askStaticQuestion(query: string): Promise<Answer> {
     };
   }
 
-  let entities = matchNodes(query, data.nodes);
+  const entities = matchNodes(query, data.nodes);
   const intent = detectIntent(query);
-  const generalAllowed = intent !== "general" || isGeneralFollowup(query, entities);
-  let paths: GraphPath[] = [];
-  if (entities.length >= 2) {
-    paths = graphPaths(entities[0].id, entities[1].id, data.nodes, data.edges);
-  }
-
-  const facts =
-    generalAllowed && entities.length === 1 && paths.length === 0
-      ? relatedFacts(entities[0], intent, data)
-      : [];
-
-  const selectedEdges: GraphEdge[] = paths.length
-    ? paths.flatMap((path) => path.edges)
-    : facts.slice(0, 8).map((fact) => fact.edge);
+  const selectedEvidence = rankRealEvidence(query, entities, intent, data);
+  const edgeById = new Map(data.edges.map((edge) => [edge.id, edge]));
   const claims: Claim[] = [];
   const seen = new Set<string>();
-  for (const edge of selectedEdges) {
-    if (!edge.evidence_ids.length) continue;
+  const paths: GraphPath[] = [];
+  for (const evidence of selectedEvidence) {
+    const edge = edgeById.get(evidence.id);
+    if (!edge) continue;
     const source = nodeById.get(edge.source);
     const target = nodeById.get(edge.target);
-    const text = claimText(edge, source, target);
-    if (!text || seen.has(text)) continue;
+    if (!source || !target) continue;
+    const text = `真实文献抽取关系：${source.name} — ${predicateLabel(edge.predicate)} → ${target.name}。`;
+    if (seen.has(text)) continue;
     seen.add(text);
     claims.push({
       id: `static-claim-${claims.length}`,
       text,
-      evidence_ids: edge.evidence_ids.slice(0, 3),
+      evidence_ids: [evidence.id],
       relation: edge.predicate
     });
-    if (claims.length >= 8) break;
+    paths.push({
+      nodes: [source, target],
+      edges: [edge],
+      evidence_ids: [evidence.id]
+    });
   }
 
   if (claims.length) {
-    const directPaths = paths.length
-      ? paths
-      : facts.slice(0, 6).flatMap((fact) => {
-          const source = nodeById.get(fact.edge.source);
-          const target = nodeById.get(fact.edge.target);
-          return source && target
-            ? [{ nodes: [source, target], edges: [fact.edge], evidence_ids: fact.edge.evidence_ids }]
-            : [];
-        });
     const citationIds = [...new Set(claims.flatMap((claim) => claim.evidence_ids))];
     const citations = citationIds
       .map((id) => evidenceById.get(id))
       .filter((item): item is StaticEvidence => Boolean(item));
+    const sourceCount = new Set(citations.map((item) => item.source_id)).size;
     const caution =
-      ["drug_interactions", "deficiency", "recommendations"].includes(intent)
-        ? "\n\n涉及个体用药、诊断或治疗时，请咨询医生或药师；本回答仅整理知识库证据。"
-        : "";
+      "\n\n以上内容是对真实外部文献三元组和原文片段的检索式整理，不构成诊断、处方或个体化用药建议。";
     return {
       session_id: sessionId,
       query,
       normalized_query: normalize(query),
       intent,
-      answer_text: `${heading(intent, entities)}\n\n${claims.map((claim) => `- ${claim.text}`).join("\n")}${caution}`,
+      answer_text:
+        `在真实外部文献证据中检索到 ${claims.length} 条已审核记录（涉及 ${sourceCount} 个来源）：\n\n` +
+        claims.map((claim) => `- ${claim.text}`).join("\n") +
+        "\n\n右侧证据卡保留了 PMID、原文片段、证据等级和 `external/public` 来源标签。" +
+        caution,
       claims,
       citations,
-      graph_paths: directPaths,
+      graph_paths: paths,
       sufficiency: claims.length >= 2 ? "sufficient" : "partial",
       safety_notice: null,
       related_entities: entities,
@@ -526,7 +700,7 @@ export async function askStaticQuestion(query: string): Promise<Answer> {
     normalized_query: normalize(query),
     intent,
     answer_text:
-      "当前知识库没有足够证据回答这个问题。系统不会使用生成模型补写医学结论。你可以查看下面的相关实体，或换一种更具体的问法。",
+      "当前已审核真实外部文献证据中没有找到足够直接依据。系统不会使用生成模型补写医学结论，也不会把待审核证据用于正式回答。",
     claims: [],
     citations: [],
     graph_paths: [],

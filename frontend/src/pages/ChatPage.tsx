@@ -1,4 +1,4 @@
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowUp,
   BookOpen,
@@ -7,8 +7,11 @@ import {
   GitBranch,
   Info,
   LoaderCircle,
+  MessageSquareText,
+  Plus,
   ShieldAlert,
-  Sparkles
+  Sparkles,
+  Trash2
 } from "lucide-react";
 import { askQuestion } from "../lib/api";
 import { STATIC_DEMO_MODE } from "../lib/staticDemo";
@@ -22,6 +25,81 @@ interface Message {
   answer?: Answer;
   trace?: string[];
   streaming?: boolean;
+}
+
+interface ConversationSession {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  messages: Message[];
+}
+
+interface ConversationState {
+  sessions: ConversationSession[];
+  activeSessionId: string | null;
+}
+
+const SESSIONS_STORAGE_KEY = "vitak-rag:conversations:v1";
+const ACTIVE_SESSION_STORAGE_KEY = "vitak-rag:active-conversation:v1";
+const MAX_STORED_SESSIONS = 20;
+const MAX_STORED_MESSAGES = 60;
+
+function makeMessageId() {
+  return `message-${crypto.randomUUID()}`;
+}
+
+function makeSessionId() {
+  return `web-${crypto.randomUUID()}`;
+}
+
+function sessionTitle(query: string) {
+  const compact = query.replace(/\s+/g, " ").trim();
+  return compact.length > 28 ? `${compact.slice(0, 28)}…` : compact;
+}
+
+function loadConversationState(): ConversationState {
+  try {
+    const parsed = JSON.parse(
+      window.localStorage.getItem(SESSIONS_STORAGE_KEY) ?? "[]"
+    ) as ConversationSession[];
+    const sessions = parsed
+      .filter(
+        (session) =>
+          session &&
+          typeof session.id === "string" &&
+          Array.isArray(session.messages)
+      )
+      .slice(0, MAX_STORED_SESSIONS);
+    const storedActive = window.localStorage.getItem(ACTIVE_SESSION_STORAGE_KEY);
+    const activeSessionId = sessions.some((session) => session.id === storedActive)
+      ? storedActive
+      : sessions[0]?.id ?? null;
+    return { sessions, activeSessionId };
+  } catch {
+    return { sessions: [], activeSessionId: null };
+  }
+}
+
+function previewMessage(session: ConversationSession) {
+  const latest = [...session.messages]
+    .reverse()
+    .find((message) => message.text.trim());
+  return latest?.text.replace(/\s+/g, " ").slice(0, 54) ?? "暂无问答内容";
+}
+
+function relativeSessionTime(timestamp: number) {
+  const elapsedMinutes = Math.max(
+    0,
+    Math.floor((Date.now() - timestamp) / 60_000)
+  );
+  if (elapsedMinutes < 1) return "刚刚";
+  if (elapsedMinutes < 60) return `${elapsedMinutes} 分钟前`;
+  if (elapsedMinutes < 24 * 60) return `${Math.floor(elapsedMinutes / 60)} 小时前`;
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit"
+  }).format(timestamp);
 }
 
 const PUBLIC_SUGGESTIONS = [
@@ -44,14 +122,124 @@ const PRIVATE_SUGGESTIONS = [
 
 function ChatPage() {
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [activeAnswer, setActiveAnswer] = useState<Answer | null>(null);
+  const [conversation, setConversation] =
+    useState<ConversationState>(loadConversationState);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
   const [thinkingSteps, setThinkingSteps] = useState<string[]>([]);
-  const messageSequence = useRef(0);
   const thinkingStepsRef = useRef<string[]>([]);
+  const activeSession =
+    conversation.sessions.find(
+      (session) => session.id === conversation.activeSessionId
+    ) ?? null;
+  const messages = activeSession?.messages ?? [];
+  const activeAnswer = useMemo(
+    () =>
+      [...messages].reverse().find((message) => message.answer)?.answer ?? null,
+    [messages]
+  );
+  const orderedSessions = useMemo(
+    () => [...conversation.sessions].sort((left, right) => right.updatedAt - left.updatedAt),
+    [conversation.sessions]
+  );
+
+  useEffect(() => {
+    const compactSessions = [...conversation.sessions]
+      .sort((left, right) => right.updatedAt - left.updatedAt)
+      .slice(0, MAX_STORED_SESSIONS)
+      .map((session) => ({
+        ...session,
+        messages: session.messages.slice(-MAX_STORED_MESSAGES).map(
+          ({ streaming: _streaming, ...message }) => message
+        )
+      }));
+    try {
+      window.localStorage.setItem(
+        SESSIONS_STORAGE_KEY,
+        JSON.stringify(compactSessions)
+      );
+    } catch {
+      // Keep the current in-memory session if browser storage is unavailable.
+    }
+  }, [conversation.sessions]);
+
+  useEffect(() => {
+    try {
+      if (conversation.activeSessionId) {
+        window.localStorage.setItem(
+          ACTIVE_SESSION_STORAGE_KEY,
+          conversation.activeSessionId
+        );
+      } else {
+        window.localStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY);
+      }
+    } catch {
+      // Browser storage is optional for the current page session.
+    }
+  }, [conversation.activeSessionId]);
+
+  function createSession() {
+    const timestamp = Date.now();
+    const session: ConversationSession = {
+      id: makeSessionId(),
+      title: "新会话",
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      messages: []
+    };
+    setConversation((current) => ({
+      sessions: [session, ...current.sessions],
+      activeSessionId: session.id
+    }));
+    setInput("");
+    setStatus("");
+    setThinkingSteps([]);
+    thinkingStepsRef.current = [];
+    return session.id;
+  }
+
+  function selectSession(sessionId: string) {
+    if (loading) return;
+    setConversation((current) => ({ ...current, activeSessionId: sessionId }));
+    setInput("");
+    setStatus("");
+    setThinkingSteps([]);
+    thinkingStepsRef.current = [];
+  }
+
+  function deleteSession(sessionId: string) {
+    if (loading) return;
+    setConversation((current) => {
+      const sessions = current.sessions.filter((session) => session.id !== sessionId);
+      const activeSessionId =
+        current.activeSessionId === sessionId
+          ? sessions.sort((left, right) => right.updatedAt - left.updatedAt)[0]?.id ?? null
+          : current.activeSessionId;
+      return { sessions, activeSessionId };
+    });
+  }
+
+  function updateMessages(
+    sessionId: string,
+    updater: (messages: Message[]) => Message[],
+    titleSource?: string
+  ) {
+    setConversation((current) => ({
+      ...current,
+      sessions: current.sessions.map((session) => {
+        if (session.id !== sessionId) return session;
+        return {
+          ...session,
+          title:
+            session.messages.length === 0 && titleSource
+              ? sessionTitle(titleSource)
+              : session.title,
+          updatedAt: Date.now(),
+          messages: updater(session.messages)
+        };
+      })
+    }));
+  }
 
   function appendThinkingStep(message: string) {
     if (!message || message === "正在检索知识图谱与证据") return;
@@ -60,12 +248,12 @@ function ChatPage() {
     setThinkingSteps(thinkingStepsRef.current);
   }
 
-  async function revealAnswer(messageId: string, text: string) {
+  async function revealAnswer(sessionId: string, messageId: string, text: string) {
     const chunks = text.match(/[^。！？\n]+[。！？]?|\n+/g) ?? [text];
     let rendered = "";
     for (const chunk of chunks) {
       rendered += chunk;
-      setMessages((current) =>
+      updateMessages(sessionId, (current) =>
         current.map((message) =>
           message.id === messageId ? { ...message, text: rendered.trimStart() } : message
         )
@@ -74,7 +262,7 @@ function ChatPage() {
         await new Promise((resolve) => window.setTimeout(resolve, 75));
       }
     }
-    setMessages((current) =>
+    updateMessages(sessionId, (current) =>
       current.map((message) =>
         message.id === messageId ? { ...message, streaming: false } : message
       )
@@ -84,13 +272,14 @@ function ChatPage() {
   async function submit(query: string) {
     const trimmed = query.trim();
     if (!trimmed || loading) return;
+    const targetSessionId = activeSession?.id ?? createSession();
 
     const userMessage: Message = {
-      id: `message-${messageSequence.current++}`,
+      id: makeMessageId(),
       role: "user",
       text: trimmed
     };
-    setMessages((current) => [...current, userMessage]);
+    updateMessages(targetSessionId, (current) => [...current, userMessage], trimmed);
     setInput("");
     setLoading(true);
     setStatus("正在准备检索");
@@ -98,17 +287,15 @@ function ChatPage() {
     thinkingStepsRef.current = [];
 
     try {
-      await askQuestion(trimmed, sessionId, {
+      await askQuestion(trimmed, targetSessionId, {
         status: (message) => {
           setStatus(message);
           appendThinkingStep(message);
         },
         onAnswer: async (answer) => {
-          setSessionId(answer.session_id);
-          setActiveAnswer(answer);
-          const messageId = `message-${messageSequence.current++}`;
+          const messageId = makeMessageId();
           const trace = [...thinkingStepsRef.current, "已完成来源核对并生成回答"];
-          setMessages((current) => [
+          updateMessages(targetSessionId, (current) => [
             ...current,
             {
               id: messageId,
@@ -119,14 +306,14 @@ function ChatPage() {
               streaming: true
             }
           ]);
-          await revealAnswer(messageId, answer.answer_text);
+          await revealAnswer(targetSessionId, messageId, answer.answer_text);
         }
       });
     } catch (error) {
-      setMessages((current) => [
+      updateMessages(targetSessionId, (current) => [
         ...current,
         {
-          id: `message-${messageSequence.current++}`,
+          id: makeMessageId(),
           role: "assistant",
           text:
             error instanceof Error
@@ -149,6 +336,61 @@ function ChatPage() {
 
   return (
     <div className="chat-layout">
+      <aside className="conversation-sidebar">
+        <div className="conversation-heading">
+          <div>
+            <span className="eyebrow">会话记录</span>
+            <h2>历史问答</h2>
+          </div>
+          <MessageSquareText size={19} />
+        </div>
+        <button
+          type="button"
+          className="new-session-button"
+          onClick={createSession}
+          disabled={loading}
+        >
+          <Plus size={16} />
+          新建会话
+        </button>
+        <div className="session-list">
+          {orderedSessions.length === 0 ? (
+            <p className="session-empty">暂无历史会话</p>
+          ) : (
+            orderedSessions.map((session) => (
+              <div
+                className={`session-item ${
+                  session.id === conversation.activeSessionId ? "active" : ""
+                }`}
+                key={session.id}
+              >
+                <button
+                  type="button"
+                  className="session-open"
+                  onClick={() => selectSession(session.id)}
+                  disabled={loading}
+                >
+                  <span className="session-copy">
+                    <strong>{session.title}</strong>
+                    <small>{previewMessage(session)}</small>
+                    <time>{relativeSessionTime(session.updatedAt)}</time>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="session-delete"
+                  onClick={() => deleteSession(session.id)}
+                  disabled={loading}
+                  aria-label={`删除会话：${session.title}`}
+                  title="删除会话"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </aside>
       <section className="chat-workspace">
         <div className="page-heading chat-heading">
           <div>

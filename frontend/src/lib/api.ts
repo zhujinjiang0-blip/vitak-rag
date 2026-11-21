@@ -155,7 +155,7 @@ export async function askQuestion(
   if (STATIC_DEMO_MODE) {
     await emitThinkingSteps();
     handlers.status?.("正在组织可追溯回答");
-    await handlers.onAnswer(await askStaticQuestion(query));
+    await handlers.onAnswer(await askStaticQuestion(query, sessionId ?? undefined));
     return;
   }
   await emitThinkingSteps();

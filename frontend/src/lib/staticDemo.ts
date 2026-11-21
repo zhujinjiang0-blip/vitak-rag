@@ -1228,12 +1228,15 @@ function topicSynthesisAnswer(
   return null;
 }
 
-export async function askStaticQuestion(query: string): Promise<Answer> {
+export async function askStaticQuestion(
+  query: string,
+  requestedSessionId?: string
+): Promise<Answer> {
   const started = performance.now();
   const data = await loadData();
   const nodeById = new Map(data.nodes.map((node) => [node.id, node]));
   const evidenceById = new Map(data.evidence.map((item) => [item.id, item]));
-  const sessionId = `static-${crypto.randomUUID()}`;
+  const sessionId = requestedSessionId || `static-${crypto.randomUUID()}`;
   const safety = safetyCheck(query);
   if (safety) {
     return {

@@ -47,11 +47,64 @@ await page
   .filter({ hasText: "维生素K的食物来源" })
   .waitFor({ timeout: 15_000 });
 
+await page.getByRole("button", { name: "新建项目" }).click();
+await page.getByPlaceholder("输入项目名称").fill("内部数据分析");
+await page.getByRole("button", { name: "创建项目", exact: true }).click();
+const projectCount = await page.locator(".project-item").count();
+if (projectCount !== 2) {
+  throw new Error(`新建项目后数量异常：${projectCount}`);
+}
+
+await page.getByPlaceholder("输入关于维生素K的问题...").fill("华法林和维生素K有什么关系？");
+await page.getByRole("button", { name: "发送问题" }).click();
+await page
+  .locator(".assistant-message .message-text")
+  .filter({ hasText: "华法林通过抑制 VKORC1" })
+  .waitFor({ timeout: 15_000 });
+await page.waitForFunction(
+  () => !document.querySelector('[data-streaming="true"]'),
+  null,
+  { timeout: 15_000 }
+);
+
+await page
+  .locator(".project-open")
+  .filter({ hasText: "我的维K项目" })
+  .click();
+await page
+  .locator(".session-open")
+  .filter({ hasText: "维生素K有哪些食物来源" })
+  .click();
+await page
+  .locator(".assistant-message .message-text")
+  .filter({ hasText: "维生素K的食物来源" })
+  .waitFor();
+
+await page
+  .locator(".project-open")
+  .filter({ hasText: "内部数据分析" })
+  .click();
+await page
+  .locator(".assistant-message .message-text")
+  .filter({ hasText: "华法林通过抑制 VKORC1" })
+  .waitFor();
+await page.reload({ waitUntil: "networkidle" });
+const activeProject = await page.locator(".project-item.active").innerText();
+if (!activeProject.includes("内部数据分析")) {
+  throw new Error(`刷新后未恢复项目：${activeProject}`);
+}
+await page
+  .locator(".assistant-message .message-text")
+  .filter({ hasText: "华法林通过抑制 VKORC1" })
+  .waitFor({ timeout: 15_000 });
+
 console.log(
   JSON.stringify(
     {
       sessionCount,
+      projectCount,
       restoredAfterReload: true,
+      restoredProject: "内部数据分析",
       url: `${baseUrl}/#/chat`
     },
     null,

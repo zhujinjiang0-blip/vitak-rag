@@ -4,6 +4,8 @@ import {
   BookOpen,
   CheckCircle2,
   ExternalLink,
+  FolderKanban,
+  FolderPlus,
   GitBranch,
   Info,
   LoaderCircle,
@@ -11,7 +13,8 @@ import {
   Plus,
   ShieldAlert,
   Sparkles,
-  Trash2
+  Trash2,
+  X
 } from "lucide-react";
 import { askQuestion } from "../lib/api";
 import { STATIC_DEMO_MODE } from "../lib/staticDemo";
@@ -35,13 +38,26 @@ interface ConversationSession {
   messages: Message[];
 }
 
-interface ConversationState {
+interface ConversationProject {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
   sessions: ConversationSession[];
+}
+
+interface ConversationState {
+  projects: ConversationProject[];
+  activeProjectId: string;
   activeSessionId: string | null;
 }
 
-const SESSIONS_STORAGE_KEY = "vitak-rag:conversations:v1";
-const ACTIVE_SESSION_STORAGE_KEY = "vitak-rag:active-conversation:v1";
+const PROJECTS_STORAGE_KEY = "vitak-rag:projects:v2";
+const ACTIVE_PROJECT_STORAGE_KEY = "vitak-rag:active-project:v2";
+const ACTIVE_SESSION_STORAGE_KEY = "vitak-rag:active-conversation:v2";
+const LEGACY_SESSIONS_STORAGE_KEY = "vitak-rag:conversations:v1";
+const LEGACY_ACTIVE_SESSION_STORAGE_KEY = "vitak-rag:active-conversation:v1";
+const MAX_STORED_PROJECTS = 10;
 const MAX_STORED_SESSIONS = 20;
 const MAX_STORED_MESSAGES = 60;
 
@@ -53,17 +69,81 @@ function makeSessionId() {
   return `web-${crypto.randomUUID()}`;
 }
 
+function makeProjectId() {
+  return `project-${crypto.randomUUID()}`;
+}
+
 function sessionTitle(query: string) {
   const compact = query.replace(/\s+/g, " ").trim();
   return compact.length > 28 ? `${compact.slice(0, 28)}…` : compact;
 }
 
+function makeSession(timestamp = Date.now()): ConversationSession {
+  return {
+    id: makeSessionId(),
+    title: "新会话",
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    messages: []
+  };
+}
+
+function makeProject(title: string, timestamp = Date.now()): ConversationProject {
+  return {
+    id: makeProjectId(),
+    title,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    sessions: [makeSession(timestamp)]
+  };
+}
+
 function loadConversationState(): ConversationState {
   try {
-    const parsed = JSON.parse(
-      window.localStorage.getItem(SESSIONS_STORAGE_KEY) ?? "[]"
+    const storedProjects = JSON.parse(
+      window.localStorage.getItem(PROJECTS_STORAGE_KEY) ?? "[]"
+    ) as ConversationProject[];
+    const projects = storedProjects
+      .filter(
+        (project) =>
+          project &&
+          typeof project.id === "string" &&
+          typeof project.title === "string" &&
+          Array.isArray(project.sessions)
+      )
+      .slice(0, MAX_STORED_PROJECTS)
+      .map((project) => ({
+        ...project,
+        sessions: project.sessions
+          .filter(
+            (session) =>
+              session &&
+              typeof session.id === "string" &&
+              Array.isArray(session.messages)
+          )
+          .slice(0, MAX_STORED_SESSIONS)
+      }));
+    if (projects.length) {
+      const storedProject = window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY);
+      const activeProject =
+        projects.find((project) => project.id === storedProject) ?? projects[0];
+      const storedSession = window.localStorage.getItem(ACTIVE_SESSION_STORAGE_KEY);
+      const activeSessionId = activeProject.sessions.some(
+        (session) => session.id === storedSession
+      )
+        ? storedSession
+        : activeProject.sessions[0]?.id ?? null;
+      return {
+        projects,
+        activeProjectId: activeProject.id,
+        activeSessionId
+      };
+    }
+
+    const legacySessions = JSON.parse(
+      window.localStorage.getItem(LEGACY_SESSIONS_STORAGE_KEY) ?? "[]"
     ) as ConversationSession[];
-    const sessions = parsed
+    const validLegacySessions = legacySessions
       .filter(
         (session) =>
           session &&
@@ -71,13 +151,36 @@ function loadConversationState(): ConversationState {
           Array.isArray(session.messages)
       )
       .slice(0, MAX_STORED_SESSIONS);
-    const storedActive = window.localStorage.getItem(ACTIVE_SESSION_STORAGE_KEY);
-    const activeSessionId = sessions.some((session) => session.id === storedActive)
-      ? storedActive
-      : sessions[0]?.id ?? null;
-    return { sessions, activeSessionId };
+    const timestamp = Date.now();
+    const project: ConversationProject = {
+      id: makeProjectId(),
+      title: "我的维K项目",
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      sessions:
+        validLegacySessions.length > 0
+          ? validLegacySessions
+          : [makeSession(timestamp)]
+    };
+    const legacyActive = window.localStorage.getItem(
+      LEGACY_ACTIVE_SESSION_STORAGE_KEY
+    );
+    return {
+      projects: [project],
+      activeProjectId: project.id,
+      activeSessionId: project.sessions.some(
+        (session) => session.id === legacyActive
+      )
+        ? legacyActive
+        : project.sessions[0]?.id ?? null
+    };
   } catch {
-    return { sessions: [], activeSessionId: null };
+    const project = makeProject("我的维K项目");
+    return {
+      projects: [project],
+      activeProjectId: project.id,
+      activeSessionId: project.sessions[0]?.id ?? null
+    };
   }
 }
 
@@ -127,9 +230,16 @@ function ChatPage() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
   const [thinkingSteps, setThinkingSteps] = useState<string[]>([]);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [projectName, setProjectName] = useState("");
   const thinkingStepsRef = useRef<string[]>([]);
+  const activeProject =
+    conversation.projects.find(
+      (project) => project.id === conversation.activeProjectId
+    ) ?? conversation.projects[0];
+  const projectSessions = activeProject?.sessions ?? [];
   const activeSession =
-    conversation.sessions.find(
+    projectSessions.find(
       (session) => session.id === conversation.activeSessionId
     ) ?? null;
   const messages = activeSession?.messages ?? [];
@@ -139,32 +249,48 @@ function ChatPage() {
     [messages]
   );
   const orderedSessions = useMemo(
-    () => [...conversation.sessions].sort((left, right) => right.updatedAt - left.updatedAt),
-    [conversation.sessions]
+    () => [...projectSessions].sort((left, right) => right.updatedAt - left.updatedAt),
+    [projectSessions]
+  );
+  const orderedProjects = useMemo(
+    () => [...conversation.projects].sort((left, right) => right.updatedAt - left.updatedAt),
+    [conversation.projects]
   );
 
   useEffect(() => {
-    const compactSessions = [...conversation.sessions]
+    const compactProjects = [...conversation.projects]
       .sort((left, right) => right.updatedAt - left.updatedAt)
-      .slice(0, MAX_STORED_SESSIONS)
-      .map((session) => ({
-        ...session,
-        messages: session.messages.slice(-MAX_STORED_MESSAGES).map(
-          ({ streaming: _streaming, ...message }) => message
-        )
+      .slice(0, MAX_STORED_PROJECTS)
+      .map((project) => ({
+        ...project,
+        sessions: [...project.sessions]
+          .sort((left, right) => right.updatedAt - left.updatedAt)
+          .slice(0, MAX_STORED_SESSIONS)
+          .map((session) => ({
+            ...session,
+            messages: session.messages.slice(-MAX_STORED_MESSAGES).map(
+              ({ streaming: _streaming, ...message }) => message
+            )
+          }))
       }));
     try {
       window.localStorage.setItem(
-        SESSIONS_STORAGE_KEY,
-        JSON.stringify(compactSessions)
+        PROJECTS_STORAGE_KEY,
+        JSON.stringify(compactProjects)
       );
+      window.localStorage.removeItem(LEGACY_SESSIONS_STORAGE_KEY);
+      window.localStorage.removeItem(LEGACY_ACTIVE_SESSION_STORAGE_KEY);
     } catch {
-      // Keep the current in-memory session if browser storage is unavailable.
+      // Keep the current in-memory projects if browser storage is unavailable.
     }
-  }, [conversation.sessions]);
+  }, [conversation.projects]);
 
   useEffect(() => {
     try {
+      window.localStorage.setItem(
+        ACTIVE_PROJECT_STORAGE_KEY,
+        conversation.activeProjectId
+      );
       if (conversation.activeSessionId) {
         window.localStorage.setItem(
           ACTIVE_SESSION_STORAGE_KEY,
@@ -176,46 +302,136 @@ function ChatPage() {
     } catch {
       // Browser storage is optional for the current page session.
     }
-  }, [conversation.activeSessionId]);
+  }, [conversation.activeProjectId, conversation.activeSessionId]);
 
-  function createSession() {
-    const timestamp = Date.now();
-    const session: ConversationSession = {
-      id: makeSessionId(),
-      title: "新会话",
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      messages: []
-    };
-    setConversation((current) => ({
-      sessions: [session, ...current.sessions],
-      activeSessionId: session.id
-    }));
+  function resetComposer() {
     setInput("");
     setStatus("");
     setThinkingSteps([]);
     thinkingStepsRef.current = [];
+  }
+
+  function createSession() {
+    if (!activeProject) {
+      const project = makeProject("我的维K项目");
+      setConversation({
+        projects: [project],
+        activeProjectId: project.id,
+        activeSessionId: project.sessions[0]?.id ?? null
+      });
+      resetComposer();
+      return project.sessions[0]?.id ?? null;
+    }
+    const timestamp = Date.now();
+    const session = makeSession(timestamp);
+    setConversation((current) => ({
+      ...current,
+      projects: current.projects.map((project) =>
+        project.id === current.activeProjectId
+          ? {
+              ...project,
+              updatedAt: timestamp,
+              sessions: [session, ...project.sessions]
+            }
+          : project
+      ),
+      activeSessionId: session.id
+    }));
+    resetComposer();
     return session.id;
+  }
+
+  function createProject(title: string) {
+    const timestamp = Date.now();
+    const project = makeProject(title.trim() || "新项目", timestamp);
+    setConversation((current) => ({
+      projects: [project, ...current.projects],
+      activeProjectId: project.id,
+      activeSessionId: project.sessions[0]?.id ?? null
+    }));
+    setIsCreatingProject(false);
+    setProjectName("");
+    resetComposer();
+  }
+
+  function submitProject(event: FormEvent) {
+    event.preventDefault();
+    if (!projectName.trim()) return;
+    createProject(projectName);
+  }
+
+  function selectProject(projectId: string) {
+    if (loading) return;
+    setConversation((current) => {
+      const project = current.projects.find((item) => item.id === projectId);
+      const activeSessionId =
+        [...(project?.sessions ?? [])].sort(
+          (left, right) => right.updatedAt - left.updatedAt
+        )[0]?.id ?? null;
+      return { ...current, activeProjectId: projectId, activeSessionId };
+    });
+    resetComposer();
+  }
+
+  function deleteProject(projectId: string) {
+    if (loading) return;
+    setConversation((current) => {
+      const remaining = current.projects.filter((project) => project.id !== projectId);
+      if (remaining.length === 0) {
+        const project = makeProject("我的维K项目");
+        return {
+          projects: [project],
+          activeProjectId: project.id,
+          activeSessionId: project.sessions[0]?.id ?? null
+        };
+      }
+      const nextProject = current.activeProjectId === projectId
+        ? [...remaining].sort((left, right) => right.updatedAt - left.updatedAt)[0]
+        : remaining.find((project) => project.id === current.activeProjectId) ??
+          remaining[0];
+      const activeSessionId =
+        nextProject.id === current.activeProjectId
+          ? current.activeSessionId
+          : [...nextProject.sessions].sort(
+              (left, right) => right.updatedAt - left.updatedAt
+            )[0]?.id ?? null;
+      return {
+        projects: remaining,
+        activeProjectId: nextProject.id,
+        activeSessionId
+      };
+    });
+    resetComposer();
   }
 
   function selectSession(sessionId: string) {
     if (loading) return;
     setConversation((current) => ({ ...current, activeSessionId: sessionId }));
-    setInput("");
-    setStatus("");
-    setThinkingSteps([]);
-    thinkingStepsRef.current = [];
+    resetComposer();
   }
 
   function deleteSession(sessionId: string) {
     if (loading) return;
     setConversation((current) => {
-      const sessions = current.sessions.filter((session) => session.id !== sessionId);
+      const activeProject = current.projects.find(
+        (project) => project.id === current.activeProjectId
+      );
+      const sessions =
+        activeProject?.sessions.filter((session) => session.id !== sessionId) ?? [];
       const activeSessionId =
         current.activeSessionId === sessionId
-          ? sessions.sort((left, right) => right.updatedAt - left.updatedAt)[0]?.id ?? null
+          ? [...sessions].sort(
+              (left, right) => right.updatedAt - left.updatedAt
+            )[0]?.id ?? null
           : current.activeSessionId;
-      return { sessions, activeSessionId };
+      return {
+        ...current,
+        projects: current.projects.map((project) => {
+          if (project.id !== current.activeProjectId) return project;
+          return { ...project, sessions };
+        }),
+        activeSessionId
+      };
     });
   }
 
@@ -226,16 +442,26 @@ function ChatPage() {
   ) {
     setConversation((current) => ({
       ...current,
-      sessions: current.sessions.map((session) => {
-        if (session.id !== sessionId) return session;
+      projects: current.projects.map((project) => {
+        if (!project.sessions.some((session) => session.id === sessionId)) {
+          return project;
+        }
+        const timestamp = Date.now();
         return {
-          ...session,
-          title:
-            session.messages.length === 0 && titleSource
-              ? sessionTitle(titleSource)
-              : session.title,
-          updatedAt: Date.now(),
-          messages: updater(session.messages)
+          ...project,
+          updatedAt: timestamp,
+          sessions: project.sessions.map((session) => {
+            if (session.id !== sessionId) return session;
+            return {
+              ...session,
+              title:
+                session.messages.length === 0 && titleSource
+                  ? sessionTitle(titleSource)
+                  : session.title,
+              updatedAt: timestamp,
+              messages: updater(session.messages)
+            };
+          })
         };
       })
     }));
@@ -273,6 +499,7 @@ function ChatPage() {
     const trimmed = query.trim();
     if (!trimmed || loading) return;
     const targetSessionId = activeSession?.id ?? createSession();
+    if (!targetSessionId) return;
 
     const userMessage: Message = {
       id: makeMessageId(),
@@ -339,20 +566,97 @@ function ChatPage() {
       <aside className="conversation-sidebar">
         <div className="conversation-heading">
           <div>
-            <span className="eyebrow">会话记录</span>
-            <h2>历史问答</h2>
+            <span className="eyebrow">项目</span>
+            <h2>项目空间</h2>
           </div>
           <MessageSquareText size={19} />
         </div>
-        <button
-          type="button"
-          className="new-session-button"
-          onClick={createSession}
-          disabled={loading}
-        >
-          <Plus size={16} />
-          新建会话
-        </button>
+
+        {isCreatingProject ? (
+          <form className="project-create-form" onSubmit={submitProject}>
+            <input
+              autoFocus
+              value={projectName}
+              onChange={(event) => setProjectName(event.target.value)}
+              placeholder="输入项目名称"
+              maxLength={40}
+            />
+            <button type="submit" disabled={!projectName.trim()} aria-label="创建项目">
+              <CheckCircle2 size={15} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsCreatingProject(false);
+                setProjectName("");
+              }}
+              aria-label="取消创建项目"
+            >
+              <X size={15} />
+            </button>
+          </form>
+        ) : (
+          <button
+            type="button"
+            className="new-project-button"
+            onClick={() => setIsCreatingProject(true)}
+            disabled={loading}
+          >
+            <FolderPlus size={16} />
+            新建项目
+          </button>
+        )}
+
+        <div className="project-list">
+          {orderedProjects.map((project) => (
+            <div
+              className={`project-item ${
+                project.id === conversation.activeProjectId ? "active" : ""
+              }`}
+              key={project.id}
+            >
+              <button
+                type="button"
+                className="project-open"
+                onClick={() => selectProject(project.id)}
+                disabled={loading}
+              >
+                <FolderKanban size={16} />
+                <span>
+                  <strong>{project.title}</strong>
+                  <small>{project.sessions.length} 个会话</small>
+                </span>
+              </button>
+              <button
+                type="button"
+                className="project-delete"
+                onClick={() => deleteProject(project.id)}
+                disabled={loading}
+                aria-label={`删除项目：${project.title}`}
+                title="删除项目"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="session-section-heading">
+          <div>
+            <strong>项目会话</strong>
+            <small>{activeProject?.title ?? "未选择项目"}</small>
+          </div>
+          <button
+            type="button"
+            className="new-session-button"
+            onClick={createSession}
+            disabled={loading}
+            aria-label="新建会话"
+            title="新建会话"
+          >
+            <Plus size={15} />
+          </button>
+        </div>
         <div className="session-list">
           {orderedSessions.length === 0 ? (
             <p className="session-empty">暂无历史会话</p>

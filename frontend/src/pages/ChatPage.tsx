@@ -10,7 +10,9 @@ import {
   Info,
   LoaderCircle,
   MessageSquareText,
+  Pencil,
   Plus,
+  Search,
   ShieldAlert,
   Sparkles,
   Trash2,
@@ -232,6 +234,11 @@ function ChatPage() {
   const [thinkingSteps, setThinkingSteps] = useState<string[]>([]);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [projectName, setProjectName] = useState("");
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [editingProjectName, setEditingProjectName] = useState("");
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editingSessionTitle, setEditingSessionTitle] = useState("");
+  const [sessionSearch, setSessionSearch] = useState("");
   const thinkingStepsRef = useRef<string[]>([]);
   const activeProject =
     conversation.projects.find(
@@ -252,6 +259,13 @@ function ChatPage() {
     () => [...projectSessions].sort((left, right) => right.updatedAt - left.updatedAt),
     [projectSessions]
   );
+  const visibleSessions = useMemo(() => {
+    const needle = sessionSearch.trim().toLowerCase();
+    if (!needle) return orderedSessions;
+    return orderedSessions.filter((session) =>
+      `${session.title} ${previewMessage(session)}`.toLowerCase().includes(needle)
+    );
+  }, [orderedSessions, sessionSearch]);
   const orderedProjects = useMemo(
     () => [...conversation.projects].sort((left, right) => right.updatedAt - left.updatedAt),
     [conversation.projects]
@@ -308,6 +322,8 @@ function ChatPage() {
     setInput("");
     setStatus("");
     setThinkingSteps([]);
+    setEditingSessionId(null);
+    setEditingSessionTitle("");
     thinkingStepsRef.current = [];
   }
 
@@ -351,6 +367,9 @@ function ChatPage() {
     }));
     setIsCreatingProject(false);
     setProjectName("");
+    setEditingProjectId(null);
+    setEditingSessionId(null);
+    setSessionSearch("");
     resetComposer();
   }
 
@@ -370,11 +389,22 @@ function ChatPage() {
         )[0]?.id ?? null;
       return { ...current, activeProjectId: projectId, activeSessionId };
     });
+    setEditingProjectId(null);
+    setEditingSessionId(null);
+    setSessionSearch("");
     resetComposer();
   }
 
   function deleteProject(projectId: string) {
     if (loading) return;
+    const project = conversation.projects.find((item) => item.id === projectId);
+    if (
+      !window.confirm(
+        `确定删除项目“${project?.title ?? ""}”及其全部会话吗？`
+      )
+    ) {
+      return;
+    }
     setConversation((current) => {
       const remaining = current.projects.filter((project) => project.id !== projectId);
       if (remaining.length === 0) {
@@ -412,6 +442,10 @@ function ChatPage() {
 
   function deleteSession(sessionId: string) {
     if (loading) return;
+    const session = projectSessions.find((item) => item.id === sessionId);
+    if (!window.confirm(`确定删除会话“${session?.title ?? ""}”吗？`)) {
+      return;
+    }
     setConversation((current) => {
       const activeProject = current.projects.find(
         (project) => project.id === current.activeProjectId
@@ -433,6 +467,55 @@ function ChatPage() {
         activeSessionId
       };
     });
+  }
+
+  function startProjectRename(project: ConversationProject) {
+    setEditingProjectId(project.id);
+    setEditingProjectName(project.title);
+  }
+
+  function submitProjectRename(event: FormEvent) {
+    event.preventDefault();
+    const title = editingProjectName.trim();
+    if (!title || !editingProjectId) return;
+    setConversation((current) => ({
+      ...current,
+      projects: current.projects.map((project) =>
+        project.id === editingProjectId
+          ? { ...project, title, updatedAt: Date.now() }
+          : project
+      )
+    }));
+    setEditingProjectId(null);
+    setEditingProjectName("");
+  }
+
+  function startSessionRename(session: ConversationSession) {
+    setEditingSessionId(session.id);
+    setEditingSessionTitle(session.title);
+  }
+
+  function submitSessionRename(event: FormEvent) {
+    event.preventDefault();
+    const title = editingSessionTitle.trim();
+    if (!title || !editingSessionId) return;
+    setConversation((current) => ({
+      ...current,
+      projects: current.projects.map((project) => {
+        if (project.id !== current.activeProjectId) return project;
+        return {
+          ...project,
+          updatedAt: Date.now(),
+          sessions: project.sessions.map((session) =>
+            session.id === editingSessionId
+              ? { ...session, title, updatedAt: Date.now() }
+              : session
+          )
+        };
+      })
+    }));
+    setEditingSessionId(null);
+    setEditingSessionTitle("");
   }
 
   function updateMessages(
@@ -615,28 +698,66 @@ function ChatPage() {
               }`}
               key={project.id}
             >
-              <button
-                type="button"
-                className="project-open"
-                onClick={() => selectProject(project.id)}
-                disabled={loading}
-              >
-                <FolderKanban size={16} />
-                <span>
-                  <strong>{project.title}</strong>
-                  <small>{project.sessions.length} 个会话</small>
-                </span>
-              </button>
-              <button
-                type="button"
-                className="project-delete"
-                onClick={() => deleteProject(project.id)}
-                disabled={loading}
-                aria-label={`删除项目：${project.title}`}
-                title="删除项目"
-              >
-                <Trash2 size={13} />
-              </button>
+              {editingProjectId === project.id ? (
+                <form className="inline-name-form" onSubmit={submitProjectRename}>
+                  <input
+                    autoFocus
+                    value={editingProjectName}
+                    onChange={(event) => setEditingProjectName(event.target.value)}
+                    maxLength={40}
+                    aria-label="项目名称"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!editingProjectName.trim()}
+                    aria-label="保存项目名称"
+                  >
+                    <CheckCircle2 size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingProjectId(null)}
+                    aria-label="取消重命名项目"
+                  >
+                    <X size={14} />
+                  </button>
+                </form>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="project-open"
+                    onClick={() => selectProject(project.id)}
+                    disabled={loading}
+                  >
+                    <FolderKanban size={16} />
+                    <span>
+                      <strong>{project.title}</strong>
+                      <small>{project.sessions.length} 个会话</small>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="project-edit"
+                    onClick={() => startProjectRename(project)}
+                    disabled={loading}
+                    aria-label={`重命名项目：${project.title}`}
+                    title="重命名项目"
+                  >
+                    <Pencil size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    className="project-delete"
+                    onClick={() => deleteProject(project.id)}
+                    disabled={loading}
+                    aria-label={`删除项目：${project.title}`}
+                    title="删除项目"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </>
+              )}
             </div>
           ))}
         </div>
@@ -657,39 +778,88 @@ function ChatPage() {
             <Plus size={15} />
           </button>
         </div>
+        <label className="session-search">
+          <Search size={13} />
+          <input
+            value={sessionSearch}
+            onChange={(event) => setSessionSearch(event.target.value)}
+            placeholder="搜索当前项目会话"
+            aria-label="搜索当前项目会话"
+          />
+        </label>
         <div className="session-list">
-          {orderedSessions.length === 0 ? (
-            <p className="session-empty">暂无历史会话</p>
+          {visibleSessions.length === 0 ? (
+            <p className="session-empty">
+              {sessionSearch.trim() ? "没有匹配的会话" : "暂无历史会话"}
+            </p>
           ) : (
-            orderedSessions.map((session) => (
+            visibleSessions.map((session) => (
               <div
                 className={`session-item ${
                   session.id === conversation.activeSessionId ? "active" : ""
                 }`}
                 key={session.id}
               >
-                <button
-                  type="button"
-                  className="session-open"
-                  onClick={() => selectSession(session.id)}
-                  disabled={loading}
-                >
-                  <span className="session-copy">
-                    <strong>{session.title}</strong>
-                    <small>{previewMessage(session)}</small>
-                    <time>{relativeSessionTime(session.updatedAt)}</time>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className="session-delete"
-                  onClick={() => deleteSession(session.id)}
-                  disabled={loading}
-                  aria-label={`删除会话：${session.title}`}
-                  title="删除会话"
-                >
-                  <Trash2 size={14} />
-                </button>
+                {editingSessionId === session.id ? (
+                  <form className="inline-name-form" onSubmit={submitSessionRename}>
+                    <input
+                      autoFocus
+                      value={editingSessionTitle}
+                      onChange={(event) => setEditingSessionTitle(event.target.value)}
+                      maxLength={48}
+                      aria-label="会话名称"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!editingSessionTitle.trim()}
+                      aria-label="保存会话名称"
+                    >
+                      <CheckCircle2 size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingSessionId(null)}
+                      aria-label="取消重命名会话"
+                    >
+                      <X size={14} />
+                    </button>
+                  </form>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="session-open"
+                      onClick={() => selectSession(session.id)}
+                      disabled={loading}
+                    >
+                      <span className="session-copy">
+                        <strong>{session.title}</strong>
+                        <small>{previewMessage(session)}</small>
+                        <time>{relativeSessionTime(session.updatedAt)}</time>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="session-edit"
+                      onClick={() => startSessionRename(session)}
+                      disabled={loading}
+                      aria-label={`重命名会话：${session.title}`}
+                      title="重命名会话"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      className="session-delete"
+                      onClick={() => deleteSession(session.id)}
+                      disabled={loading}
+                      aria-label={`删除会话：${session.title}`}
+                      title="删除会话"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </>
+                )}
               </div>
             ))
           )}

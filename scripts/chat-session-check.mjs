@@ -54,6 +54,15 @@ const projectCount = await page.locator(".project-item").count();
 if (projectCount !== 2) {
   throw new Error(`新建项目后数量异常：${projectCount}`);
 }
+await page
+  .getByRole("button", { name: "重命名项目：内部数据分析" })
+  .click();
+await page.getByLabel("项目名称", { exact: true }).fill("内部数据研究");
+await page.getByRole("button", { name: "保存项目名称" }).click();
+await page
+  .locator(".project-item.active")
+  .filter({ hasText: "内部数据研究" })
+  .waitFor();
 
 await page.getByPlaceholder("输入关于维生素K的问题...").fill("华法林和维生素K有什么关系？");
 await page.getByRole("button", { name: "发送问题" }).click();
@@ -66,6 +75,12 @@ await page.waitForFunction(
   null,
   { timeout: 15_000 }
 );
+await page
+  .getByRole("button", { name: /重命名会话：华法林和维生素K有什么关系/ })
+  .click();
+await page.getByLabel("会话名称", { exact: true }).fill("华法林相互作用");
+await page.getByRole("button", { name: "保存会话名称" }).click();
+await page.getByText("华法林相互作用", { exact: true }).waitFor();
 
 await page
   .locator(".project-open")
@@ -79,10 +94,16 @@ await page
   .locator(".assistant-message .message-text")
   .filter({ hasText: "维生素K的食物来源" })
   .waitFor();
+await page.getByLabel("搜索当前项目会话").fill("食物");
+const filteredSessions = await page.locator(".session-item").count();
+if (filteredSessions !== 1) {
+  throw new Error(`项目内会话搜索异常：${filteredSessions}`);
+}
+await page.getByLabel("搜索当前项目会话").fill("");
 
 await page
   .locator(".project-open")
-  .filter({ hasText: "内部数据分析" })
+  .filter({ hasText: "内部数据研究" })
   .click();
 await page
   .locator(".assistant-message .message-text")
@@ -90,7 +111,7 @@ await page
   .waitFor();
 await page.reload({ waitUntil: "networkidle" });
 const activeProject = await page.locator(".project-item.active").innerText();
-if (!activeProject.includes("内部数据分析")) {
+if (!activeProject.includes("内部数据研究")) {
   throw new Error(`刷新后未恢复项目：${activeProject}`);
 }
 await page
@@ -104,7 +125,7 @@ console.log(
       sessionCount,
       projectCount,
       restoredAfterReload: true,
-      restoredProject: "内部数据分析",
+      restoredProject: "内部数据研究",
       url: `${baseUrl}/#/chat`
     },
     null,

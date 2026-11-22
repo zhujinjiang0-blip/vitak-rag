@@ -317,7 +317,7 @@ a {
 .project-item {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 28px;
+  grid-template-columns: minmax(0, 1fr) 24px 24px;
   align-items: stretch;
   border: 1px solid transparent;
   border-radius: 7px;
@@ -373,12 +373,13 @@ a {
   font-size: 8px;
 }
 
+.project-edit,
 .project-delete {
   display: grid;
   place-items: center;
   align-self: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   padding: 0;
   border: 0;
   border-radius: 5px;
@@ -387,9 +388,16 @@ a {
   opacity: 0;
 }
 
+.project-item:hover .project-edit,
+.project-item.active .project-edit,
 .project-item:hover .project-delete,
 .project-item.active .project-delete {
   opacity: 1;
+}
+
+.project-edit:hover {
+  background: #e7f3f1;
+  color: var(--teal-dark);
 }
 
 .project-delete:hover {
@@ -440,8 +448,10 @@ a {
 .new-project-button:disabled,
 .new-session-button:disabled,
 .project-open:disabled,
+.project-edit:disabled,
 .project-delete:disabled,
 .session-open:disabled,
+.session-edit:disabled,
 .session-delete:disabled {
   cursor: not-allowed;
   opacity: 0.55;
@@ -452,10 +462,33 @@ a {
   gap: 6px;
 }
 
+.session-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  margin-bottom: 7px;
+  padding: 0 8px;
+  border: 1px solid #dce5ea;
+  border-radius: 6px;
+  background: white;
+  color: #8793a2;
+}
+
+.session-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 9px;
+}
+
 .session-item {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 30px;
+  grid-template-columns: minmax(0, 1fr) 24px 24px;
   align-items: stretch;
   border: 1px solid transparent;
   border-radius: 7px;
@@ -508,12 +541,13 @@ a {
   font-size: 8px;
 }
 
+.session-edit,
 .session-delete {
   display: grid;
   place-items: center;
   align-self: center;
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   padding: 0;
   border: 0;
   border-radius: 5px;
@@ -522,14 +556,50 @@ a {
   opacity: 0;
 }
 
+.session-item:hover .session-edit,
+.session-item.active .session-edit,
 .session-item:hover .session-delete,
 .session-item.active .session-delete {
   opacity: 1;
 }
 
+.session-edit:hover {
+  background: #e7f3f1;
+  color: var(--teal-dark);
+}
+
 .session-delete:hover {
   background: #fee2e2;
   color: #b91c1c;
+}
+
+.inline-name-form {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) 26px 26px;
+  gap: 4px;
+  padding: 5px;
+}
+
+.inline-name-form input {
+  min-width: 0;
+  height: 28px;
+  padding: 0 7px;
+  border: 1px solid #8bcfc5;
+  border-radius: 5px;
+  background: white;
+  color: var(--ink);
+  font-size: 9px;
+}
+
+.inline-name-form button {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #b9d8d3;
+  border-radius: 5px;
+  background: white;
+  color: var(--teal-dark);
 }
 
 .session-empty {
@@ -2131,7 +2201,9 @@ a {
     flex: 0 0 220px;
   }
 
+  .project-edit,
   .project-delete,
+  .session-edit,
   .session-delete {
     opacity: 1;
   }

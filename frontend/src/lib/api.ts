@@ -9,6 +9,7 @@ import type {
 import {
   askStaticQuestion,
   getStaticGraphMeta,
+  getStaticFullGraph,
   getStaticHealth,
   getStaticSubgraph,
   searchStaticEvidence,
@@ -55,6 +56,15 @@ export function getSubgraph(
       domains,
       limit: 100
     })
+  });
+}
+
+export function getFullGraph(domains: string[]): Promise<Subgraph> {
+  if (STATIC_DEMO_MODE) return getStaticFullGraph(domains);
+  return jsonRequest<Subgraph>("/api/v1/graph/full", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ domains })
   });
 }
 

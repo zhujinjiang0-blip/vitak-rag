@@ -14,6 +14,7 @@ from app.schemas import (
     EvidenceTableImportRequest,
     ExternalTripleImportRequest,
     ExternalTripleImportResponse,
+    FullGraphRequest,
     GraphSearchResponse,
     HealthResponse,
     IngestRequest,
@@ -288,6 +289,26 @@ def graph_meta(request: Request):
         "stats": _snapshot(request).graph.stats(),
         "data_version": _snapshot(request).data_version,
     }
+
+
+@router.post("/api/v1/graph/full", response_model=SubgraphResponse)
+def graph_full(payload: FullGraphRequest, request: Request) -> SubgraphResponse:
+    snapshot = _snapshot(request)
+    domains = set(payload.domains)
+    nodes = [
+        node for node in snapshot.graph.all_nodes() if not domains or node.domain in domains
+    ]
+    node_ids = {node.id for node in nodes}
+    edges = [
+        edge
+        for edge in snapshot.graph.all_edges()
+        if edge.source in node_ids and edge.target in node_ids
+    ]
+    return SubgraphResponse(
+        nodes=nodes,
+        edges=edges,
+        data_version=snapshot.data_version,
+    )
 
 
 @router.post("/api/v1/graph/subgraph", response_model=SubgraphResponse)

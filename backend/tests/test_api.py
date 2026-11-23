@@ -20,6 +20,7 @@ def test_public_api_contract_and_internal_auth():
             "/api/v1/graph/subgraph",
             json={"entity_ids": entity_ids, "depth": 1},
         )
+        full_graph = client.post("/api/v1/graph/full", json={})
         protected = client.post(
             "/internal/v1/ingest",
             json={"path": "/tmp/does-not-exist.txt"},
@@ -43,4 +44,8 @@ def test_public_api_contract_and_internal_auth():
     assert entity_ids
     assert graph.status_code == 200
     assert graph.json()["nodes"]
+    assert full_graph.status_code == 200
+    assert full_graph.json()["nodes"]
+    assert len(full_graph.json()["nodes"]) >= len(graph.json()["nodes"])
+    assert full_graph.json()["edges"]
     assert protected.status_code == 401

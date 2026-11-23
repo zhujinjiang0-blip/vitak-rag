@@ -155,13 +155,46 @@ if (checkInternal) {
 
 await page.goto(`${baseUrl}/#/graph`, { waitUntil: "networkidle" });
 await page.getByRole("heading", { name: "知识图谱" }).waitFor();
+await page.locator('[data-graph-scope="all"]').waitFor({ timeout: 20_000 });
 await page.locator(".graph-3d-canvas canvas").waitFor();
+const overviewCounts = await page.evaluate(() => {
+  const values = [...document.querySelectorAll(".graph-stats strong")].map((node) =>
+    Number(node.textContent?.replace(/[^\d]/g, "") || 0)
+  );
+  return {
+    nodes: values[0],
+    edges: values[1],
+    scope: document.querySelector(".graph-canvas")?.getAttribute("data-graph-scope")
+  };
+});
+if (overviewCounts.scope !== "all" || overviewCounts.nodes < 1500 || overviewCounts.edges < 5000) {
+  throw new Error(`图谱默认未展示全量数据：${JSON.stringify(overviewCounts)}`);
+}
 await page.screenshot({
   path: `${outputDir}/graph-3d-desktop.png`,
   fullPage: true
 });
+await page.getByPlaceholder("搜索实体，例如：华法林、纳豆、INR").fill("华法林");
+await page.getByRole("button", { name: "搜索" }).click();
+await page.locator(".entity-result").first().waitFor({ timeout: 15_000 });
+await page.locator(".entity-result").first().click();
+await page.locator('[data-graph-scope="focus"]').waitFor({ timeout: 15_000 });
+await page.locator(".graph-show-all").click();
+await page.locator('[data-graph-scope="all"]').waitFor({ timeout: 15_000 });
 await page.getByRole("button", { name: "二维图谱" }).click();
 await page.locator(".react-flow").waitFor();
+await page.waitForFunction(
+  () => document.querySelectorAll(".react-flow__node").length > 1500,
+  null,
+  { timeout: 20_000 }
+);
+const reactFlowCounts = await page.evaluate(() => ({
+  nodes: document.querySelectorAll(".react-flow__node").length,
+  edges: document.querySelectorAll(".react-flow__edge").length
+}));
+if (reactFlowCounts.nodes < 1500 || reactFlowCounts.edges < 5000) {
+  throw new Error(`二维全图数量不完整：${JSON.stringify(reactFlowCounts)}`);
+}
 await page.screenshot({
   path: `${outputDir}/graph-2d-desktop.png`,
   fullPage: true

@@ -1416,6 +1416,31 @@ a {
   background: #fbfcfd;
 }
 
+.graph-show-all {
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--teal-dark);
+  background: white;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.graph-show-all:hover:not(:disabled) {
+  border-color: #75bdb4;
+  background: #eefaf7;
+}
+
+.graph-show-all:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
+
 .node-inspector {
   border-left: 1px solid var(--line);
 }

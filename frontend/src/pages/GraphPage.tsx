@@ -13,7 +13,7 @@ import "@xyflow/react/dist/style.css";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Box, Filter, GitFork, Network, RotateCcw, Search, X } from "lucide-react";
 import Graph3DView from "../components/Graph3DView";
-import { getGraphMeta, getSubgraph, searchGraph } from "../lib/api";
+import { getFullGraph, getGraphMeta, getSubgraph, searchGraph } from "../lib/api";
 import {
   DOMAIN_COLORS,
   RELATION_THEMES,
@@ -27,7 +27,7 @@ function GraphPage() {
   const [query, setQuery] = useState("维生素K");
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [selected, setSelected] = useState<GraphNode | null>(null);
-  const [selectedIds, setSelectedIds] = useState<string[]>(["vitamin-k"]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [enabledDomains, setEnabledDomains] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"2d" | "3d">("3d");
 
@@ -42,68 +42,111 @@ function GraphPage() {
     queryFn: () => getSubgraph(selectedIds, 1, enabledDomains),
     enabled: selectedIds.length > 0
   });
+  const fullGraph = useQuery({
+    queryKey: ["full-graph", enabledDomains],
+    queryFn: () => getFullGraph(enabledDomains)
+  });
+  const visibleGraph = selectedIds.length > 0 ? subgraph.data : fullGraph.data;
+  const graphLoading =
+    selectedIds.length > 0 ? subgraph.isFetching : fullGraph.isFetching;
+  const isOverview = selectedIds.length === 0;
 
   const baseFlow = useMemo(() => {
-    const items = subgraph.data;
+    const items = visibleGraph;
     if (!items) return { nodes: [], edges: [] };
 
+    const overview = selectedIds.length === 0 && items.nodes.length > 200;
     const centerId = selectedIds[0] ?? items.nodes[0]?.id;
     const others = items.nodes.filter((node) => node.id !== centerId);
     const radius = Math.max(210, Math.min(320, others.length * 18));
-    const nodes: FlowNode[] = items.nodes.map((node, index) => {
+    const orderedNodes = overview
+      ? [...items.nodes].sort(
+          (left, right) =>
+            left.domain.localeCompare(right.domain, "zh-CN") ||
+            left.name.localeCompare(right.name, "zh-CN")
+        )
+      : items.nodes;
+    const columns = Math.max(1, Math.ceil(Math.sqrt(orderedNodes.length * 1.4)));
+    const rows = Math.ceil(orderedNodes.length / columns);
+    const nodes: FlowNode[] = orderedNodes.map((node, index) => {
       const isCenter = node.id === centerId;
       const angle = (Math.PI * 2 * index) / Math.max(others.length, 1);
       const domainColor = graphDomainColor(node.domain);
+      const row = Math.floor(index / columns);
+      const column = index % columns;
       return {
         id: node.id,
-        position: isCenter
-          ? { x: 0, y: 0 }
-          : { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius },
-        data: { label: node.name },
-        style: {
-          width: isCenter ? 150 : 124,
-          minHeight: 42,
-          borderRadius: 8,
-          border: `1px solid ${domainColor}99`,
-          background: isCenter
-            ? "rgba(15, 23, 42, 0.82)"
-            : "rgba(255, 255, 255, 0.62)",
-          color: isCenter ? "#ffffff" : "#172033",
-          fontWeight: isCenter ? 700 : 600,
-          padding: "10px 12px",
-          backdropFilter: "blur(12px)",
-          boxShadow: isCenter
-            ? `0 16px 36px ${domainColor}45`
-            : "0 12px 30px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.72)"
-        }
+        position: overview
+          ? {
+              x: (column - (columns - 1) / 2) * 110,
+              y: (row - (rows - 1) / 2) * 76
+            }
+          : isCenter
+            ? { x: 0, y: 0 }
+            : { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius },
+        data: { label: overview ? "" : node.name },
+        style: overview
+          ? {
+              width: 14,
+              height: 14,
+              minHeight: 14,
+              borderRadius: 999,
+              border: "1px solid rgba(255,255,255,0.92)",
+              background: `${domainColor}cc`,
+              padding: 0,
+              boxShadow: `0 0 0 2px ${domainColor}18`
+            }
+          : {
+              width: isCenter ? 150 : 124,
+              minHeight: 42,
+              borderRadius: 8,
+              border: `1px solid ${domainColor}99`,
+              background: isCenter
+                ? "rgba(15, 23, 42, 0.82)"
+                : "rgba(255, 255, 255, 0.62)",
+              color: isCenter ? "#ffffff" : "#172033",
+              fontWeight: isCenter ? 700 : 600,
+              padding: "10px 12px",
+              backdropFilter: "blur(12px)",
+              boxShadow: isCenter
+                ? `0 16px 36px ${domainColor}45`
+                : "0 12px 30px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.72)"
+            }
       };
     });
     const edges: FlowEdge[] = items.edges.map((edge) => ({
       id: edge.id,
       source: edge.source,
       target: edge.target,
-      label: edge.predicate,
-      animated: edge.is_demo,
+      label: overview ? undefined : edge.predicate,
+      animated: !overview && edge.is_demo,
       style: {
         stroke: graphRelationColor(edge.predicate),
-        strokeWidth: 1.35,
-        opacity: edge.is_demo ? 0.4 : 0.7
+        strokeWidth: overview ? 0.65 : 1.35,
+        opacity: overview ? 0.12 : edge.is_demo ? 0.4 : 0.7
       },
-      labelStyle: { fontSize: 9, fill: graphRelationColor(edge.predicate) },
-      labelBgStyle: { fill: "#f8fafc", fillOpacity: 0.9 }
+      ...(overview
+        ? {}
+        : {
+            labelStyle: {
+              fontSize: 9,
+              fill: graphRelationColor(edge.predicate)
+            },
+            labelBgStyle: { fill: "#f8fafc", fillOpacity: 0.9 }
+          })
     }));
     return { nodes, edges };
-  }, [selectedIds, subgraph.data]);
+  }, [selectedIds, visibleGraph]);
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState<FlowNode>([]);
   const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
   const relationCounts = useMemo(() => {
     const counts = new Map<string, number>();
-    subgraph.data?.edges.forEach((edge) => {
+    visibleGraph?.edges.forEach((edge) => {
       const theme = graphRelationTheme(edge.predicate);
       counts.set(theme.id, (counts.get(theme.id) ?? 0) + 1);
     });
     return counts;
-  }, [subgraph.data?.edges]);
+  }, [visibleGraph?.edges]);
 
   useEffect(() => {
     setFlowNodes(baseFlow.nodes);
@@ -120,16 +163,17 @@ function GraphPage() {
     setSelectedIds([node.id]);
   }
 
-  function inspectEntity(node: GraphNode) {
-    setSelected(node);
-  }
-
   function toggleDomain(domain: string) {
     setEnabledDomains((current) =>
       current.includes(domain)
         ? current.filter((item) => item !== domain)
         : [...current, domain]
     );
+  }
+
+  function showAllGraph() {
+    setSelected(null);
+    setSelectedIds([]);
   }
 
   function resetLayout() {
@@ -166,8 +210,8 @@ function GraphPage() {
             </button>
           </div>
           <div className="graph-stats">
-            <span><strong>{meta.data?.stats.nodes ?? "—"}</strong> 实体</span>
-            <span><strong>{meta.data?.stats.edges ?? "—"}</strong> 关系</span>
+            <span><strong>{visibleGraph?.nodes.length ?? "—"}</strong> 当前实体</span>
+            <span><strong>{visibleGraph?.edges.length ?? "—"}</strong> 当前关系</span>
             <span><strong>{meta.data?.domains.length ?? 6}</strong> 领域</span>
           </div>
         </div>
@@ -205,6 +249,15 @@ function GraphPage() {
           <div className="panel-title">
             <GitFork size={17} />
             <h2>实体结果</h2>
+            <button
+              type="button"
+              className="graph-show-all"
+              onClick={showAllGraph}
+              disabled={isOverview}
+            >
+              <Network size={13} />
+              全部
+            </button>
           </div>
           {search.isFetching && <p className="muted">正在搜索...</p>}
           {search.data?.items.map((node) => (
@@ -226,8 +279,15 @@ function GraphPage() {
           {search.data?.items.length === 0 && <p className="muted">没有找到匹配实体。</p>}
         </aside>
 
-        <section className={`graph-canvas ${viewMode === "3d" ? "is-3d" : ""}`}>
-          {subgraph.isFetching && <div className="canvas-status">正在查询邻居关系...</div>}
+        <section
+          className={`graph-canvas ${viewMode === "3d" ? "is-3d" : ""}`}
+          data-graph-scope={isOverview ? "all" : "focus"}
+        >
+          {graphLoading && (
+            <div className="canvas-status">
+              {isOverview ? "正在加载全部图谱..." : "正在查询邻居关系..."}
+            </div>
+          )}
           <div className="graph-legend-panel" aria-label="知识领域图例">
             <div className="graph-legend-heading">
               <strong>图例</strong>
@@ -289,30 +349,31 @@ function GraphPage() {
           </div>
           {viewMode === "3d" ? (
             <Graph3DView
-              nodes={subgraph.data?.nodes ?? []}
-              edges={subgraph.data?.edges ?? []}
+              nodes={visibleGraph?.nodes ?? []}
+              edges={visibleGraph?.edges ?? []}
               selectedId={selected?.id ?? selectedIds[0] ?? null}
-              onSelect={inspectEntity}
+              onSelect={selectEntity}
             />
           ) : (
             <>
               <ReactFlow
+                key={`${isOverview ? "all" : selectedIds.join("-")}-${enabledDomains.join("-")}`}
                 nodes={flowNodes}
                 edges={flowEdges}
                 fitView
-                minZoom={0.35}
+                minZoom={isOverview ? 0.04 : 0.35}
                 maxZoom={1.7}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onNodeClick={(_, node) => {
-                  const entity = subgraph.data?.nodes.find((item) => item.id === node.id);
-                  if (entity) setSelected(entity);
+                  const entity = visibleGraph?.nodes.find((item) => item.id === node.id);
+                  if (entity) selectEntity(entity);
                 }}
                 onNodeDragStart={(_, node) => {
-                  const entity = subgraph.data?.nodes.find((item) => item.id === node.id);
+                  const entity = visibleGraph?.nodes.find((item) => item.id === node.id);
                   if (entity) setSelected(entity);
                 }}
-                nodesDraggable
+                nodesDraggable={!isOverview}
                 nodesConnectable={false}
                 elementsSelectable
                 panOnDrag
@@ -322,7 +383,7 @@ function GraphPage() {
                 <Background color="#d7dee8" gap={22} size={1} />
                 <MiniMap
                   nodeColor={(node) => {
-                    const entity = subgraph.data?.nodes.find((item) => item.id === node.id);
+                    const entity = visibleGraph?.nodes.find((item) => item.id === node.id);
                     return graphDomainColor(entity?.domain ?? "");
                   }}
                 />

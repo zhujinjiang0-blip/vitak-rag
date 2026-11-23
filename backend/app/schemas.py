@@ -133,6 +133,10 @@ class SubgraphRequest(BaseModel):
     limit: int = Field(default=80, ge=10, le=300)
 
 
+class FullGraphRequest(BaseModel):
+    domains: list[str] = Field(default_factory=list)
+
+
 class SubgraphResponse(BaseModel):
     nodes: list[GraphNode]
     edges: list[GraphEdge]

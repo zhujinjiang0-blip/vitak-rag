@@ -14,7 +14,7 @@ interface Graph3DViewProps {
 interface EdgeObject {
   edge: GraphEdge;
   line: THREE.Line;
-  handle: THREE.Mesh;
+  handle?: THREE.Mesh;
   bendOffset: THREE.Vector3;
 }
 
@@ -126,9 +126,15 @@ function Graph3DView({
     const root = containerRef.current!;
     if (!root || nodes.length === 0) return;
 
+    const overview = nodes.length > 300;
+    const showEdgeHandles = edges.length <= 350;
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(48, 1, 1, 2400);
-    camera.position.set(170, 115, 360);
+    camera.position.set(
+      overview ? 620 : 170,
+      overview ? 420 : 115,
+      overview ? 1050 : 360
+    );
 
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
@@ -138,16 +144,20 @@ function Graph3DView({
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.domElement.setAttribute(
       "aria-label",
-      "可旋转、缩放、拖拽节点和关系曲线控制点、点击选择节点的三维知识图谱"
+      showEdgeHandles
+        ? "可旋转、缩放、拖拽节点和关系曲线控制点、点击选择节点的三维知识图谱"
+        : "可旋转、缩放和点击选择节点的全量三维知识图谱"
     );
-    renderer.domElement.dataset.interactionReady = "node-edge";
+    renderer.domElement.dataset.interactionReady = showEdgeHandles
+      ? "node-edge"
+      : "node";
     root.replaceChildren(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.07;
-    controls.minDistance = 90;
-    controls.maxDistance = 760;
+    controls.minDistance = overview ? 180 : 90;
+    controls.maxDistance = overview ? 2600 : 760;
     controls.rotateSpeed = 0.65;
     controls.zoomSpeed = 0.8;
 
@@ -160,10 +170,15 @@ function Graph3DView({
     scene.add(fillLight);
 
     const positions = new Map<string, THREE.Vector3>();
-    const center = nodes.find((node) => node.id === selectedId) ?? nodes[0];
-    positions.set(center.id, new THREE.Vector3(0, 0, 0));
-    const others = nodes.filter((node) => node.id !== center.id);
-    const radius = Math.max(150, Math.min(245, 115 + others.length * 4.4));
+    const explicitCenter = nodes.find((node) => node.id === selectedId);
+    const center = explicitCenter ?? (overview ? null : nodes[0]);
+    if (center) positions.set(center.id, new THREE.Vector3(0, 0, 0));
+    const others = center
+      ? nodes.filter((node) => node.id !== center.id)
+      : nodes;
+    const radius = overview
+      ? Math.max(330, Math.min(660, 220 + Math.sqrt(others.length) * 20))
+      : Math.max(150, Math.min(245, 115 + others.length * 4.4));
 
     others.forEach((node, index) => {
       const fraction = (index + 0.5) / Math.max(1, others.length);
@@ -198,23 +213,27 @@ function Graph3DView({
         .slice(0, 9)
         .map((node) => node.id)
     );
-    persistentLabels.add(center.id);
+    if (center) persistentLabels.add(center.id);
     nodes.forEach((node) => {
       const point = positions.get(node.id);
       if (!point) return;
-      const isCenter = node.id === center.id;
-      const baseRadius = isCenter ? 10.5 : 6.2;
-      const geometry = new THREE.SphereGeometry(baseRadius, 24, 18);
+      const isCenter = node.id === center?.id;
+      const baseRadius = isCenter ? 10.5 : overview ? 3.4 : 6.2;
+      const geometry = new THREE.SphereGeometry(
+        baseRadius,
+        overview ? 10 : 24,
+        overview ? 8 : 18
+      );
       const color = new THREE.Color(graphDomainColor(node.domain));
       const material = new THREE.MeshPhysicalMaterial({
         color,
         emissive: color,
-        emissiveIntensity: isCenter ? 0.3 : 0.1,
+        emissiveIntensity: isCenter ? 0.3 : overview ? 0.04 : 0.1,
         roughness: 0.18,
         metalness: 0.08,
         transparent: true,
-        opacity: isCenter ? 0.86 : 0.7,
-        transmission: 0.28,
+        opacity: isCenter ? 0.86 : overview ? 0.58 : 0.7,
+        transmission: overview ? 0 : 0.28,
         thickness: 1.4,
         clearcoat: 1,
         clearcoatRoughness: 0.12
@@ -228,30 +247,34 @@ function Graph3DView({
       scene.add(mesh);
       nodeMeshes.set(node.id, mesh);
 
-      const glow = glowSprite(graphDomainColor(node.domain));
-      const glowSize = baseRadius * 3.2;
-      glow.scale.set(glowSize, glowSize, 1);
-      glow.userData.baseScale = glowSize;
-      glow.userData.baseOpacity = isCenter ? 0.3 : 0.16;
-      const glowMaterial = glow.material as THREE.SpriteMaterial;
-      glowMaterial.opacity = glow.userData.baseOpacity;
-      glow.renderOrder = 1;
-      mesh.add(glow);
-      mesh.userData.glow = glow;
+      if (!overview || isCenter) {
+        const glow = glowSprite(graphDomainColor(node.domain));
+        const glowSize = baseRadius * 3.2;
+        glow.scale.set(glowSize, glowSize, 1);
+        glow.userData.baseScale = glowSize;
+        glow.userData.baseOpacity = isCenter ? 0.3 : 0.16;
+        const glowMaterial = glow.material as THREE.SpriteMaterial;
+        glowMaterial.opacity = glow.userData.baseOpacity;
+        glow.renderOrder = 1;
+        mesh.add(glow);
+        mesh.userData.glow = glow;
 
-      const ring = selectionRing(graphDomainColor(node.domain));
-      const ringSize = baseRadius * 2.75;
-      ring.scale.set(ringSize, ringSize, 1);
-      ring.renderOrder = 3;
-      mesh.add(ring);
-      mesh.userData.ring = ring;
+        const ring = selectionRing(graphDomainColor(node.domain));
+        const ringSize = baseRadius * 2.75;
+        ring.scale.set(ringSize, ringSize, 1);
+        ring.renderOrder = 3;
+        mesh.add(ring);
+        mesh.userData.ring = ring;
+      }
 
-      const label = nodeLabel(node.name);
-      label.position.copy(point).add(new THREE.Vector3(0, baseRadius + 8, 0));
-      label.visible = persistentLabels.has(node.id);
-      label.userData.persistent = persistentLabels.has(node.id);
-      scene.add(label);
-      mesh.userData.label = label;
+      if (!overview || persistentLabels.has(node.id)) {
+        const label = nodeLabel(node.name);
+        label.position.copy(point).add(new THREE.Vector3(0, baseRadius + 8, 0));
+        label.visible = persistentLabels.has(node.id);
+        label.userData.persistent = persistentLabels.has(node.id);
+        scene.add(label);
+        mesh.userData.label = label;
+      }
     });
 
     const edgeObjects: EdgeObject[] = [];
@@ -269,7 +292,7 @@ function Graph3DView({
       edgeObject.line.geometry = new THREE.BufferGeometry().setFromPoints(
         curve.getPoints(20)
       );
-      edgeObject.handle.position.copy(controlPoint);
+      edgeObject.handle?.position.copy(controlPoint);
     }
 
     edges.forEach((edge, index) => {
@@ -285,28 +308,33 @@ function Graph3DView({
       const material = new THREE.LineBasicMaterial({
         color: relationTheme.color,
         transparent: true,
-        opacity: edge.is_demo ? 0.24 : 0.48,
+        opacity: overview ? 0.1 : edge.is_demo ? 0.24 : 0.48,
         depthWrite: false
       });
       const line = new THREE.Line(new THREE.BufferGeometry(), material);
       scene.add(line);
-      const handle = new THREE.Mesh(
-        new THREE.SphereGeometry(3, 12, 8),
-        new THREE.MeshBasicMaterial({
-          color: relationTheme.color,
-          transparent: true,
-          opacity: 0.42,
-          depthWrite: false
-        })
-      );
-      handle.userData.edgeId = edge.id;
-      handle.renderOrder = 1;
-      scene.add(handle);
+      let handle: THREE.Mesh | undefined;
+      if (showEdgeHandles) {
+        handle = new THREE.Mesh(
+          new THREE.SphereGeometry(3, 12, 8),
+          new THREE.MeshBasicMaterial({
+            color: relationTheme.color,
+            transparent: true,
+            opacity: 0.42,
+            depthWrite: false
+          })
+        );
+        handle.userData.edgeId = edge.id;
+        handle.renderOrder = 1;
+        scene.add(handle);
+      }
       const edgeObject = { edge, line, handle, bendOffset };
       updateEdgeCurve(edgeObject);
       edgeObjects.push(edgeObject);
     });
     edgeObjectsRef.current = edgeObjects;
+    const edgeHandles = () =>
+      edgeObjects.flatMap((item) => (item.handle ? [item.handle] : []));
 
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
@@ -347,9 +375,7 @@ function Graph3DView({
       if (event.button !== 0) return;
       updatePointer(event);
       raycaster.setFromCamera(pointer, camera);
-      const edgeHit = raycaster.intersectObjects(
-        edgeObjects.map((item) => item.handle)
-      )[0];
+      const edgeHit = raycaster.intersectObjects(edgeHandles())[0];
       const nodeHit = raycaster.intersectObjects([...nodeMeshes.values()])[0];
 
       if (edgeHit) {
@@ -357,6 +383,7 @@ function Graph3DView({
           (item) => item.edge.id === edgeHit.object.userData.edgeId
         );
         if (!edgeObject) return;
+        if (!edgeObject.handle) return;
         beginPlaneDrag(edgeObject.handle.position);
         dragState = {
           mode: "edge",
@@ -448,9 +475,7 @@ function Graph3DView({
       }
 
       const nodeHit = raycaster.intersectObjects([...nodeMeshes.values()])[0];
-      const edgeHit = raycaster.intersectObjects(
-        edgeObjects.map((item) => item.handle)
-      )[0];
+      const edgeHit = raycaster.intersectObjects(edgeHandles())[0];
       const hoveredId = nodeHit?.object.userData.nodeId as string | undefined;
       renderer.domElement.style.cursor = edgeHit
         ? "grab"
@@ -458,6 +483,7 @@ function Graph3DView({
           ? "pointer"
           : "grab";
       edgeObjects.forEach(({ handle }) => {
+        if (!handle) return;
         const material = handle.material as THREE.MeshBasicMaterial;
         material.opacity =
           edgeHit?.object === handle
@@ -574,13 +600,14 @@ function Graph3DView({
         label.visible = selected || Boolean(label.userData.persistent);
       }
     });
+    const denseGraph = edgeObjectsRef.current.length > 350;
     edgeObjectsRef.current.forEach(({ edge, line, handle }) => {
       const active = edge.source === selectedId || edge.target === selectedId;
       const material = line.material as THREE.LineBasicMaterial;
       const theme = graphRelationTheme(edge.predicate);
-      material.opacity = active ? 0.92 : edge.is_demo ? 0.24 : 0.48;
+      material.opacity = active ? 0.92 : denseGraph ? 0.1 : edge.is_demo ? 0.24 : 0.48;
       material.color.set(theme.color);
-      const handleMaterial = handle.material as THREE.MeshBasicMaterial | undefined;
+      const handleMaterial = handle?.material as THREE.MeshBasicMaterial | undefined;
       if (handleMaterial) {
         handleMaterial.opacity = active ? 0.88 : 0.42;
       }

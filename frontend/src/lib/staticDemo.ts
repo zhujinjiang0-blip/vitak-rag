@@ -453,6 +453,21 @@ export async function getStaticSubgraph(
   };
 }
 
+export async function getStaticFullGraph(domains: string[]): Promise<Subgraph> {
+  const data = await loadData();
+  const nodes = domains.length
+    ? data.nodes.filter((node) => domains.includes(node.domain))
+    : data.nodes;
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  return {
+    nodes,
+    edges: data.edges.filter(
+      (edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target)
+    ),
+    data_version: data.version
+  };
+}
+
 export async function searchStaticEvidence(query: string): Promise<{
   items: SearchResult[];
   total: number;

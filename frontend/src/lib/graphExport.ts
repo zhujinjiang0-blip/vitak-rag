@@ -348,19 +348,37 @@ export async function exportThreeGraphPng(
     52 * uiScale
   );
 
-  const footerHeight = 48 * uiScale;
+  const footerHeight = 72 * uiScale;
   context.fillStyle = "rgba(255,255,255,0.92)";
   context.fillRect(0, canvas.height - footerHeight, canvas.width, footerHeight);
   let x = 24 * uiScale;
   context.font = `600 ${9 * uiScale}px "Noto Sans SC", "PingFang SC", sans-serif`;
+  context.fillStyle = "#435166";
+  context.fillText("实体领域", x, canvas.height - 49 * uiScale);
+  x += 60 * uiScale;
   Object.entries(DOMAIN_COLORS).forEach(([label, color]) => {
     context.fillStyle = color;
     context.beginPath();
-    context.arc(x, canvas.height - 25 * uiScale, 3.5 * uiScale, 0, Math.PI * 2);
+    context.arc(x, canvas.height - 52 * uiScale, 3.5 * uiScale, 0, Math.PI * 2);
     context.fill();
     context.fillStyle = "#64748b";
-    context.fillText(label, x + 7 * uiScale, canvas.height - 22 * uiScale);
+    context.fillText(label, x + 7 * uiScale, canvas.height - 49 * uiScale);
     x += context.measureText(label).width + 24 * uiScale;
+  });
+  x = 24 * uiScale;
+  context.fillStyle = "#435166";
+  context.fillText("关系类型", x, canvas.height - 20 * uiScale);
+  x += 60 * uiScale;
+  RELATION_THEMES.forEach((theme) => {
+    context.strokeStyle = theme.color;
+    context.lineWidth = 2 * uiScale;
+    context.beginPath();
+    context.moveTo(x, canvas.height - 23 * uiScale);
+    context.lineTo(x + 14 * uiScale, canvas.height - 23 * uiScale);
+    context.stroke();
+    context.fillStyle = "#64748b";
+    context.fillText(theme.label, x + 19 * uiScale, canvas.height - 20 * uiScale);
+    x += context.measureText(theme.label).width + 38 * uiScale;
   });
   return canvasToBlob(canvas);
 }

@@ -18,6 +18,23 @@ RESEARCH_ONLY_STATUSES = {
     "manual_pending",
     "provisional",
 }
+STRUCTURED_QA_PREDICATES = {
+    "contains",
+    "VitaminKContent",
+    "CookingMethod",
+    "MeasurementUnit",
+    "has_outcome_biomarker",
+    "has_exposure_intervention",
+    "RelatedDisease",
+}
+STRUCTURED_METADATA_PREDICATES = {
+    "Name",
+    "Description",
+    "skos:altLabel",
+    "URI",
+    "Category",
+    "Source",
+}
 
 CURATED_ALIASES = {
     "vitamin k": ["维生素K", "维K", "Vitamin K"],
@@ -51,6 +68,22 @@ NODE_IDS = {
     "mk-4": "mk-4",
     "warfarin": "warfarin",
     "osteocalcin": "osteocalcin",
+}
+
+STRUCTURED_NAME_OVERRIDES = {
+    "vitamin k (phylloquinone)": "Phylloquinone",
+    "vitamin k (dihydrophylloquinone)": "Dihydrophylloquinone",
+    "vitamin k (menaquinone-4)": "Menaquinone-4",
+    "vitamin k (menaquinone-7)": "Menaquinone-7",
+}
+
+STRUCTURED_ALIASES = {
+    "kale": "羽衣甘蓝",
+    "spinach": "菠菜",
+    "broccoli": "西兰花",
+    "natto": "纳豆",
+    "fermented soy": "发酵豆制品",
+    "vegetable oil": "植物油",
 }
 
 
@@ -171,6 +204,103 @@ def rank_research_only(row: dict[str, str]) -> tuple[int, float, int]:
     return grade_rank, confidence_value(row.get("confidence_score", "")), len(sentence)
 
 
+def structured_publisher(source_locator: str) -> str:
+    lowered = source_locator.casefold()
+    publishers = (
+        ("usda", "USDA FoodData Central"),
+        ("fdc", "USDA FoodData Central"),
+        ("pubchem", "PubChem"),
+        ("foodb", "FooDB"),
+        ("kegg", "KEGG"),
+        ("clinicaltrials", "ClinicalTrials"),
+        ("中国食物成分表", "中国食物成分表"),
+    )
+    for marker, label in publishers:
+        if marker in lowered:
+            return label
+    return "外部结构化数据"
+
+
+def structured_node_label(
+    row: dict[str, str],
+    side: str,
+    metadata: dict[tuple[str, str], dict[str, Any]],
+) -> str:
+    raw_label = row[f"{side}_label"].strip()
+    raw_type = row[f"{side}_type"].strip()
+    override = STRUCTURED_NAME_OVERRIDES.get(normalized(raw_label))
+    if override:
+        return override
+    details = metadata.get((normalized(raw_label), raw_type), {})
+    return str(details.get("name") or raw_label)
+
+
+def structured_snippet(row: dict[str, str], subject: str, object_label: str) -> str:
+    predicate = row["predicate"]
+    if predicate == "VitaminKContent":
+        return f"{subject}的维生素K含量记录值为{object_label}。"
+    if predicate == "CookingMethod":
+        return f"{subject}的烹饪方式记录为{object_label}。"
+    if predicate == "Pathway":
+        return f"{subject}对应的KEGG通路为{object_label}。"
+    if predicate == "MeasurementUnit":
+        return f"{subject}的计量单位记录为{object_label}。"
+    if predicate == "has_outcome_biomarker":
+        return f"{subject}相关记录涉及结局或生物标志物{object_label}。"
+    if predicate == "has_exposure_intervention":
+        return f"{subject}相关研究的暴露或干预为{object_label}。"
+    if predicate == "RelatedDisease":
+        return f"{subject}与疾病主题{object_label}存在结构化关联。"
+    return f"{subject}含有{object_label}。"
+
+
+def load_structured_rows(
+    path: Path,
+) -> tuple[list[dict[str, str]], dict[tuple[str, str], dict[str, Any]]]:
+    selected: list[dict[str, str]] = []
+    metadata: dict[tuple[str, str], dict[str, Any]] = {}
+    seen: set[str] = set()
+    with path.open(encoding="utf-8-sig", newline="", errors="replace") as handle:
+        for row in csv.DictReader(handle):
+            edge_id = row.get("edge_id", "").strip()
+            if not edge_id or edge_id in seen or not is_eligible(row):
+                continue
+            seen.add(edge_id)
+            predicate = row.get("predicate", "").strip()
+            if predicate in STRUCTURED_METADATA_PREDICATES:
+                key = (
+                    normalized(row.get("subject_label", "")),
+                    row.get("subject_type", "").strip(),
+                )
+                details = metadata.setdefault(
+                    key,
+                    {
+                        "name": "",
+                        "description": "",
+                        "aliases": set(),
+                        "uri": "",
+                        "categories": [],
+                        "sources": [],
+                    },
+                )
+                value = row.get("object_label", "").strip()
+                if predicate == "Name" and value:
+                    details["name"] = value
+                elif predicate == "Description" and value:
+                    details["description"] = value[:500]
+                elif predicate == "skos:altLabel" and value:
+                    details["aliases"].add(value)
+                elif predicate == "URI" and value:
+                    details["uri"] = value
+                elif predicate == "Category" and value:
+                    details["categories"].append(value)
+                elif predicate == "Source" and value:
+                    details["sources"].append(value)
+            elif predicate in STRUCTURED_QA_PREDICATES:
+                selected.append(row)
+    return selected, metadata
+
+
 def load_rows(path: Path, research_only_limit: int) -> tuple[list[dict[str, str]], int]:
     eligible: list[dict[str, str]] = []
     research_only: list[dict[str, str]] = []
@@ -195,7 +325,9 @@ def build_payload(
     rows: list[dict[str, str]],
     *,
     research_only_count: int,
-    source_path: Path,
+    source_paths: list[Path],
+    structured_metadata: dict[tuple[str, str], dict[str, Any]],
+    eligible_structured_records: int,
 ) -> dict[str, Any]:
     nodes: dict[str, dict[str, Any]] = {}
     edges: list[dict[str, Any]] = []
@@ -206,24 +338,71 @@ def build_payload(
     source_ids: set[str] = set()
 
     for row in rows:
-        subject_label = row["subject_label"].strip()
-        object_label = row["object_label"].strip()
+        source_type = row.get("source_type", "").strip()
+        raw_subject_label = row["subject_label"].strip()
+        raw_object_label = row["object_label"].strip()
+        subject_label = (
+            structured_node_label(row, "subject", structured_metadata)
+            if source_type == "structured"
+            else raw_subject_label
+        )
+        object_label = (
+            structured_node_label(row, "object", structured_metadata)
+            if source_type == "structured"
+            else raw_object_label
+        )
         subject_id = stable_node_id(subject_label)
         object_id = stable_node_id(object_label)
-        for node_id, label, entity_type in (
-            (subject_id, subject_label, row["subject_type"]),
-            (object_id, object_label, row["object_type"]),
+        for node_id, label, entity_type, raw_label in (
+            (subject_id, subject_label, row["subject_type"], raw_subject_label),
+            (object_id, object_label, row["object_type"], raw_object_label),
         ):
+            metadata_key = (normalized(raw_label), entity_type.strip())
+            node_metadata = (
+                structured_metadata.get(metadata_key, {})
+                if source_type == "structured"
+                else {}
+            )
+            aliases = {
+                *CURATED_ALIASES.get(normalized(label), []),
+                *CURATED_ALIASES.get(normalized(raw_label), []),
+                *node_metadata.get("aliases", set()),
+            }
+            if source_type == "structured":
+                searchable_label = normalized(label)
+                aliases.update(
+                    alias
+                    for term, alias in STRUCTURED_ALIASES.items()
+                    if term in searchable_label
+                )
+            if raw_label and raw_label != label:
+                aliases.add(raw_label)
             if node_id not in nodes:
                 nodes[node_id] = {
                     "id": node_id,
                     "name": label,
                     "type": entity_type or "LiteratureEntity",
                     "domain": domain_for(label, entity_type),
-                    "summary": "来自已审核真实外部文献三元组。",
-                    "aliases": CURATED_ALIASES.get(normalized(label), []),
+                    "summary": (
+                        node_metadata.get("description")
+                        or (
+                            "来自已审核的真实外部结构化数据。"
+                            if source_type == "structured"
+                            else "来自已审核真实外部文献三元组。"
+                        )
+                    ),
+                    "aliases": sorted(aliases),
                     "is_demo": False,
                 }
+            else:
+                existing = nodes[node_id]
+                existing["aliases"] = sorted({*existing.get("aliases", []), *aliases})
+                if (
+                    source_type == "structured"
+                    and node_metadata.get("description")
+                    and existing.get("summary", "").startswith("来自已审核真实外部文献")
+                ):
+                    existing["summary"] = node_metadata["description"]
 
         _descriptor, sentence, pmid = parse_locator(row["source_locator"])
         evidence_id = row["edge_id"]
@@ -232,28 +411,44 @@ def build_payload(
         source_ids.add(source_record_id)
         statuses[row["review_status"]] += 1
         predicates[row["predicate"]] += 1
-        registry_codes[row["source_type"]] += 1
-        source_title = (
-            f"PMID {pmid} · 真实外部文献证据"
-            if pmid
-            else f"{source_record_id} · 真实外部文献证据"
-        )
+        registry_codes[source_type] += 1
+        if source_type == "structured":
+            publisher = structured_publisher(row["source_locator"])
+            source_title = f"{publisher} · 外部结构化证据"
+            snippet = structured_snippet(row, subject_label, object_label)
+        else:
+            publisher = "PubMed" if pmid else "真实外部文献"
+            source_title = (
+                f"PMID {pmid} · 真实外部文献证据"
+                if pmid
+                else f"{source_record_id} · 真实外部文献证据"
+            )
+            snippet = sentence[:1200]
         evidence.append(
             {
                 "id": evidence_id,
                 "source_id": source_record_id,
                 "source_title": source_title,
-                "source_type": "literature",
-                "source_classification": "external_literature_triple",
+                "source_type": source_type,
+                "source_classification": (
+                    "external_structured_triple"
+                    if source_type == "structured"
+                    else "external_literature_triple"
+                ),
                 "data_origin": "external",
-                "data_owner": "已发表维生素 K 研究文献",
+                "data_owner": (
+                    "FDC、USDA、PubChem、FooDB、KEGG、ClinicalTrials 等外部结构化数据"
+                    if source_type == "structured"
+                    else "已发表维生素 K 研究文献"
+                ),
                 "access_scope": "public",
-                "publisher": "PubMed" if pmid else "真实外部文献",
+                "publisher": publisher,
                 "published_at": "",
                 "url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/" if pmid else "",
-                "evidence_level": row["evidence_grade"],
+                "evidence_level": row["evidence_grade"]
+                or ("structured" if source_type == "structured" else ""),
                 "locator": row["source_locator"],
-                "snippet": sentence[:1200],
+                "snippet": snippet,
                 "is_demo": False,
                 "document_id": evidence_id,
                 "entity_ids": [subject_id, object_id],
@@ -286,10 +481,14 @@ def build_payload(
             }
         )
 
-    eligible_count = sum(1 for item in evidence if item["answer_eligible"])
+    eligible_count = sum(
+        1
+        for item in evidence
+        if item["answer_eligible"] and item["source_type"] == "literature"
+    )
     return {
         "version": {
-            "version": "real-public-2026.11",
+            "version": "real-public-2026.11-structured",
             "created_at": datetime.now(UTC).isoformat(),
             "is_demo": False,
             "entity_count": len(nodes),
@@ -299,8 +498,10 @@ def build_payload(
         },
         "export_metadata": {
             "scope": "external_public_only",
-            "source_file": source_path.name,
+            "source_files": [path.name for path in source_paths],
+            "source_file": ", ".join(path.name for path in source_paths),
             "eligible_literature_records": eligible_count,
+            "eligible_structured_records": eligible_structured_records,
             "research_only_literature_records": research_only_count,
             "internal_records": 0,
             "review_statuses": dict(statuses),
@@ -315,9 +516,18 @@ def build_payload(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Export accepted public literature triples for the static VitaK-RAG demo."
+        description=(
+            "Export accepted public literature and structured triples "
+            "for the static VitaK-RAG demo."
+        )
     )
     parser.add_argument("literature_csv", type=Path)
+    parser.add_argument(
+        "structured_csv",
+        type=Path,
+        nargs="?",
+        help="可选：42 列外部结构化三元组 CSV",
+    )
     parser.add_argument(
         "--output",
         type=Path,
@@ -326,14 +536,24 @@ def main() -> int:
     parser.add_argument("--research-only-limit", type=int, default=1200)
     args = parser.parse_args()
 
-    rows, research_only_count = load_rows(
+    literature_rows, research_only_count = load_rows(
         args.literature_csv,
         args.research_only_limit,
     )
+    structured_rows: list[dict[str, str]] = []
+    structured_metadata: dict[tuple[str, str], dict[str, Any]] = {}
+    if args.structured_csv:
+        structured_rows, structured_metadata = load_structured_rows(args.structured_csv)
+    rows = [*structured_rows, *literature_rows]
+    source_paths = [args.literature_csv]
+    if args.structured_csv:
+        source_paths.append(args.structured_csv)
     payload = build_payload(
         rows,
         research_only_count=research_only_count,
-        source_path=args.literature_csv,
+        source_paths=source_paths,
+        structured_metadata=structured_metadata,
+        eligible_structured_records=len(structured_rows),
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
@@ -346,6 +566,9 @@ def main() -> int:
                 "output": str(args.output),
                 "records": len(payload["evidence"]),
                 "eligible": payload["export_metadata"]["eligible_literature_records"],
+                "eligible_structured": payload["export_metadata"][
+                    "eligible_structured_records"
+                ],
                 "research_only": research_only_count,
                 "nodes": payload["version"]["entity_count"],
                 "edges": payload["version"]["relation_count"],

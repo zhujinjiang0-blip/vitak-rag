@@ -26,6 +26,7 @@ interface OverviewData {
   public_evidence_pack?: {
     version: string;
     eligible_literature_records: number;
+    eligible_structured_records?: number;
     research_only_literature_records: number;
     internal_records: number;
     nodes: number;
@@ -84,7 +85,9 @@ function OverviewPage() {
         <Info size={18} />
         <p>
           <strong>预答辩演示口径：</strong>
-          在线问答读取 1,012 条已审核真实外部文献关系和 1,200 条仅研究检索记录；
+          在线问答读取 1,012 条已审核外部文献关系、
+          {formatNumber(data?.public_evidence_pack?.eligible_structured_records ?? 3123)}
+          条公开结构化关系和 1,200 条仅研究检索记录；
           内部 248 条队列证据只保留在本地私有快照，不上传原始 CSV、内部证据或全量图谱。
         </p>
       </div>

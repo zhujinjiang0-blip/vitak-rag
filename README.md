@@ -4,7 +4,7 @@ VitaK-RAG 是一个面向营养学、临床、药学和医学信息学研究人�
 
 预答辩版本采用双轨数据边界：
 
-- **公网真实外部证据版**：GitHub Pages 使用 1,012 条已审核且可正式回答的真实外部文献关系，另含 1,200 条明确标记为“仅研究检索”的待审或暂定真实文献记录。
+- **公网真实外部证据版**：GitHub Pages 使用 1,012 条已审核外部文献关系、3,123 条可问答的公开结构化关系，另含 1,200 条明确标记为“仅研究检索”的待审或暂定真实文献记录。
 - **本地真实内外数据版**：FastAPI 后端激活 `vitak-real-2026.11` 私有快照，可同时检索 73,148 条外部证据和 248 条内部队列证据。内部数据仍标记为 `internal/private`。
 
 ## 在线演示
@@ -24,7 +24,7 @@ internal_evidence_final.csv       248 条
 合计                            73,396 条
 ```
 
-公网只发布经筛选的真实外部文献证据片段。原始 CSV、内部证据、个体级数据和全量私有快照只保存在本机，不进入 GitHub、GitHub Pages 或飞书。完整演示流程见 [`docs/pre-defense-demo.md`](docs/pre-defense-demo.md)。
+公网只发布经筛选的真实外部文献和公开结构化语义关系。原始 CSV、内部证据、个体级数据和全量私有快照只保存在本机，不进入 GitHub、GitHub Pages 或飞书。完整演示流程见 [`docs/pre-defense-demo.md`](docs/pre-defense-demo.md)。
 
 ![问答界面](docs/screenshots/chat-answer-desktop.png)
 
@@ -33,7 +33,7 @@ internal_evidence_final.csv       248 条
 ## 已实现能力
 
 - 六领域维生素 K 属性图：生理代谢、食物营养、药物相互作用、临床疾病、检测评估、指南与 RCT。
-- 公网真实外部证据包包含 1,012 条正式回答证据、1,200 条研究检索证据、962 个实体和 2,212 条关系。
+- 公网真实外部证据包包含 1,012 条文献证据、3,123 条结构化问答关系、1,200 条研究检索证据、1,547 个实体和 5,335 条关系。
 - 本地私有快照包含 73,396 条真实证据、36,638 个实体和 73,279 条关系，其中内部队列证据 248 条。
 - 实体别名链接、规则意图识别、白名单图查询、1-2 跳路径检索和模板化回答。
 - 药物问题按“作用机制、饮食影响、监测与安全边界”聚合真实证据，不再直接展示原始三元组。
@@ -56,7 +56,7 @@ data/eval/               评测题集与报告
 scripts/
   bootstrap.sh           安装依赖并生成演示快照
   dev.sh                 同时启动前后端
-  export-public-evidence.py  从真实文献表生成公网外部证据包
+  export-public-evidence.py  合并真实文献和结构化表，生成公网外部证据包
   visual-check.mjs       浏览器交互、截图和布局检查
   public-qa-smoke.mjs    公网真实证据问答冒烟测试
 ```
@@ -142,9 +142,10 @@ cd backend
   path/to/literature_triples_final.csv \
   path/to/structured_triples_final.csv
 
-# 从真实文献表生成可公开的静态外部证据包
+# 合并真实文献和结构化表，生成可公开的静态外部证据包
 ../.venv/bin/python ../scripts/export-public-evidence.py \
-  path/to/literature_triples_final.csv
+  path/to/literature_triples_final.csv \
+  path/to/structured_triples_final.csv
 
 # 导入文本型 PDF、DOCX、TXT、Markdown、JSON、XML、HTML、CSV 或 XLSX
 ../.venv/bin/python -m app.cli ingest path/to/document.pdf --title "材料名称"

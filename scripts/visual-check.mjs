@@ -11,7 +11,8 @@ const sharp = require(
 
 const outputDir = "/private/tmp/vitak-rag-visual";
 const baseUrl = process.env.VITAK_WEB_URL || "http://127.0.0.1:5173";
-const expectedVersion = process.env.VITAK_EXPECT_VERSION || "real-public-2026.11";
+const expectedVersion =
+  process.env.VITAK_EXPECT_VERSION || "real-public-2026.11-structured";
 const checkInternal = process.env.VITAK_CHECK_INTERNAL === "true";
 await mkdir(outputDir, { recursive: true });
 
@@ -66,6 +67,26 @@ await page.locator(".origin-pill.external").first().waitFor({ timeout: 15_000 })
 await page.locator(".origin-legend.compact").waitFor();
 await page.screenshot({
   path: `${outputDir}/chat-answer-desktop.png`,
+  fullPage: true
+});
+
+await page.getByPlaceholder("输入关于维生素K的问题...").fill(
+  "羽衣甘蓝含有哪种维生素K？"
+);
+await page.getByRole("button", { name: "发送问题" }).click();
+await page.locator(".assistant-message").last().waitFor({ timeout: 15_000 });
+await page.waitForFunction(
+  () =>
+    !document.querySelector(".thinking-panel") &&
+    !document.querySelector('[data-streaming="true"]'),
+  null,
+  { timeout: 15_000 }
+);
+await page.getByText("EXTERNAL_STRUCTURED_TRIPLE", { exact: false }).first().waitFor({
+  timeout: 15_000
+});
+await page.screenshot({
+  path: `${outputDir}/chat-structured-evidence-desktop.png`,
   fullPage: true
 });
 
@@ -168,6 +189,7 @@ const screenshots = [
   "chat-desktop.png",
   "chat-thinking-desktop.png",
   "chat-answer-desktop.png",
+  "chat-structured-evidence-desktop.png",
   "chat-safety-desktop.png",
   ...(checkInternal ? ["chat-internal-desktop.png"] : []),
   "graph-3d-desktop.png",

@@ -18,12 +18,14 @@
 
 | 运行环境 | 外部数据 | 内部数据 | 用途 |
 | --- | --- | --- | --- |
-| GitHub Pages 公网版 | 1,012 条已审核真实外部文献证据 + 1,200 条仅研究检索记录 | 不发布 | 导师可直接访问的真实外部证据演示 |
+| GitHub Pages 公网版 | 1,012 条已审核外部文献 + 3,123 条公开结构化问答关系 + 1,200 条仅研究检索记录 | 不发布 | 导师可直接访问的真实外部证据演示 |
 | 本地 FastAPI 全栈版 | 73,148 条外部证据 | 248 条真实内部队列证据，`internal/private` | 完整内外数据联合检索与预答辩演示 |
 
-公网数据包由 [`scripts/export-public-evidence.py`](../scripts/export-public-evidence.py) 生成。脚本只读取外部文献表，并强制过滤：
+公网数据包由 [`scripts/export-public-evidence.py`](../scripts/export-public-evidence.py) 生成。脚本读取外部文献表，并合并审核通过的结构化语义关系：
 
 - 正式回答证据：`accepted` 或 `adopted_with_warning`，且 `input_status=adopted`。
+- 结构化节点先用 `Name`、`Description`、`skos:altLabel` 等已审核属性补全，再将 `contains`、`VitaminKContent`、`CookingMethod` 等语义关系纳入公网问答。
+- `URI`、`Category`、`Source` 等纯属性声明用于节点补全，不直接当作可回答的医学关系。
 - 研究检索证据：最多 1,200 条 `manual_pending` 或 `provisional` 记录，明确标记为不可用于正式回答。
 - 不读取、不打包任何内部 CSV。
 
@@ -151,10 +153,11 @@ cd backend
 
 ```bash
 ../.venv/bin/python ../scripts/export-public-evidence.py \
-  path/to/literature_triples_final.csv
+  path/to/literature_triples_final.csv \
+  path/to/structured_triples_final.csv
 ```
 
-输出文件为 `frontend/public/real-evidence.json`，不包含内部证据。
+输出文件为 `frontend/public/real-evidence.json`，包含可公开的外部文献和结构化语义关系，不包含内部证据。
 
 ## 当前审计结果
 

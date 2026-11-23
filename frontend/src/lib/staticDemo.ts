@@ -163,6 +163,11 @@ const relationTemplates: Record<string, string> = {
   ASSOCIATED_WITH: "{source}与{target}存在关联，具体意义需结合监测和专业评估。",
   CAN_ALTER: "{source}可能改变{target}。",
   CONTAINS: "{source}含有{target}。",
+  VitaminKContent: "{source}的维生素K含量记录值为{target}。",
+  CookingMethod: "{source}的烹饪方式记录为{target}。",
+  Pathway: "{source}对应KEGG通路{target}。",
+  MeasurementUnit: "{source}的计量单位记录为{target}。",
+  RelatedDisease: "{source}与疾病主题{target}存在结构化关联。",
   RICH_IN: "{source}可被视为富含{target}的食物类别之一。",
   MAY_CONTAIN: "{source}可能含有{target}，具体含量受加工与配方影响。",
   RECOMMENDED_FOR: "{source}与{target}相关的知识建议适用于该场景，实际执行应遵循专业指导。",
@@ -556,6 +561,18 @@ function naturalEvidenceSentence(edge: GraphEdge, source: GraphNode, target: Gra
     }
     return `${sourceName}含有${targetName}。`;
   }
+  if (edge.predicate === "VitaminKContent") {
+    return `${sourceName}的维生素K含量记录值为${targetName}。`;
+  }
+  if (edge.predicate === "CookingMethod") {
+    return `${sourceName}的烹饪方式记录为${targetName}。`;
+  }
+  if (edge.predicate === "Pathway") {
+    return `${sourceName}对应KEGG通路${targetName}。`;
+  }
+  if (edge.predicate === "MeasurementUnit") {
+    return `${sourceName}的计量单位记录为${targetName}。`;
+  }
   if (edge.predicate === "is_synthesized_by") {
     return isFoodName(target.name)
       ? `${sourceName}可从${targetName}中获得，或与${targetName}有关。`
@@ -720,7 +737,13 @@ function rankRealEvidence(
       if (haystack.includes(normalize(term))) score += 2.5;
     }
     if (intent === "food_sources") {
-      if (["contains", "is_synthesized_by"].includes(item.predicate ?? "")) score += 8;
+      if (
+        ["contains", "is_synthesized_by", "VitaminKContent"].includes(
+          item.predicate ?? ""
+        )
+      ) {
+        score += 8;
+      }
       if (["food", "diet", "vegetable", "leafy", "oil"].some((term) => haystack.includes(term))) {
         score += 5;
       }
@@ -942,6 +965,40 @@ function buildTopicAnswer(
       relation: "evidence_synthesis"
     });
   }
+  if (intent === "food_sources") {
+    const structuredData: StaticData = {
+      ...data,
+      evidence: data.evidence.filter(
+        (item) =>
+          item.source_type === "structured" &&
+          item.predicate === "contains" &&
+          item.answer_eligible !== false
+      )
+    };
+    const structuredEvidence = rankRealEvidence(
+      query,
+      entities,
+      intent,
+      structuredData
+    ).slice(0, 3);
+    const edgeById = new Map(data.edges.map((edge) => [edge.id, edge]));
+    const nodeById = new Map(data.nodes.map((node) => [node.id, node]));
+    for (const evidence of structuredEvidence) {
+      if (usedSources.has(evidence.source_id)) continue;
+      const edge = edgeById.get(evidence.id);
+      const source = edge ? nodeById.get(edge.source) : undefined;
+      const target = edge ? nodeById.get(edge.target) : undefined;
+      if (!edge || !source || !target) continue;
+      usedSources.add(evidence.source_id);
+      selected.push(evidence);
+      claims.push({
+        id: `static-claim-${claims.length}`,
+        text: naturalEvidenceSentence(edge, source, target),
+        evidence_ids: [evidence.id],
+        relation: edge.predicate
+      });
+    }
+  }
   if (claims.length < 2) return null;
 
   const edgeById = new Map(data.edges.map((edge) => [edge.id, edge]));
@@ -1077,7 +1134,11 @@ function topicSynthesisAnswer(
     );
   }
 
-  if (intent === "food_sources" && normalizedQuery.includes("vitamink")) {
+  if (
+    intent === "food_sources" &&
+    normalizedQuery.includes("vitamink") &&
+    !entities.some((entity) => entity.domain === "食物营养")
+  ) {
     return buildTopicAnswer(
       query,
       data,

@@ -4,12 +4,14 @@ import {
   Controls,
   MiniMap,
   ReactFlow,
+  useEdgesState,
+  useNodesState,
   type Edge as FlowEdge,
   type Node as FlowNode
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { FormEvent, useMemo, useState } from "react";
-import { Filter, GitFork, Search, X } from "lucide-react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Filter, GitFork, RotateCcw, Search, X } from "lucide-react";
 import { getGraphMeta, getSubgraph, searchGraph } from "../lib/api";
 import type { GraphNode } from "../lib/types";
 
@@ -41,7 +43,7 @@ function GraphPage() {
     enabled: selectedIds.length > 0
   });
 
-  const flow = useMemo(() => {
+  const baseFlow = useMemo(() => {
     const items = subgraph.data;
     if (!items) return { nodes: [], edges: [] };
 
@@ -82,6 +84,13 @@ function GraphPage() {
     }));
     return { nodes, edges };
   }, [selectedIds, subgraph.data]);
+  const [flowNodes, setFlowNodes, onNodesChange] = useNodesState<FlowNode>([]);
+  const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
+
+  useEffect(() => {
+    setFlowNodes(baseFlow.nodes);
+    setFlowEdges(baseFlow.edges);
+  }, [baseFlow, setFlowEdges, setFlowNodes]);
 
   function handleSearch(event: FormEvent) {
     event.preventDefault();
@@ -99,6 +108,10 @@ function GraphPage() {
         ? current.filter((item) => item !== domain)
         : [...current, domain]
     );
+  }
+
+  function resetLayout() {
+    setFlowNodes(baseFlow.nodes);
   }
 
   return (
@@ -171,19 +184,37 @@ function GraphPage() {
 
         <section className="graph-canvas">
           {subgraph.isFetching && <div className="canvas-status">正在查询邻居关系...</div>}
+          <button
+            className="graph-reset-layout"
+            type="button"
+            onClick={resetLayout}
+            title="恢复默认布局"
+            aria-label="恢复默认布局"
+          >
+            <RotateCcw size={16} />
+          </button>
           <ReactFlow
-            nodes={flow.nodes}
-            edges={flow.edges}
+            nodes={flowNodes}
+            edges={flowEdges}
             fitView
             minZoom={0.35}
             maxZoom={1.7}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
             onNodeClick={(_, node) => {
+              const entity = subgraph.data?.nodes.find((item) => item.id === node.id);
+              if (entity) setSelected(entity);
+            }}
+            onNodeDragStart={(_, node) => {
               const entity = subgraph.data?.nodes.find((item) => item.id === node.id);
               if (entity) setSelected(entity);
             }}
             nodesDraggable
             nodesConnectable={false}
             elementsSelectable
+            panOnDrag
+            zoomOnScroll
+            elevateNodesOnSelect
           >
             <Background color="#d7dee8" gap={22} size={1} />
             <MiniMap
@@ -238,4 +269,3 @@ function GraphPage() {
 }
 
 export default GraphPage;
-

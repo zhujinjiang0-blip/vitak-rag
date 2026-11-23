@@ -1396,6 +1396,38 @@ a {
   background: #f7f9fb;
 }
 
+.graph-canvas .react-flow__node {
+  cursor: grab;
+}
+
+.graph-canvas .react-flow__node.dragging,
+.graph-canvas .react-flow__node:active {
+  cursor: grabbing;
+}
+
+.graph-reset-layout {
+  position: absolute;
+  z-index: 12;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  cursor: pointer;
+}
+
+.graph-reset-layout:hover {
+  color: var(--teal-dark);
+  border-color: #75bdb4;
+  background: #eefaf7;
+}
+
 .canvas-status {
   position: absolute;
   z-index: 10;

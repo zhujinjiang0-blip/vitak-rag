@@ -174,6 +174,20 @@ await page.screenshot({
   path: `${outputDir}/graph-3d-desktop.png`,
   fullPage: true
 });
+const threeDownloadPromise = page.waitForEvent("download");
+await page.getByRole("button", { name: "下载当前图谱 PNG" }).click();
+const threeDownload = await threeDownloadPromise;
+const threeDownloadPath = await threeDownload.path();
+if (!threeDownloadPath) throw new Error("三维图谱 PNG 下载失败");
+const threeDownloadImage = await sharp(threeDownloadPath).metadata();
+const threeDownloadStats = await sharp(threeDownloadPath).stats();
+if (
+  threeDownloadImage.format !== "png" ||
+  !threeDownloadImage.width ||
+  !threeDownloadStats.channels.some((channel) => channel.stdev > 8)
+) {
+  throw new Error("三维图谱下载文件不是有效 PNG");
+}
 await page.getByPlaceholder("搜索实体，例如：华法林、纳豆、INR").fill("华法林");
 await page.getByRole("button", { name: "搜索" }).click();
 await page.locator(".entity-result").first().waitFor({ timeout: 15_000 });
@@ -199,6 +213,20 @@ await page.screenshot({
   path: `${outputDir}/graph-2d-desktop.png`,
   fullPage: true
 });
+const twoDownloadPromise = page.waitForEvent("download");
+await page.getByRole("button", { name: "下载当前图谱 PNG" }).click();
+const twoDownload = await twoDownloadPromise;
+const twoDownloadPath = await twoDownload.path();
+if (!twoDownloadPath) throw new Error("二维图谱 PNG 下载失败");
+const twoDownloadImage = await sharp(twoDownloadPath).metadata();
+const twoDownloadStats = await sharp(twoDownloadPath).stats();
+if (
+  twoDownloadImage.format !== "png" ||
+  !twoDownloadImage.width ||
+  !twoDownloadStats.channels.some((channel) => channel.stdev > 8)
+) {
+  throw new Error("二维图谱下载文件不是有效 PNG");
+}
 
 await page.goto(`${baseUrl}/#/evidence`, { waitUntil: "networkidle" });
 await page.getByPlaceholder("输入关键词、实体或研究主题...").fill("华法林");

@@ -1574,6 +1574,18 @@ a {
   font-size: 9px;
 }
 
+.graph-legend-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.graph-legend-heading .graph-export-status {
+  color: var(--teal-dark);
+  font-size: 8px;
+  font-weight: 750;
+}
+
 .graph-legend-heading button {
   width: 24px;
   height: 24px;
@@ -1591,6 +1603,11 @@ a {
   color: var(--teal-dark);
   border-color: #75bdb4;
   background: #eefaf7;
+}
+
+.graph-legend-heading button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .graph-legend-grid {

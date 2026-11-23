@@ -11,9 +11,23 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Box, Filter, GitFork, Network, RotateCcw, Search, X } from "lucide-react";
+import {
+  Box,
+  Download,
+  Filter,
+  GitFork,
+  Network,
+  RotateCcw,
+  Search,
+  X
+} from "lucide-react";
 import Graph3DView from "../components/Graph3DView";
 import { getFullGraph, getGraphMeta, getSubgraph, searchGraph } from "../lib/api";
+import {
+  downloadPng,
+  exportFlowGraphPng,
+  exportThreeGraphPng
+} from "../lib/graphExport";
 import {
   DOMAIN_COLORS,
   RELATION_THEMES,
@@ -30,6 +44,9 @@ function GraphPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [enabledDomains, setEnabledDomains] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"2d" | "3d">("3d");
+  const [exportStatus, setExportStatus] = useState<
+    "idle" | "working" | "done" | "error"
+  >("idle");
 
   const meta = useQuery({ queryKey: ["graph-meta"], queryFn: getGraphMeta });
   const search = useQuery({
@@ -118,6 +135,7 @@ function GraphPage() {
       id: edge.id,
       source: edge.source,
       target: edge.target,
+      data: { predicate: edge.predicate },
       label: overview ? undefined : edge.predicate,
       animated: !overview && edge.is_demo,
       style: {
@@ -178,6 +196,46 @@ function GraphPage() {
 
   function resetLayout() {
     setFlowNodes(baseFlow.nodes);
+  }
+
+  async function downloadGraph() {
+    if (!visibleGraph || exportStatus === "working") return;
+    setExportStatus("working");
+    try {
+      const meta = {
+        mode: viewMode,
+        scope: isOverview ? ("all" as const) : ("focus" as const),
+        entityCount: visibleGraph.nodes.length,
+        relationCount: visibleGraph.edges.length,
+        dataVersion: visibleGraph.data_version.version,
+        focusName: selected?.name
+      };
+      let blob: Blob;
+      if (viewMode === "3d") {
+        const canvas = document.querySelector<HTMLCanvasElement>(
+          ".graph-3d-canvas canvas"
+        );
+        if (!canvas) throw new Error("三维画布尚未加载");
+        blob = await exportThreeGraphPng(canvas, meta);
+      } else {
+        blob = await exportFlowGraphPng(
+          flowNodes,
+          flowEdges,
+          visibleGraph.nodes,
+          meta
+        );
+      }
+      const date = new Date().toISOString().slice(0, 10).replaceAll("-", "");
+      downloadPng(
+        blob,
+        `vitak-graph-${viewMode}-${isOverview ? "all" : "focus"}-${date}.png`
+      );
+      setExportStatus("done");
+    } catch {
+      setExportStatus("error");
+    } finally {
+      window.setTimeout(() => setExportStatus("idle"), 1800);
+    }
   }
 
   return (
@@ -291,18 +349,36 @@ function GraphPage() {
           <div className="graph-legend-panel" aria-label="知识领域图例">
             <div className="graph-legend-heading">
               <strong>图例</strong>
-              {viewMode === "2d" ? (
+              <div className="graph-legend-actions">
+                <span className="graph-export-status" aria-live="polite">
+                  {exportStatus === "working"
+                    ? "导出中"
+                    : exportStatus === "done"
+                      ? "已下载"
+                      : exportStatus === "error"
+                        ? "导出失败"
+                        : ""}
+                </span>
+                {viewMode === "2d" && (
+                  <button
+                    type="button"
+                    onClick={resetLayout}
+                    title="恢复默认布局"
+                    aria-label="恢复默认布局"
+                  >
+                    <RotateCcw size={14} />
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={resetLayout}
-                  title="恢复默认布局"
-                  aria-label="恢复默认布局"
+                  onClick={() => void downloadGraph()}
+                  title="下载当前图谱 PNG"
+                  aria-label="下载当前图谱 PNG"
+                  disabled={graphLoading || !visibleGraph || exportStatus === "working"}
                 >
-                  <RotateCcw size={14} />
+                  <Download size={14} />
                 </button>
-              ) : (
-                <span>{meta.data?.domains.length ?? 0} 类</span>
-              )}
+              </div>
             </div>
             <span className="graph-legend-section-label">实体 · 节点颜色</span>
             <div className="graph-legend-grid">

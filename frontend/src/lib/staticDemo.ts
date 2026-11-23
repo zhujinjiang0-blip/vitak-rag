@@ -213,6 +213,48 @@ function isGeneralFollowup(query: string, entities: GraphNode[]): boolean {
   return residue.replace(/[，。！？、,.!?和与及有什么关系统介绍一下的是]/g, "").length <= 4;
 }
 
+function isCapabilityQuestion(query: string): boolean {
+  const compact = query.replace(/\s+/g, "");
+  return [
+    "你能回答什么",
+    "你可以回答什么",
+    "你能做什么",
+    "你可以做什么",
+    "支持哪些问题",
+    "可以问什么",
+    "能问什么",
+    "问答范围",
+    "怎么提问",
+    "使用说明"
+  ].some((phrase) => compact.includes(phrase));
+}
+
+function capabilityAnswer(
+  query: string,
+  sessionId: string,
+  started: number,
+  data: StaticData
+): Answer {
+  return {
+    session_id: sessionId,
+    query,
+    normalized_query: normalize(query),
+    intent: "capabilities",
+    answer_text:
+      "我可以回答围绕维生素K的九类问题：定义与形式、功能与机制、食物来源与结构化含量、药物相互作用、缺乏与风险、检测指标、研究证据、一般建议，以及实体之间的关系比较。\n\n" +
+      "你可以直接问“华法林和维生素K有什么关系”“哪些食物含维生素K”“羽衣甘蓝的维生素K含量是多少”或“MK-7有哪些RCT证据”。\n\n" +
+      "我不会提供疾病诊断、个体化处方剂量、停药或换药决定，也不处理急救问题；知识库没有足够证据时，我会明确拒答。",
+    claims: [],
+    citations: [],
+    graph_paths: [],
+    sufficiency: "none",
+    safety_notice: null,
+    related_entities: [],
+    data_version: data.version,
+    elapsed_ms: Math.round(performance.now() - started)
+  };
+}
+
 function safetyCheck(query: string): { notice: string; intent: string } | null {
   const compact = query.replace(/\s+/g, "");
   if (
@@ -1298,6 +1340,9 @@ export async function askStaticQuestion(
   const nodeById = new Map(data.nodes.map((node) => [node.id, node]));
   const evidenceById = new Map(data.evidence.map((item) => [item.id, item]));
   const sessionId = requestedSessionId || `static-${crypto.randomUUID()}`;
+  if (isCapabilityQuestion(query)) {
+    return capabilityAnswer(query, sessionId, started, data);
+  }
   const safety = safetyCheck(query);
   if (safety) {
     return {

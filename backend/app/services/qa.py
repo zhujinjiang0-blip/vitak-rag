@@ -57,6 +57,19 @@ MEDICATION_SAFETY_PATTERNS = [
     ),
 ]
 
+CAPABILITY_PHRASES = {
+    "你能回答什么",
+    "你可以回答什么",
+    "你能做什么",
+    "你可以做什么",
+    "支持哪些问题",
+    "可以问什么",
+    "能问什么",
+    "问答范围",
+    "怎么提问",
+    "使用说明",
+}
+
 
 INTENT_RULES: list[tuple[str, set[str]]] = [
     ("comparison", {"区别", "比较", "不同", "差异", "哪个好", "对比"}),
@@ -407,6 +420,28 @@ class GraphAnswerEngine:
                 answer_text=notice,
                 sufficiency=EvidenceSufficiency.NONE,
                 safety_notice=notice,
+                data_version=self.snapshot.data_version,
+                elapsed_ms=int((time.perf_counter() - started) * 1000),
+            )
+            self._finish_answer(answer)
+            return answer
+
+        if any(phrase in normalized for phrase in CAPABILITY_PHRASES):
+            answer = Answer(
+                session_id=session_id,
+                query=query,
+                normalized_query=normalized,
+                intent="capabilities",
+                answer_text=(
+                    "我可以回答围绕维生素K的九类问题：定义与形式、功能与机制、"
+                    "食物来源与结构化含量、药物相互作用、缺乏与风险、检测指标、"
+                    "研究证据、一般建议，以及实体之间的关系比较。\n\n"
+                    "你可以直接问“华法林和维生素K有什么关系”“哪些食物含维生素K”"
+                    "“羽衣甘蓝的维生素K含量是多少”或“MK-7有哪些RCT证据”。\n\n"
+                    "我不会提供疾病诊断、个体化处方剂量、停药或换药决定，也不处理急救问题；"
+                    "知识库没有足够证据时，我会明确拒答。"
+                ),
+                sufficiency=EvidenceSufficiency.NONE,
                 data_version=self.snapshot.data_version,
                 elapsed_ms=int((time.perf_counter() - started) * 1000),
             )

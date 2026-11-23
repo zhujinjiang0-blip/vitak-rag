@@ -28,6 +28,16 @@ def test_no_evidence_question_is_refused(engine):
     assert answer.claims == []
 
 
+def test_capability_question_returns_scope_without_fake_citations(engine):
+    answer = engine.answer("你能回答什么问题？")
+
+    assert answer.intent == "capabilities"
+    assert "九类问题" in answer.answer_text
+    assert "不会提供疾病诊断" in answer.answer_text
+    assert answer.claims == []
+    assert answer.citations == []
+
+
 def test_medication_safety_rule_precedes_graph_retrieval(engine):
     answer = engine.answer("华法林吃多少？")
 

@@ -927,10 +927,17 @@ function ChatPage() {
                     {message.answer && (
                       <div className="message-meta">
                         <span>{intentLabel(message.answer.intent)}</span>
-                        <span>{sufficiencyLabel(message.answer.sufficiency)}</span>
-                        <span>{message.answer.data_version.version}</span>
-                        <span>{message.answer.elapsed_ms} ms</span>
-                        <span>{message.answer.citations.length} 条证据</span>
+                        {message.answer.intent !== "capabilities" && (
+                          <>
+                            <span>{sufficiencyLabel(message.answer.sufficiency)}</span>
+                            <span>{message.answer.data_version.version}</span>
+                            <span>{message.answer.elapsed_ms} ms</span>
+                            <span>{message.answer.citations.length} 条证据</span>
+                          </>
+                        )}
+                        {message.answer.intent === "capabilities" && (
+                          <span>功能范围说明</span>
+                        )}
                       </div>
                     )}
                     {message.answer && message.trace && message.trace.length > 0 && (
@@ -1013,6 +1020,11 @@ function ChatPage() {
           <div className="rail-empty">
             <BookOpen size={32} />
             <p>完成一次问答后，这里会展示证据来源和图谱关联路径。</p>
+          </div>
+        ) : activeAnswer.intent === "capabilities" ? (
+          <div className="rail-empty">
+            <Info size={32} />
+            <p>这是系统的能力范围说明，不需要引用医学证据或图谱路径。</p>
           </div>
         ) : (
           <div className="rail-content">
@@ -1116,7 +1128,8 @@ function intentLabel(intent: string) {
     emergency: "紧急安全",
     medication: "用药安全",
     diagnosis: "诊断边界",
-    general: "图谱检索"
+    general: "图谱检索",
+    capabilities: "能力说明"
   };
   return labels[intent] ?? intent;
 }

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -157,8 +158,11 @@ class SearchResult(BaseModel):
     source_record_id: str = ""
     source_version: str = ""
     source_locator: str = ""
+    url: str = ""
+    predicate: str = ""
     snippet: str
     entity_ids: list[str] = Field(default_factory=list)
+    evidence_json: dict[str, Any] = Field(default_factory=dict)
     score: float
     is_demo: bool = True
 

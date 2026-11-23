@@ -10,6 +10,10 @@ def test_public_api_contract_and_internal_auth():
             "/api/v1/qa/query",
             json={"query": "维生素K有哪些食物来源？"},
         )
+        evidence_search = client.get(
+            "/api/v1/search",
+            params={"q": "维生素K", "limit": 5},
+        )
         graph_search = client.get("/api/v1/graph/search", params={"q": "Vitamin K"})
         entity_ids = [item["id"] for item in graph_search.json()["items"][:1]]
         graph = client.post(
@@ -25,6 +29,11 @@ def test_public_api_contract_and_internal_auth():
     assert health.json()["runtime_llm"] is False
     assert answer.status_code == 200
     assert answer.json()["claims"]
+    assert evidence_search.status_code == 200
+    search_items = evidence_search.json()["items"]
+    assert search_items
+    assert search_items[0]["evidence_json"]
+    assert search_items[0]["evidence_json"]["source_id"] == search_items[0]["source_id"]
     assert all(
         citation["data_origin"]
         in {"internal", "external", "public", "synthetic"}

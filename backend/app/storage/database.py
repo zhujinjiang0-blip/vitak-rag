@@ -440,7 +440,8 @@ class MetadataStore:
         with self.connect() as connection:
             row = connection.execute(
                 """
-                SELECT e.*, c.text AS chunk_text, c.locator, s.title, s.source_type,
+                SELECT e.*, c.text AS chunk_text, c.locator, c.entity_ids_json,
+                       s.title, s.source_type,
                        s.source_classification, s.data_origin, s.data_owner,
                        s.access_scope, s.publisher, s.published_at, s.url, s.is_demo
                 FROM evidence e
@@ -530,10 +531,12 @@ class MetadataStore:
                 SELECT c.id, c.document_id, c.source_id, c.text, c.entity_ids_json,
                        c.locator, s.title, s.source_classification,
                        s.data_origin, s.data_owner, s.access_scope, s.is_demo,
+                       s.publisher, s.published_at, s.url,
                        e.id AS evidence_id, e.source_type, e.review_status, e.input_status,
                        e.fusion_status, e.evidence_status, e.graph_display_role,
                        e.answer_eligible, e.source_record_id, e.source_version,
-                       e.source_locator,
+                       e.source_locator, e.edge_id,
+                       e.metadata_json AS evidence_metadata_json,
                        bm25(chunk_fts) AS rank
                 FROM chunk_fts
                 JOIN chunks c ON c.id = chunk_fts.chunk_id
@@ -591,7 +594,8 @@ class MetadataStore:
                        e.id AS evidence_id, e.edge_id, e.source_type AS evidence_source_type,
                        e.review_status, e.input_status, e.fusion_status,
                        e.evidence_status, e.graph_display_role, e.answer_eligible,
-                       e.source_record_id, e.source_version, e.source_locator
+                       e.source_record_id, e.source_version, e.source_locator,
+                       e.metadata_json AS evidence_metadata_json
                 FROM chunks c
                 JOIN sources s ON s.id = c.source_id
                 LEFT JOIN evidence e ON e.chunk_id = c.id

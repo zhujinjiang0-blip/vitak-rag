@@ -498,8 +498,11 @@ export async function searchStaticEvidence(query: string): Promise<{
         source_record_id: item.source_id,
         source_version: item.source_version ?? "",
         source_locator: item.source_locator ?? item.locator,
+        url: item.url,
+        predicate: item.predicate ?? "",
         snippet: item.snippet,
         entity_ids: item.entity_ids,
+        evidence_json: { ...item } as unknown as Record<string, unknown>,
         score,
         is_demo: item.is_demo
       } satisfies SearchResult;

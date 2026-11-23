@@ -121,8 +121,11 @@ export interface SearchResult {
   source_record_id: string;
   source_version: string;
   source_locator: string;
+  url: string;
+  predicate: string;
   snippet: string;
   entity_ids: string[];
+  evidence_json: Record<string, unknown>;
   score: number;
   is_demo: boolean;
 }

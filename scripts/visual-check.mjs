@@ -174,6 +174,24 @@ await page.locator(".evidence-result-card").first().waitFor({ timeout: 15_000 })
 await page.locator(".origin-pill.external").first().waitFor({ timeout: 15_000 });
 await page.locator(".eligibility-pill").first().waitFor({ timeout: 15_000 });
 await page.locator(".origin-filter").waitFor();
+await page.getByRole("button", { name: "查看 JSON" }).first().click();
+const jsonDialog = page.getByRole("dialog");
+await jsonDialog.waitFor({ state: "visible", timeout: 15_000 });
+const jsonText = await page.getByTestId("evidence-json").innerText();
+if (!jsonText.includes('"schema_version": "vitak.evidence.v1"')) {
+  throw new Error("证据 JSON 缺少 schema_version");
+}
+if (!jsonText.includes('"raw_record"')) {
+  throw new Error("证据 JSON 缺少原始记录");
+}
+const downloadPromise = page.waitForEvent("download");
+await page.getByRole("button", { name: "下载 JSON" }).click();
+await downloadPromise;
+await page.screenshot({
+  path: `${outputDir}/evidence-json-desktop.png`,
+  fullPage: false
+});
+await page.getByRole("button", { name: "关闭 JSON 详情" }).click();
 await page.screenshot({
   path: `${outputDir}/evidence-desktop.png`,
   fullPage: true
@@ -198,6 +216,18 @@ await page.screenshot({
   path: `${outputDir}/graph-3d-mobile.png`,
   fullPage: true
 });
+await page.goto(`${baseUrl}/#/evidence`, { waitUntil: "networkidle" });
+await page
+  .getByPlaceholder("输入关键词、实体或研究主题...")
+  .fill("华法林");
+await page.getByRole("button", { name: "检索" }).click();
+await page.locator(".evidence-result-card").first().waitFor({ timeout: 15_000 });
+await page.getByRole("button", { name: "查看 JSON" }).first().click();
+await page.getByRole("dialog").waitFor({ state: "visible", timeout: 15_000 });
+await page.screenshot({
+  path: `${outputDir}/evidence-json-mobile.png`,
+  fullPage: false
+});
 const mobileOverflow = await page.evaluate(
   () => document.documentElement.scrollWidth > window.innerWidth
 );
@@ -213,10 +243,12 @@ const screenshots = [
   ...(checkInternal ? ["chat-internal-desktop.png"] : []),
   "graph-3d-desktop.png",
   "graph-2d-desktop.png",
+  "evidence-json-desktop.png",
   "evidence-desktop.png",
   "import-desktop.png",
   "chat-mobile.png",
-  "graph-3d-mobile.png"
+  "graph-3d-mobile.png",
+  "evidence-json-mobile.png"
 ];
 const imageChecks = {};
 for (const filename of screenshots) {

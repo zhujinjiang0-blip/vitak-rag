@@ -1,6 +1,13 @@
 import { FormEvent, useState } from "react";
-import { BookOpenText, ExternalLink, FileSearch, Search } from "lucide-react";
+import {
+  BookOpenText,
+  ExternalLink,
+  FileJson2,
+  FileSearch,
+  Search
+} from "lucide-react";
 import DataSourceLegend from "../components/DataSourceLegend";
+import EvidenceJsonDialog from "../components/EvidenceJsonDialog";
 import { searchEvidence } from "../lib/api";
 import type { SearchResult } from "../lib/types";
 
@@ -11,6 +18,7 @@ function EvidencePage() {
   const [originFilter, setOriginFilter] = useState("all");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [jsonItem, setJsonItem] = useState<SearchResult | null>(null);
 
   async function runSearch(event?: FormEvent) {
     event?.preventDefault();
@@ -117,15 +125,42 @@ function EvidencePage() {
                   ))}
                 </div>
               )}
-              <div className="result-link">
-                <span>
+              <div className="result-footer">
+                <span className="result-source-meta">
                   {item.review_status} · {item.source_version || item.data_owner || item.chunk_id}
                 </span>
-                <ExternalLink size={14} />
+                <div className="result-actions">
+                  {item.url && (
+                    <a
+                      className="result-action"
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      查看原文
+                      <ExternalLink size={14} />
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    className="result-action"
+                    onClick={() => setJsonItem(item)}
+                  >
+                    <FileJson2 size={14} />
+                    查看 JSON
+                  </button>
+                </div>
               </div>
             </article>
           ))}
         </div>
+      )}
+      {jsonItem && (
+        <EvidenceJsonDialog
+          key={jsonItem.chunk_id}
+          item={jsonItem}
+          onClose={() => setJsonItem(null)}
+        />
       )}
     </div>
   );

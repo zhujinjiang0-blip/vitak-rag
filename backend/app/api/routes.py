@@ -4,7 +4,7 @@ import json
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, File, Form, Header, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
@@ -42,6 +42,52 @@ def _snapshot(request: Request):
 
 def _manager(request: Request):
     return request.app.state.snapshot_manager
+
+
+def _json_object(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return dict(value)
+    if not value:
+        return {}
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _search_evidence_json(row: dict[str, Any]) -> dict[str, Any]:
+    payload = _json_object(row.get("evidence_metadata_json"))
+    payload.update(
+        {
+            "evidence_id": row.get("evidence_id") or row.get("id"),
+            "chunk_id": row.get("id") or row.get("chunk_id"),
+            "edge_id": row.get("edge_id") or payload.get("edge_id", ""),
+            "document_id": row.get("document_id"),
+            "source_id": row.get("source_id"),
+            "source_title": row.get("title"),
+            "source_type": row.get("evidence_source_type") or row.get("source_type"),
+            "source_classification": row.get("source_classification"),
+            "data_origin": row.get("data_origin"),
+            "data_owner": row.get("data_owner"),
+            "access_scope": row.get("access_scope"),
+            "publisher": row.get("publisher", ""),
+            "published_at": row.get("published_at", ""),
+            "url": row.get("url", ""),
+            "review_status": row.get("review_status"),
+            "input_status": row.get("input_status"),
+            "fusion_status": row.get("fusion_status"),
+            "evidence_status": row.get("evidence_status"),
+            "graph_display_role": row.get("graph_display_role"),
+            "answer_eligible": bool(row.get("answer_eligible")),
+            "source_record_id": row.get("source_record_id"),
+            "source_version": row.get("source_version"),
+            "source_locator": row.get("source_locator") or row.get("locator"),
+            "snippet": row.get("text") or row.get("chunk_text"),
+            "entity_ids": json.loads(row.get("entity_ids_json") or "[]"),
+        }
+    )
+    return payload
 
 
 def _assert_internal_token(request: Request, token: str | None) -> None:
@@ -122,6 +168,7 @@ def search(
     expanded_query = _engine(request)._expanded_text_query(q) or q
     for row in snapshot.metadata.search_fts(expanded_query, limit=limit):
         score = 1.0 / (1.0 + abs(float(row["rank"] or 0.0)))
+        evidence_json = _search_evidence_json(row)
         combined[row["id"]] = SearchResult(
             chunk_id=row["id"],
             document_id=row["document_id"],
@@ -141,8 +188,11 @@ def search(
             source_record_id=row["source_record_id"] or "",
             source_version=row["source_version"] or "",
             source_locator=row["source_locator"] or "",
+            url=row["url"] or "",
+            predicate=str(evidence_json.get("predicate") or ""),
             snippet=row["text"][:360],
             entity_ids=json.loads(row["entity_ids_json"] or "[]"),
+            evidence_json=evidence_json,
             score=score,
             is_demo=bool(row["is_demo"]),
         )
@@ -157,6 +207,7 @@ def search(
             continue
         previous = combined.get(chunk_id)
         score = float(item["score"])
+        evidence_json = _search_evidence_json(chunk)
         combined[chunk_id] = SearchResult(
             chunk_id=chunk_id,
             document_id=chunk["document_id"],
@@ -176,8 +227,11 @@ def search(
             source_record_id=chunk["source_record_id"] or "",
             source_version=chunk["source_version"] or "",
             source_locator=chunk["source_locator"] or "",
+            url=chunk["url"] or "",
+            predicate=str(evidence_json.get("predicate") or ""),
             snippet=chunk["text"][:360],
             entity_ids=json.loads(chunk["entity_ids_json"] or "[]"),
+            evidence_json=evidence_json,
             score=max(score, previous.score if previous else 0.0),
             is_demo=bool(chunk["is_demo"]),
         )
@@ -191,7 +245,10 @@ def evidence(evidence_id: str, request: Request):
     row = _snapshot(request).metadata.get_evidence(evidence_id)
     if not row:
         raise HTTPException(status_code=404, detail="evidence not found")
+    evidence_json = _search_evidence_json(row)
     return {
+        "evidence_json": evidence_json,
+        **evidence_json,
         "id": row["id"],
         "source_id": row["source_id"],
         "source_title": row["title"],

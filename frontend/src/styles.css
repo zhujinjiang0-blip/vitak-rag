@@ -1486,7 +1486,8 @@ a {
   z-index: 14;
   top: 12px;
   right: 12px;
-  width: min(210px, calc(100% - 24px));
+  width: min(230px, calc(100% - 24px));
+  max-height: min(360px, calc(100% - 24px));
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1494,6 +1495,7 @@ a {
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
   backdrop-filter: blur(12px);
+  overflow-y: auto;
 }
 
 .graph-legend-heading {
@@ -1538,6 +1540,19 @@ a {
   gap: 6px 8px;
 }
 
+.graph-legend-section-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #435166;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.graph-legend-section-label.relation-label {
+  margin-top: 10px;
+}
+
 .graph-legend-grid span {
   min-width: 0;
   display: flex;
@@ -1549,6 +1564,49 @@ a {
   text-overflow: ellipsis;
   white-space: nowrap;
   transition: opacity 120ms ease;
+}
+
+.graph-relation-legend {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 8px;
+}
+
+.graph-relation-legend span {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  color: #536174;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graph-relation-legend span.dimmed {
+  opacity: 0.34;
+}
+
+.graph-relation-legend span > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.graph-relation-legend small {
+  margin-left: auto;
+  color: #7b8797;
+  font-size: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.graph-relation-legend .relation-swatch {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 2px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
 }
 
 .graph-legend-grid span.dimmed {

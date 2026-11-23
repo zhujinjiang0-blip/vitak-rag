@@ -100,12 +100,80 @@ def stable_node_id(label: str) -> str:
 
 
 def domain_for(label: str, entity_type: str) -> str:
-    text = f"{label} {entity_type}".lower()
+    entity_text = re.sub(r"[^a-z0-9]+", "", entity_type.lower())
+    label_text = label.lower()
+
     if any(
-        term in text
+        term in entity_text
+        for term in (
+            "drug",
+            "supplement",
+            "warfarin",
+            "antibiotic",
+        )
+    ):
+        return "药物相互作用"
+    if any(
+        term in entity_text
+        for term in (
+            "food",
+            "dietarysource",
+            "fermentedsoy",
+            "greenleafyvegetable",
+            "plantoil",
+        )
+    ):
+        return "食物营养"
+    if any(
+        term in entity_text
+        for term in (
+            "biomarker",
+            "measurable",
+        )
+    ):
+        return "检测评估"
+    if any(
+        term in entity_text
+        for term in (
+            "disease",
+            "clinicalfinding",
+            "symptom",
+            "disorder",
+            "osteoporosis",
+            "calcification",
+            "bleeding",
+            "fracture",
+            "cancer",
+        )
+    ):
+        return "临床疾病"
+    if any(
+        term in entity_text
+        for term in (
+            "clinicaloutcome",
+            "population",
+            "participant",
+            "hostcharacteristic",
+            "interventionarm",
+            "researchmethodology",
+            "studydesign",
+            "randomizedcontrolledtrial",
+            "crosssectionalstudy",
+            "cohortstudy",
+            "metaanalysis",
+            "guideline",
+            "standard",
+            "vitaminkexposuredose",
+            "dietaryintervention",
+            "evidenceassociation",
+        )
+    ):
+        return "指南与RCT"
+
+    if any(
+        term in label_text
         for term in (
             "warfarin",
-            "drug",
             "antagonist",
             "antibiotic",
             "anticoag",
@@ -113,7 +181,7 @@ def domain_for(label: str, entity_type: str) -> str:
     ):
         return "药物相互作用"
     if any(
-        term in text
+        term in label_text
         for term in (
             "food",
             "vegetable",
@@ -123,11 +191,14 @@ def domain_for(label: str, entity_type: str) -> str:
             "spinach",
             "kale",
             "broccoli",
+            "human milk",
+            "natto",
+            "liver",
         )
     ):
         return "食物营养"
     if any(
-        term in text
+        term in label_text
         for term in (
             "biomarker",
             "plasma",
@@ -140,11 +211,13 @@ def domain_for(label: str, entity_type: str) -> str:
             "osteocalcin",
             "matrix gla",
             "dp-ucmgp",
+            "homa",
+            "insulin",
         )
     ):
         return "检测评估"
     if any(
-        term in text
+        term in label_text
         for term in (
             "deficiency",
             "disease",
@@ -157,7 +230,7 @@ def domain_for(label: str, entity_type: str) -> str:
     ):
         return "临床疾病"
     if any(
-        term in text
+        term in label_text
         for term in (
             "trial",
             "randomized",
@@ -165,6 +238,7 @@ def domain_for(label: str, entity_type: str) -> str:
             "cohort",
             "guideline",
             "outcome",
+            "standard",
         )
     ):
         return "指南与RCT"

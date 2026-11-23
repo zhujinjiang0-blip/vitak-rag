@@ -14,7 +14,13 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Box, Filter, GitFork, Network, RotateCcw, Search, X } from "lucide-react";
 import Graph3DView from "../components/Graph3DView";
 import { getGraphMeta, getSubgraph, searchGraph } from "../lib/api";
-import { DOMAIN_COLORS, graphDomainColor } from "../lib/graphTheme";
+import {
+  DOMAIN_COLORS,
+  RELATION_THEMES,
+  graphDomainColor,
+  graphRelationColor,
+  graphRelationTheme
+} from "../lib/graphTheme";
 import type { GraphNode } from "../lib/types";
 
 function GraphPage() {
@@ -79,17 +85,25 @@ function GraphPage() {
       label: edge.predicate,
       animated: edge.is_demo,
       style: {
-        stroke: edge.is_demo ? "#94a3b8" : "#0f766e",
-        strokeWidth: 1.2,
-        opacity: edge.is_demo ? 0.35 : 0.62
+        stroke: graphRelationColor(edge.predicate),
+        strokeWidth: 1.35,
+        opacity: edge.is_demo ? 0.4 : 0.7
       },
-      labelStyle: { fontSize: 9, fill: "#64748b" },
+      labelStyle: { fontSize: 9, fill: graphRelationColor(edge.predicate) },
       labelBgStyle: { fill: "#f8fafc", fillOpacity: 0.9 }
     }));
     return { nodes, edges };
   }, [selectedIds, subgraph.data]);
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState<FlowNode>([]);
   const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
+  const relationCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    subgraph.data?.edges.forEach((edge) => {
+      const theme = graphRelationTheme(edge.predicate);
+      counts.set(theme.id, (counts.get(theme.id) ?? 0) + 1);
+    });
+    return counts;
+  }, [subgraph.data?.edges]);
 
   useEffect(() => {
     setFlowNodes(baseFlow.nodes);
@@ -230,6 +244,7 @@ function GraphPage() {
                 <span>{meta.data?.domains.length ?? 0} 类</span>
               )}
             </div>
+            <span className="graph-legend-section-label">实体 · 节点颜色</span>
             <div className="graph-legend-grid">
               {meta.data?.domains.map((domain) => {
                 const dimmed =
@@ -243,6 +258,30 @@ function GraphPage() {
                       }}
                     />
                     {domain}
+                  </span>
+                );
+              })}
+            </div>
+            <span className="graph-legend-section-label relation-label">关系 · 边颜色</span>
+            <div className="graph-relation-legend">
+              {RELATION_THEMES.map((theme) => {
+                const count = relationCounts.get(theme.id) ?? 0;
+                return (
+                  <span
+                    key={theme.id}
+                    className={count === 0 ? "dimmed" : ""}
+                    title={
+                      theme.predicates.length > 0
+                        ? theme.predicates.join("、")
+                        : undefined
+                    }
+                  >
+                    <i
+                      className="relation-swatch"
+                      style={{ background: theme.color }}
+                    />
+                    <span>{theme.label}</span>
+                    <small>{count}</small>
                   </span>
                 );
               })}

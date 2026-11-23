@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { graphDomainColor } from "../lib/graphTheme";
+import { graphDomainColor, graphRelationTheme } from "../lib/graphTheme";
 import type { GraphEdge, GraphNode } from "../lib/types";
 
 interface Graph3DViewProps {
@@ -14,6 +14,8 @@ interface Graph3DViewProps {
 interface EdgeObject {
   edge: GraphEdge;
   line: THREE.Line;
+  handle: THREE.Mesh;
+  bendOffset: THREE.Vector3;
 }
 
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
@@ -136,8 +138,9 @@ function Graph3DView({
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.domElement.setAttribute(
       "aria-label",
-      "可旋转、缩放和点击选择节点的三维知识图谱"
+      "可旋转、缩放、拖拽节点和关系曲线控制点、点击选择节点的三维知识图谱"
     );
+    renderer.domElement.dataset.interactionReady = "node-edge";
     root.replaceChildren(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -252,32 +255,78 @@ function Graph3DView({
     });
 
     const edgeObjects: EdgeObject[] = [];
-    edges.forEach((edge) => {
-      const source = positions.get(edge.source);
-      const target = positions.get(edge.target);
+    function updateEdgeCurve(edgeObject: EdgeObject) {
+      const source = positions.get(edgeObject.edge.source);
+      const target = positions.get(edgeObject.edge.target);
       if (!source || !target) return;
-      const midpoint = source
+      const controlPoint = source
         .clone()
         .add(target)
         .multiplyScalar(0.5)
-        .add(new THREE.Vector3(0, 6, 3));
-      const curve = new THREE.QuadraticBezierCurve3(source, midpoint, target);
-      const geometry = new THREE.BufferGeometry().setFromPoints(curve.getPoints(18));
+        .add(edgeObject.bendOffset);
+      const curve = new THREE.QuadraticBezierCurve3(source, controlPoint, target);
+      edgeObject.line.geometry.dispose();
+      edgeObject.line.geometry = new THREE.BufferGeometry().setFromPoints(
+        curve.getPoints(20)
+      );
+      edgeObject.handle.position.copy(controlPoint);
+    }
+
+    edges.forEach((edge, index) => {
+      const source = positions.get(edge.source);
+      const target = positions.get(edge.target);
+      if (!source || !target) return;
+      const relationTheme = graphRelationTheme(edge.predicate);
+      const bendOffset = new THREE.Vector3(
+        ((index % 3) - 1) * 4,
+        7 + (index % 3) * 3,
+        (index % 2 === 0 ? 1 : -1) * 7
+      );
       const material = new THREE.LineBasicMaterial({
-        color: edge.is_demo ? 0xaab7c4 : 0x2b9f94,
+        color: relationTheme.color,
         transparent: true,
-        opacity: edge.is_demo ? 0.18 : 0.3,
+        opacity: edge.is_demo ? 0.24 : 0.48,
         depthWrite: false
       });
-      const line = new THREE.Line(geometry, material);
+      const line = new THREE.Line(new THREE.BufferGeometry(), material);
       scene.add(line);
-      edgeObjects.push({ edge, line });
+      const handle = new THREE.Mesh(
+        new THREE.SphereGeometry(3, 12, 8),
+        new THREE.MeshBasicMaterial({
+          color: relationTheme.color,
+          transparent: true,
+          opacity: 0.42,
+          depthWrite: false
+        })
+      );
+      handle.userData.edgeId = edge.id;
+      handle.renderOrder = 1;
+      scene.add(handle);
+      const edgeObject = { edge, line, handle, bendOffset };
+      updateEdgeCurve(edgeObject);
+      edgeObjects.push(edgeObject);
     });
     edgeObjectsRef.current = edgeObjects;
 
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
-    let pointerStart = { x: 0, y: 0 };
+    const dragPlane = new THREE.Plane();
+    const planeNormal = new THREE.Vector3();
+    const intersection = new THREE.Vector3();
+    type DragState =
+      | {
+          mode: "node";
+          nodeId: string;
+          moved: boolean;
+          start: THREE.Vector3;
+        }
+      | {
+          mode: "edge";
+          edgeObject: EdgeObject;
+          moved: boolean;
+          start: THREE.Vector3;
+        };
+    let dragState: DragState | null = null;
 
     function updatePointer(event: PointerEvent) {
       const rect = renderer.domElement.getBoundingClientRect();
@@ -285,32 +334,143 @@ function Graph3DView({
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     }
 
-    function handlePointerDown(event: PointerEvent) {
-      pointerStart = { x: event.clientX, y: event.clientY };
+    function beginPlaneDrag(point: THREE.Vector3) {
+      camera.getWorldDirection(planeNormal);
+      dragPlane.setFromNormalAndCoplanarPoint(planeNormal, point);
     }
 
-    function handlePointerUp(event: PointerEvent) {
-      if (
-        Math.abs(event.clientX - pointerStart.x) +
-          Math.abs(event.clientY - pointerStart.y) >
-        5
-      ) {
-        return;
-      }
+    function updateAllEdgeCurves() {
+      edgeObjects.forEach(updateEdgeCurve);
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (event.button !== 0) return;
       updatePointer(event);
       raycaster.setFromCamera(pointer, camera);
-      const hit = raycaster.intersectObjects([...nodeMeshes.values()])[0];
-      const nodeId = hit?.object.userData.nodeId as string | undefined;
-      const node = nodeId ? nodeById.get(nodeId) : undefined;
-      if (node) onSelectRef.current(node);
+      const edgeHit = raycaster.intersectObjects(
+        edgeObjects.map((item) => item.handle)
+      )[0];
+      const nodeHit = raycaster.intersectObjects([...nodeMeshes.values()])[0];
+
+      if (edgeHit) {
+        const edgeObject = edgeObjects.find(
+          (item) => item.edge.id === edgeHit.object.userData.edgeId
+        );
+        if (!edgeObject) return;
+        beginPlaneDrag(edgeObject.handle.position);
+        dragState = {
+          mode: "edge",
+          edgeObject,
+          moved: false,
+          start: edgeObject.handle.position.clone(),
+        };
+        renderer.domElement.dataset.activeDrag = "edge";
+        controls.enabled = false;
+        renderer.domElement.style.cursor = "grabbing";
+        renderer.domElement.setPointerCapture?.(event.pointerId);
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+
+      const nodeId = nodeHit?.object.userData.nodeId as string | undefined;
+      const nodeMesh = nodeId ? nodeMeshes.get(nodeId) : undefined;
+      if (nodeId && nodeMesh) {
+        beginPlaneDrag(nodeMesh.position);
+        dragState = {
+          mode: "node",
+          nodeId,
+          moved: false,
+          start: nodeMesh.position.clone(),
+        };
+        renderer.domElement.dataset.activeDrag = "node";
+        controls.enabled = false;
+        renderer.domElement.style.cursor = "grabbing";
+        renderer.domElement.setPointerCapture?.(event.pointerId);
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    }
+
+    function finishPointer(event: PointerEvent) {
+      if (!dragState) return;
+      if (dragState.moved) {
+        renderer.domElement.dataset.lastDrag = dragState.mode;
+      }
+      if (dragState.mode === "node" && !dragState.moved) {
+        const node = nodeById.get(dragState.nodeId);
+        if (node) onSelectRef.current(node);
+      }
+      dragState = null;
+      delete renderer.domElement.dataset.activeDrag;
+      controls.enabled = true;
+      renderer.domElement.style.cursor = "grab";
+      renderer.domElement.releasePointerCapture?.(event.pointerId);
+      event.preventDefault();
+      event.stopImmediatePropagation();
     }
 
     function handlePointerMove(event: PointerEvent) {
       updatePointer(event);
       raycaster.setFromCamera(pointer, camera);
-      const hit = raycaster.intersectObjects([...nodeMeshes.values()])[0];
-      const hoveredId = hit?.object.userData.nodeId as string | undefined;
-      renderer.domElement.style.cursor = hoveredId ? "pointer" : "grab";
+
+      if (dragState) {
+        if (!raycaster.ray.intersectPlane(dragPlane, intersection)) return;
+        if (dragState.mode === "node") {
+          const nodeMesh = nodeMeshes.get(dragState.nodeId);
+          if (!nodeMesh) return;
+          dragState.moved =
+            dragState.moved ||
+            intersection.distanceTo(dragState.start) > 0.25;
+          nodeMesh.position.copy(intersection);
+          positions.set(dragState.nodeId, intersection.clone());
+          const label = nodeMesh.userData.label as THREE.Sprite | undefined;
+          if (label) {
+            const radius = Number(nodeMesh.userData.baseRadius ?? 7.2);
+            label.position.copy(intersection).add(new THREE.Vector3(0, radius + 8, 0));
+          }
+          updateAllEdgeCurves();
+        } else {
+          const { edgeObject } = dragState;
+          const source = positions.get(edgeObject.edge.source);
+          const target = positions.get(edgeObject.edge.target);
+          if (!source || !target) return;
+          dragState.moved =
+            dragState.moved ||
+            intersection.distanceTo(dragState.start) > 0.2;
+          const midpoint = source.clone().add(target).multiplyScalar(0.5);
+          edgeObject.bendOffset.copy(intersection).sub(midpoint);
+          updateEdgeCurve(edgeObject);
+        }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+
+      const nodeHit = raycaster.intersectObjects([...nodeMeshes.values()])[0];
+      const edgeHit = raycaster.intersectObjects(
+        edgeObjects.map((item) => item.handle)
+      )[0];
+      const hoveredId = nodeHit?.object.userData.nodeId as string | undefined;
+      renderer.domElement.style.cursor = edgeHit
+        ? "grab"
+        : hoveredId
+          ? "pointer"
+          : "grab";
+      edgeObjects.forEach(({ handle }) => {
+        const material = handle.material as THREE.MeshBasicMaterial;
+        material.opacity =
+          edgeHit?.object === handle
+            ? 0.95
+            : edgeObjectsRef.current.some(
+                  (item) =>
+                    item.edge.id === handle.userData.edgeId &&
+                    (item.edge.source === selectedIdRef.current ||
+                      item.edge.target === selectedIdRef.current)
+                )
+              ? 0.68
+              : 0.42;
+      });
       nodeMeshes.forEach((mesh, nodeId) => {
         const label = mesh.userData.label as THREE.Sprite | undefined;
         if (!label) return;
@@ -331,9 +491,10 @@ function Graph3DView({
       });
     }
 
-    renderer.domElement.addEventListener("pointerdown", handlePointerDown);
-    renderer.domElement.addEventListener("pointerup", handlePointerUp);
-    renderer.domElement.addEventListener("pointermove", handlePointerMove);
+    renderer.domElement.addEventListener("pointerdown", handlePointerDown, true);
+    renderer.domElement.addEventListener("pointerup", finishPointer, true);
+    renderer.domElement.addEventListener("pointermove", handlePointerMove, true);
+    renderer.domElement.addEventListener("pointercancel", finishPointer, true);
     renderer.domElement.addEventListener("pointerleave", handlePointerLeave);
 
     function resize() {
@@ -363,9 +524,10 @@ function Graph3DView({
       cancelAnimationFrame(animationFrame);
       resizeObserver.disconnect();
       controls.dispose();
-      renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
-      renderer.domElement.removeEventListener("pointerup", handlePointerUp);
-      renderer.domElement.removeEventListener("pointermove", handlePointerMove);
+      renderer.domElement.removeEventListener("pointerdown", handlePointerDown, true);
+      renderer.domElement.removeEventListener("pointerup", finishPointer, true);
+      renderer.domElement.removeEventListener("pointermove", handlePointerMove, true);
+      renderer.domElement.removeEventListener("pointercancel", finishPointer, true);
       renderer.domElement.removeEventListener("pointerleave", handlePointerLeave);
       scene.traverse((object) => {
         if (object instanceof THREE.Mesh || object instanceof THREE.Line) {
@@ -412,11 +574,16 @@ function Graph3DView({
         label.visible = selected || Boolean(label.userData.persistent);
       }
     });
-    edgeObjectsRef.current.forEach(({ edge, line }) => {
+    edgeObjectsRef.current.forEach(({ edge, line, handle }) => {
       const active = edge.source === selectedId || edge.target === selectedId;
       const material = line.material as THREE.LineBasicMaterial;
-      material.opacity = active ? 0.72 : edge.is_demo ? 0.18 : 0.3;
-      material.color.set(active ? 0x0f766e : edge.is_demo ? 0xaab7c4 : 0x2b9f94);
+      const theme = graphRelationTheme(edge.predicate);
+      material.opacity = active ? 0.92 : edge.is_demo ? 0.24 : 0.48;
+      material.color.set(theme.color);
+      const handleMaterial = handle.material as THREE.MeshBasicMaterial | undefined;
+      if (handleMaterial) {
+        handleMaterial.opacity = active ? 0.88 : 0.42;
+      }
     });
   }, [selectedId]);
 

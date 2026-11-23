@@ -83,3 +83,35 @@ def test_structured_export_keeps_source_metadata_and_node_names():
     assert payload["evidence"][0]["source_type"] == "structured"
     assert payload["evidence"][0]["answer_eligible"] is True
     assert any(node["name"] == "Kale - NFY1214SU" for node in payload["nodes"])
+
+
+def test_domain_mapping_uses_specific_structured_entity_types():
+    assert export_public_evidence.domain_for("HOMA-IR", "MeasurableEntity") == "检测评估"
+    assert (
+        export_public_evidence.domain_for(
+            "Vitamin K deficiency", "ClinicalFinding"
+        )
+        == "临床疾病"
+    )
+    assert (
+        export_public_evidence.domain_for("Intervention arm A", "InterventionArm")
+        == "指南与RCT"
+    )
+    assert (
+        export_public_evidence.domain_for(
+            "Patients receiving warfarin", "PopulationEntity"
+        )
+        == "指南与RCT"
+    )
+    assert (
+        export_public_evidence.domain_for(
+            "Major bleeding", "ClinicalOutcomesTargets"
+        )
+        == "指南与RCT"
+    )
+    assert (
+        export_public_evidence.domain_for(
+            "Chronic glucocorticoid users", "PopulationEntity"
+        )
+        == "指南与RCT"
+    )

@@ -47,6 +47,7 @@ function GraphPage() {
     const nodes: FlowNode[] = items.nodes.map((node, index) => {
       const isCenter = node.id === centerId;
       const angle = (Math.PI * 2 * index) / Math.max(others.length, 1);
+      const domainColor = graphDomainColor(node.domain);
       return {
         id: node.id,
         position: isCenter
@@ -57,12 +58,17 @@ function GraphPage() {
           width: isCenter ? 150 : 124,
           minHeight: 42,
           borderRadius: 8,
-          border: `1px solid ${graphDomainColor(node.domain)}`,
-          background: isCenter ? "#0f172a" : "#ffffff",
+          border: `1px solid ${domainColor}99`,
+          background: isCenter
+            ? "rgba(15, 23, 42, 0.82)"
+            : "rgba(255, 255, 255, 0.62)",
           color: isCenter ? "#ffffff" : "#172033",
           fontWeight: isCenter ? 700 : 600,
           padding: "10px 12px",
-          boxShadow: "0 8px 20px rgba(15, 23, 42, 0.08)"
+          backdropFilter: "blur(12px)",
+          boxShadow: isCenter
+            ? `0 16px 36px ${domainColor}45`
+            : "0 12px 30px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.72)"
         }
       };
     });
@@ -72,7 +78,11 @@ function GraphPage() {
       target: edge.target,
       label: edge.predicate,
       animated: edge.is_demo,
-      style: { stroke: edge.is_demo ? "#94a3b8" : "#0f766e", strokeWidth: 1.4 },
+      style: {
+        stroke: edge.is_demo ? "#94a3b8" : "#0f766e",
+        strokeWidth: 1.2,
+        opacity: edge.is_demo ? 0.35 : 0.62
+      },
       labelStyle: { fontSize: 9, fill: "#64748b" },
       labelBgStyle: { fill: "#f8fafc", fillOpacity: 0.9 }
     }));

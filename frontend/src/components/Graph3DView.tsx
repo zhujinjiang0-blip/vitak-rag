@@ -40,6 +40,7 @@ function nodeLabel(text: string): THREE.Sprite {
   const material = new THREE.SpriteMaterial({
     map: texture,
     transparent: true,
+    opacity: 0.92,
     depthWrite: false
   });
   const sprite = new THREE.Sprite(material);
@@ -130,19 +131,40 @@ function Graph3DView({
       const baseRadius = isCenter ? 12 : 7.2;
       const geometry = new THREE.SphereGeometry(baseRadius, 24, 18);
       const color = new THREE.Color(graphDomainColor(node.domain));
-      const material = new THREE.MeshStandardMaterial({
+      const material = new THREE.MeshPhysicalMaterial({
         color,
         emissive: color,
-        emissiveIntensity: isCenter ? 0.42 : 0.15,
-        roughness: 0.42,
-        metalness: 0.08
+        emissiveIntensity: isCenter ? 0.34 : 0.12,
+        roughness: 0.2,
+        metalness: 0.06,
+        transparent: true,
+        opacity: isCenter ? 0.82 : 0.68,
+        transmission: 0.24,
+        thickness: 1.4,
+        clearcoat: 1,
+        clearcoatRoughness: 0.12
       });
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.copy(point);
       mesh.userData.nodeId = node.id;
       mesh.userData.baseRadius = baseRadius;
+      mesh.renderOrder = 2;
       scene.add(mesh);
       nodeMeshes.set(node.id, mesh);
+
+      const halo = new THREE.Mesh(
+        new THREE.SphereGeometry(baseRadius * 1.32, 18, 12),
+        new THREE.MeshBasicMaterial({
+          color,
+          transparent: true,
+          opacity: isCenter ? 0.16 : 0.08,
+          wireframe: true,
+          depthWrite: false
+        })
+      );
+      halo.renderOrder = 1;
+      mesh.add(halo);
+      mesh.userData.halo = halo;
 
       const label = nodeLabel(node.name);
       label.position.copy(point).add(new THREE.Vector3(0, baseRadius + 10, 0));
@@ -158,7 +180,8 @@ function Graph3DView({
       const material = new THREE.LineBasicMaterial({
         color: edge.is_demo ? 0xaab7c4 : 0x2b9f94,
         transparent: true,
-        opacity: edge.is_demo ? 0.24 : 0.38
+        opacity: edge.is_demo ? 0.18 : 0.3,
+        depthWrite: false
       });
       const line = new THREE.Line(geometry, material);
       scene.add(line);
@@ -263,13 +286,19 @@ function Graph3DView({
       const baseRadius = Number(mesh.userData.baseRadius ?? 7.2);
       mesh.scale.setScalar(selected ? 1.35 : 1);
       mesh.userData.displayRadius = baseRadius * (selected ? 1.35 : 1);
-      const material = mesh.material as THREE.MeshStandardMaterial;
-      material.emissiveIntensity = selected ? 0.8 : 0.15;
+      const material = mesh.material as THREE.MeshPhysicalMaterial;
+      material.emissiveIntensity = selected ? 0.62 : 0.12;
+      material.opacity = selected ? 0.88 : 0.68;
+      const halo = mesh.userData.halo as THREE.Mesh | undefined;
+      if (halo) {
+        const haloMaterial = halo.material as THREE.MeshBasicMaterial;
+        haloMaterial.opacity = selected ? 0.28 : 0.08;
+      }
     });
     edgeObjectsRef.current.forEach(({ edge, line }) => {
       const active = edge.source === selectedId || edge.target === selectedId;
       const material = line.material as THREE.LineBasicMaterial;
-      material.opacity = active ? 0.88 : edge.is_demo ? 0.24 : 0.38;
+      material.opacity = active ? 0.72 : edge.is_demo ? 0.18 : 0.3;
       material.color.set(active ? 0x0f766e : edge.is_demo ? 0xaab7c4 : 0x2b9f94);
     });
   }, [selectedId]);

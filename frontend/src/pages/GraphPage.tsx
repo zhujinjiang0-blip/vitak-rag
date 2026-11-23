@@ -11,18 +11,11 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Filter, GitFork, RotateCcw, Search, X } from "lucide-react";
+import { Box, Filter, GitFork, Network, RotateCcw, Search, X } from "lucide-react";
+import Graph3DView from "../components/Graph3DView";
 import { getGraphMeta, getSubgraph, searchGraph } from "../lib/api";
+import { graphDomainColor } from "../lib/graphTheme";
 import type { GraphNode } from "../lib/types";
-
-const DOMAIN_COLORS: Record<string, string> = {
-  生理代谢: "#0f766e",
-  食物营养: "#ca8a04",
-  药物相互作用: "#be123c",
-  临床疾病: "#b45309",
-  检测评估: "#0369a1",
-  指南与RCT: "#6d28d9"
-};
 
 function GraphPage() {
   const [query, setQuery] = useState("维生素K");
@@ -30,6 +23,7 @@ function GraphPage() {
   const [selected, setSelected] = useState<GraphNode | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>(["vitamin-k"]);
   const [enabledDomains, setEnabledDomains] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<"2d" | "3d">("3d");
 
   const meta = useQuery({ queryKey: ["graph-meta"], queryFn: getGraphMeta });
   const search = useQuery({
@@ -63,7 +57,7 @@ function GraphPage() {
           width: isCenter ? 150 : 124,
           minHeight: 42,
           borderRadius: 8,
-          border: `1px solid ${DOMAIN_COLORS[node.domain] ?? "#334155"}`,
+          border: `1px solid ${graphDomainColor(node.domain)}`,
           background: isCenter ? "#0f172a" : "#ffffff",
           color: isCenter ? "#ffffff" : "#172033",
           fontWeight: isCenter ? 700 : 600,
@@ -102,6 +96,10 @@ function GraphPage() {
     setSelectedIds([node.id]);
   }
 
+  function inspectEntity(node: GraphNode) {
+    setSelected(node);
+  }
+
   function toggleDomain(domain: string) {
     setEnabledDomains((current) =>
       current.includes(domain)
@@ -122,10 +120,32 @@ function GraphPage() {
           <h1>知识图谱</h1>
           <p>搜索实体、查看领域关系和证据覆盖情况。节点和边均来自当前数据版本。</p>
         </div>
-        <div className="graph-stats">
-          <span><strong>{meta.data?.stats.nodes ?? "—"}</strong> 实体</span>
-          <span><strong>{meta.data?.stats.edges ?? "—"}</strong> 关系</span>
-          <span><strong>{meta.data?.domains.length ?? 6}</strong> 领域</span>
+        <div className="graph-heading-side">
+          <div className="graph-view-switch" role="group" aria-label="图谱展示模式">
+            <button
+              type="button"
+              className={viewMode === "2d" ? "active" : ""}
+              onClick={() => setViewMode("2d")}
+              aria-label="二维图谱"
+            >
+              <Network size={15} />
+              <span>2D</span>
+            </button>
+            <button
+              type="button"
+              className={viewMode === "3d" ? "active" : ""}
+              onClick={() => setViewMode("3d")}
+              aria-label="三维图谱"
+            >
+              <Box size={15} />
+              <span>3D</span>
+            </button>
+          </div>
+          <div className="graph-stats">
+            <span><strong>{meta.data?.stats.nodes ?? "—"}</strong> 实体</span>
+            <span><strong>{meta.data?.stats.edges ?? "—"}</strong> 关系</span>
+            <span><strong>{meta.data?.domains.length ?? 6}</strong> 领域</span>
+          </div>
         </div>
       </section>
 
@@ -171,7 +191,7 @@ function GraphPage() {
             >
               <span
                 className="entity-domain-dot"
-                style={{ background: DOMAIN_COLORS[node.domain] }}
+                style={{ background: graphDomainColor(node.domain) }}
               />
               <span>
                 <strong>{node.name}</strong>
@@ -182,49 +202,60 @@ function GraphPage() {
           {search.data?.items.length === 0 && <p className="muted">没有找到匹配实体。</p>}
         </aside>
 
-        <section className="graph-canvas">
+        <section className={`graph-canvas ${viewMode === "3d" ? "is-3d" : ""}`}>
           {subgraph.isFetching && <div className="canvas-status">正在查询邻居关系...</div>}
-          <button
-            className="graph-reset-layout"
-            type="button"
-            onClick={resetLayout}
-            title="恢复默认布局"
-            aria-label="恢复默认布局"
-          >
-            <RotateCcw size={16} />
-          </button>
-          <ReactFlow
-            nodes={flowNodes}
-            edges={flowEdges}
-            fitView
-            minZoom={0.35}
-            maxZoom={1.7}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onNodeClick={(_, node) => {
-              const entity = subgraph.data?.nodes.find((item) => item.id === node.id);
-              if (entity) setSelected(entity);
-            }}
-            onNodeDragStart={(_, node) => {
-              const entity = subgraph.data?.nodes.find((item) => item.id === node.id);
-              if (entity) setSelected(entity);
-            }}
-            nodesDraggable
-            nodesConnectable={false}
-            elementsSelectable
-            panOnDrag
-            zoomOnScroll
-            elevateNodesOnSelect
-          >
-            <Background color="#d7dee8" gap={22} size={1} />
-            <MiniMap
-              nodeColor={(node) => {
-                const entity = subgraph.data?.nodes.find((item) => item.id === node.id);
-                return DOMAIN_COLORS[entity?.domain ?? ""] ?? "#64748b";
-              }}
+          {viewMode === "3d" ? (
+            <Graph3DView
+              nodes={subgraph.data?.nodes ?? []}
+              edges={subgraph.data?.edges ?? []}
+              selectedId={selected?.id ?? selectedIds[0] ?? null}
+              onSelect={inspectEntity}
             />
-            <Controls />
-          </ReactFlow>
+          ) : (
+            <>
+              <button
+                className="graph-reset-layout"
+                type="button"
+                onClick={resetLayout}
+                title="恢复默认布局"
+                aria-label="恢复默认布局"
+              >
+                <RotateCcw size={16} />
+              </button>
+              <ReactFlow
+                nodes={flowNodes}
+                edges={flowEdges}
+                fitView
+                minZoom={0.35}
+                maxZoom={1.7}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onNodeClick={(_, node) => {
+                  const entity = subgraph.data?.nodes.find((item) => item.id === node.id);
+                  if (entity) setSelected(entity);
+                }}
+                onNodeDragStart={(_, node) => {
+                  const entity = subgraph.data?.nodes.find((item) => item.id === node.id);
+                  if (entity) setSelected(entity);
+                }}
+                nodesDraggable
+                nodesConnectable={false}
+                elementsSelectable
+                panOnDrag
+                zoomOnScroll
+                elevateNodesOnSelect
+              >
+                <Background color="#d7dee8" gap={22} size={1} />
+                <MiniMap
+                  nodeColor={(node) => {
+                    const entity = subgraph.data?.nodes.find((item) => item.id === node.id);
+                    return graphDomainColor(entity?.domain ?? "");
+                  }}
+                />
+                <Controls />
+              </ReactFlow>
+            </>
+          )}
         </section>
 
         <aside className="node-inspector">
@@ -246,7 +277,7 @@ function GraphPage() {
             <>
               <span
                 className="domain-label"
-                style={{ color: DOMAIN_COLORS[selected.domain] }}
+                style={{ color: graphDomainColor(selected.domain) }}
               >
                 {selected.domain}
               </span>

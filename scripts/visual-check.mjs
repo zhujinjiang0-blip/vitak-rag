@@ -116,9 +116,15 @@ if (checkInternal) {
 
 await page.goto(`${baseUrl}/#/graph`, { waitUntil: "networkidle" });
 await page.getByRole("heading", { name: "知识图谱" }).waitFor();
+await page.locator(".graph-3d-canvas canvas").waitFor();
+await page.screenshot({
+  path: `${outputDir}/graph-3d-desktop.png`,
+  fullPage: true
+});
+await page.getByRole("button", { name: "二维图谱" }).click();
 await page.locator(".react-flow").waitFor();
 await page.screenshot({
-  path: `${outputDir}/graph-desktop.png`,
+  path: `${outputDir}/graph-2d-desktop.png`,
   fullPage: true
 });
 
@@ -147,6 +153,12 @@ await page.screenshot({
   path: `${outputDir}/chat-mobile.png`,
   fullPage: true
 });
+await page.goto(`${baseUrl}/#/graph`, { waitUntil: "networkidle" });
+await page.locator(".graph-3d-canvas canvas").waitFor();
+await page.screenshot({
+  path: `${outputDir}/graph-3d-mobile.png`,
+  fullPage: true
+});
 const mobileOverflow = await page.evaluate(
   () => document.documentElement.scrollWidth > window.innerWidth
 );
@@ -158,10 +170,12 @@ const screenshots = [
   "chat-answer-desktop.png",
   "chat-safety-desktop.png",
   ...(checkInternal ? ["chat-internal-desktop.png"] : []),
-  "graph-desktop.png",
+  "graph-3d-desktop.png",
+  "graph-2d-desktop.png",
   "evidence-desktop.png",
   "import-desktop.png",
-  "chat-mobile.png"
+  "chat-mobile.png",
+  "graph-3d-mobile.png"
 ];
 const imageChecks = {};
 for (const filename of screenshots) {

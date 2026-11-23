@@ -7,14 +7,16 @@ import {
   MessageSquareText,
   UploadCloud
 } from "lucide-react";
+import { lazy, Suspense } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { getHealth } from "./lib/api";
 import { STATIC_DEMO_MODE } from "./lib/staticDemo";
 import ChatPage from "./pages/ChatPage";
 import EvidencePage from "./pages/EvidencePage";
-import GraphPage from "./pages/GraphPage";
 import ImportPage from "./pages/ImportPage";
 import OverviewPage from "./pages/OverviewPage";
+
+const GraphPage = lazy(() => import("./pages/GraphPage"));
 
 function App() {
   const health = useQuery({ queryKey: ["health"], queryFn: getHealth });
@@ -78,7 +80,14 @@ function App() {
           <Route path="/" element={<Navigate to="/overview" replace />} />
           <Route path="/overview" element={<OverviewPage />} />
           <Route path="/chat" element={<ChatPage />} />
-          <Route path="/graph" element={<GraphPage />} />
+          <Route
+            path="/graph"
+            element={
+              <Suspense fallback={<p className="route-loading">正在加载知识图谱...</p>}>
+                <GraphPage />
+              </Suspense>
+            }
+          />
           <Route path="/evidence" element={<EvidencePage />} />
           <Route path="/import" element={<ImportPage />} />
           <Route path="*" element={<Navigate to="/overview" replace />} />

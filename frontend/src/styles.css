@@ -1197,11 +1197,53 @@ a {
   line-height: 1.65;
 }
 
+.route-loading {
+  margin: 40px auto;
+  color: var(--muted);
+  text-align: center;
+  font-size: 13px;
+}
+
 .graph-page,
 .evidence-page {
   max-width: 1500px;
   margin: 0 auto;
   padding: 28px 30px 34px;
+}
+
+.graph-heading-side {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.graph-view-switch {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.graph-view-switch button {
+  min-height: 32px;
+  padding: 5px 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.graph-view-switch button.active {
+  color: var(--teal-dark);
+  background: white;
+  box-shadow: 0 1px 5px rgba(15, 23, 42, 0.1);
 }
 
 .graph-stats {
@@ -1394,6 +1436,25 @@ a {
   position: relative;
   min-width: 0;
   background: #f7f9fb;
+}
+
+.graph-canvas.is-3d {
+  background:
+    linear-gradient(rgba(100, 116, 139, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(100, 116, 139, 0.045) 1px, transparent 1px),
+    #f7f9fb;
+  background-size: 26px 26px;
+}
+
+.graph-3d-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.graph-3d-canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .graph-canvas .react-flow__node {
@@ -2328,6 +2389,17 @@ a {
   .knowledge-badge,
   .graph-stats {
     margin-top: 14px;
+  }
+
+  .graph-heading-side {
+    margin-top: 14px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .graph-heading-side .graph-stats {
+    margin-top: 0;
   }
 
   .graph-stats {

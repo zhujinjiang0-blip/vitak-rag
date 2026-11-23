@@ -232,6 +232,72 @@ const mobileOverflow = await page.evaluate(
   () => document.documentElement.scrollWidth > window.innerWidth
 );
 
+await page.setViewportSize({ width: 1440, height: 1000 });
+await page.goto(`${baseUrl}/#/chat`, { waitUntil: "networkidle" });
+await page.evaluate(() => {
+  const timestamp = Date.now();
+  const messages = Array.from({ length: 28 }, (_, index) => ({
+    id: `scroll-message-${index}`,
+    role: index % 2 === 0 ? "user" : "assistant",
+    text:
+      index % 2 === 0
+        ? `连续提问测试 ${index / 2 + 1}：维生素K与这个健康问题有什么关系？`
+        : `这是第 ${Math.ceil(index / 2)} 个回答。内容用于验证只有中间问答区域产生滚动条，页面主体和输入框保持固定。`
+  }));
+  const project = {
+    id: "scroll-project",
+    title: "连续问答滚动测试",
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    sessions: [
+      {
+        id: "scroll-session",
+        title: "连续提问与历史消息",
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        messages
+      }
+    ]
+  };
+  localStorage.setItem("vitak-rag:projects:v2", JSON.stringify([project]));
+  localStorage.setItem("vitak-rag:active-project:v2", project.id);
+  localStorage.setItem("vitak-rag:active-conversation:v2", project.sessions[0].id);
+});
+await page.reload({ waitUntil: "networkidle" });
+await page.locator(".chat-scroll").waitFor({ state: "visible" });
+const chatScrollMetrics = await page.evaluate(() => {
+  const element = document.querySelector(".chat-scroll");
+  if (!(element instanceof HTMLElement)) return null;
+  const composer = document.querySelector(".composer")?.getBoundingClientRect();
+  return {
+    pageHeight: document.documentElement.scrollHeight,
+    viewportHeight: window.innerHeight,
+    clientHeight: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+    scrollTop: element.scrollTop,
+    composerBottom: composer?.bottom ?? null
+  };
+});
+if (!chatScrollMetrics) throw new Error("未找到中间问答滚动区域");
+if (chatScrollMetrics.pageHeight > chatScrollMetrics.viewportHeight + 2) {
+  throw new Error("连续问答导致整页高度增长");
+}
+if (chatScrollMetrics.scrollHeight <= chatScrollMetrics.clientHeight) {
+  throw new Error("中间问答区域没有产生独立滚动条");
+}
+if (
+  chatScrollMetrics.scrollHeight -
+    chatScrollMetrics.scrollTop -
+    chatScrollMetrics.clientHeight >
+  4
+) {
+  throw new Error("历史会话加载后未自动定位到最新消息");
+}
+await page.screenshot({
+  path: `${outputDir}/chat-long-scroll-desktop.png`,
+  fullPage: false
+});
+
 const screenshots = [
   "overview-desktop.png",
   "chat-desktop.png",
@@ -248,7 +314,8 @@ const screenshots = [
   "import-desktop.png",
   "chat-mobile.png",
   "graph-3d-mobile.png",
-  "evidence-json-mobile.png"
+  "evidence-json-mobile.png",
+  "chat-long-scroll-desktop.png"
 ];
 const imageChecks = {};
 for (const filename of screenshots) {

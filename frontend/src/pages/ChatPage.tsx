@@ -240,6 +240,8 @@ function ChatPage() {
   const [editingSessionTitle, setEditingSessionTitle] = useState("");
   const [sessionSearch, setSessionSearch] = useState("");
   const thinkingStepsRef = useRef<string[]>([]);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
   const activeProject =
     conversation.projects.find(
       (project) => project.id === conversation.activeProjectId
@@ -317,6 +319,28 @@ function ChatPage() {
       // Browser storage is optional for the current page session.
     }
   }, [conversation.activeProjectId, conversation.activeSessionId]);
+
+  useEffect(() => {
+    stickToBottomRef.current = true;
+    const frame = window.requestAnimationFrame(() => {
+      const element = chatScrollRef.current;
+      if (element) element.scrollTop = element.scrollHeight;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [conversation.activeSessionId]);
+
+  useEffect(() => {
+    const element = chatScrollRef.current;
+    if (!element) return;
+    if (messages.at(-1)?.role === "user") {
+      stickToBottomRef.current = true;
+    }
+    if (!stickToBottomRef.current) return;
+    const frame = window.requestAnimationFrame(() => {
+      element.scrollTop = element.scrollHeight;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [loading, messages, status, thinkingSteps.length]);
 
   function resetComposer() {
     setInput("");
@@ -584,6 +608,7 @@ function ChatPage() {
     const targetSessionId = activeSession?.id ?? createSession();
     if (!targetSessionId) return;
 
+    stickToBottomRef.current = true;
     const userMessage: Message = {
       id: makeMessageId(),
       role: "user",
@@ -882,7 +907,18 @@ function ChatPage() {
           </div>
         </div>
 
-        <div className="chat-scroll" aria-live="polite">
+        <div
+          ref={chatScrollRef}
+          className="chat-scroll"
+          aria-live="polite"
+          aria-label="当前会话问答内容"
+          tabIndex={0}
+          onScroll={(event) => {
+            const element = event.currentTarget;
+            stickToBottomRef.current =
+              element.scrollHeight - element.scrollTop - element.clientHeight < 72;
+          }}
+        >
           {messages.length === 0 ? (
             <div className="empty-chat">
               <div className="empty-mark">K</div>

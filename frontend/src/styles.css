@@ -1454,13 +1454,11 @@ a {
 }
 
 .graph-canvas.is-3d {
-  background: #07111f;
-}
-
-.graph-canvas.is-3d .canvas-status {
-  color: #cbd5e1;
-  border-color: #274155;
-  background: rgba(7, 17, 31, 0.82);
+  background:
+    linear-gradient(rgba(100, 116, 139, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(100, 116, 139, 0.045) 1px, transparent 1px),
+    #f7f9fb;
+  background-size: 26px 26px;
 }
 
 .graph-3d-canvas {

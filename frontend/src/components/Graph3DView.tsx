@@ -18,25 +18,21 @@ interface EdgeObject {
 
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
-function nodeLabel(text: string, color: string): THREE.Sprite {
+function nodeLabel(text: string): THREE.Sprite {
   const canvas = document.createElement("canvas");
-  canvas.width = 640;
-  canvas.height = 160;
+  canvas.width = 512;
+  canvas.height = 128;
   const context = canvas.getContext("2d");
   if (context) {
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.font =
-      '650 34px "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif';
+      '700 38px "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif';
     context.textAlign = "center";
     context.textBaseline = "middle";
-    context.fillStyle = "rgba(5, 13, 26, 0.78)";
-    context.strokeStyle = color;
-    context.lineWidth = 4;
-    context.beginPath();
-    context.roundRect(24, 30, 592, 100, 24);
-    context.fill();
-    context.stroke();
-    context.fillStyle = "#f4f8ff";
+    context.lineWidth = 8;
+    context.strokeStyle = "rgba(255,255,255,0.96)";
+    context.strokeText(text.slice(0, 22), canvas.width / 2, canvas.height / 2);
+    context.fillStyle = "#243244";
     context.fillText(text.slice(0, 22), canvas.width / 2, canvas.height / 2);
   }
   const texture = new THREE.CanvasTexture(canvas);
@@ -44,38 +40,12 @@ function nodeLabel(text: string, color: string): THREE.Sprite {
   const material = new THREE.SpriteMaterial({
     map: texture,
     transparent: true,
-    opacity: 0.94,
+    opacity: 0.92,
     depthWrite: false
   });
   const sprite = new THREE.Sprite(material);
-  sprite.scale.set(62, 15.5, 1);
+  sprite.scale.set(54, 13.5, 1);
   return sprite;
-}
-
-function glowSprite(color: string): THREE.Sprite {
-  const canvas = document.createElement("canvas");
-  canvas.width = 256;
-  canvas.height = 256;
-  const context = canvas.getContext("2d");
-  if (context) {
-    const gradient = context.createRadialGradient(128, 128, 0, 128, 128, 128);
-    gradient.addColorStop(0, "rgba(255, 255, 255, 0.96)");
-    gradient.addColorStop(0.14, color);
-    gradient.addColorStop(0.42, `${color}55`);
-    gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, 256, 256);
-  }
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  const material = new THREE.SpriteMaterial({
-    map: texture,
-    transparent: true,
-    opacity: 0.46,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false
-  });
-  return new THREE.Sprite(material);
 }
 
 function Graph3DView({
@@ -88,22 +58,16 @@ function Graph3DView({
   const nodeMeshesRef = useRef(new Map<string, THREE.Mesh>());
   const edgeObjectsRef = useRef<EdgeObject[]>([]);
   const onSelectRef = useRef(onSelect);
-  const selectedIdRef = useRef(selectedId);
 
   useEffect(() => {
     onSelectRef.current = onSelect;
   }, [onSelect]);
 
   useEffect(() => {
-    selectedIdRef.current = selectedId;
-  }, [selectedId]);
-
-  useEffect(() => {
     const root = containerRef.current!;
     if (!root || nodes.length === 0) return;
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x07111f, 0.0015);
     const camera = new THREE.PerspectiveCamera(48, 1, 1, 2400);
     camera.position.set(170, 115, 360);
 
@@ -113,9 +77,6 @@ function Graph3DView({
     });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.12;
-    renderer.setClearColor(0x07111f, 1);
     renderer.domElement.setAttribute(
       "aria-label",
       "可旋转、缩放和点击选择节点的三维知识图谱"
@@ -130,18 +91,13 @@ function Graph3DView({
     controls.rotateSpeed = 0.65;
     controls.zoomSpeed = 0.8;
 
-    scene.add(new THREE.HemisphereLight(0xb8ddff, 0x07111f, 1.7));
-    const keyLight = new THREE.DirectionalLight(0xffffff, 2.6);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xdbe6ee, 2.4));
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.1);
     keyLight.position.set(180, 260, 240);
     scene.add(keyLight);
-    const fillLight = new THREE.DirectionalLight(0x6ee7d8, 1.1);
+    const fillLight = new THREE.DirectionalLight(0x9ad7d0, 0.8);
     fillLight.position.set(-220, -120, -180);
     scene.add(fillLight);
-    const grid = new THREE.GridHelper(920, 46, 0x1d5364, 0x14323f);
-    grid.position.y = -210;
-    grid.material.transparent = true;
-    grid.material.opacity = 0.2;
-    scene.add(grid);
 
     const positions = new Map<string, THREE.Vector3>();
     const center = nodes.find((node) => node.id === selectedId) ?? nodes[0];
@@ -174,41 +130,45 @@ function Graph3DView({
       const isCenter = node.id === center.id;
       const baseRadius = isCenter ? 12 : 7.2;
       const geometry = new THREE.SphereGeometry(baseRadius, 24, 18);
-      const domainColor = graphDomainColor(node.domain);
-      const color = new THREE.Color(domainColor);
+      const color = new THREE.Color(graphDomainColor(node.domain));
       const material = new THREE.MeshPhysicalMaterial({
         color,
         emissive: color,
-        emissiveIntensity: isCenter ? 0.62 : 0.34,
-        roughness: 0.16,
-        metalness: 0.2,
+        emissiveIntensity: isCenter ? 0.34 : 0.12,
+        roughness: 0.2,
+        metalness: 0.06,
         transparent: true,
-        opacity: isCenter ? 0.92 : 0.8,
+        opacity: isCenter ? 0.82 : 0.68,
+        transmission: 0.24,
+        thickness: 1.4,
         clearcoat: 1,
-        clearcoatRoughness: 0.1
+        clearcoatRoughness: 0.12
       });
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.copy(point);
       mesh.userData.nodeId = node.id;
       mesh.userData.baseRadius = baseRadius;
-      mesh.userData.baseOpacity = material.opacity;
       mesh.renderOrder = 2;
       scene.add(mesh);
       nodeMeshes.set(node.id, mesh);
 
-      const glow = glowSprite(domainColor);
-      const glowSize = baseRadius * 5.7;
-      glow.scale.set(glowSize, glowSize, 1);
-      glow.renderOrder = 1;
-      glow.userData.baseScale = glowSize;
-      glow.userData.baseOpacity = isCenter ? 0.58 : 0.38;
-      mesh.add(glow);
-      mesh.userData.glow = glow;
+      const halo = new THREE.Mesh(
+        new THREE.SphereGeometry(baseRadius * 1.32, 18, 12),
+        new THREE.MeshBasicMaterial({
+          color,
+          transparent: true,
+          opacity: isCenter ? 0.16 : 0.08,
+          wireframe: true,
+          depthWrite: false
+        })
+      );
+      halo.renderOrder = 1;
+      mesh.add(halo);
+      mesh.userData.halo = halo;
 
-      const label = nodeLabel(node.name, domainColor);
-      label.position.copy(point).add(new THREE.Vector3(0, baseRadius + 12, 0));
+      const label = nodeLabel(node.name);
+      label.position.copy(point).add(new THREE.Vector3(0, baseRadius + 10, 0));
       scene.add(label);
-      mesh.userData.label = label;
     });
 
     const edgeObjects: EdgeObject[] = [];
@@ -216,17 +176,11 @@ function Graph3DView({
       const source = positions.get(edge.source);
       const target = positions.get(edge.target);
       if (!source || !target) return;
-      const midpoint = source
-        .clone()
-        .add(target)
-        .multiplyScalar(0.5)
-        .add(new THREE.Vector3(0, 8, 4));
-      const curve = new THREE.QuadraticBezierCurve3(source, midpoint, target);
-      const geometry = new THREE.BufferGeometry().setFromPoints(curve.getPoints(18));
+      const geometry = new THREE.BufferGeometry().setFromPoints([source, target]);
       const material = new THREE.LineBasicMaterial({
-        color: edge.is_demo ? 0x52667a : 0x2dd4bf,
+        color: edge.is_demo ? 0xaab7c4 : 0x2b9f94,
         transparent: true,
-        opacity: edge.is_demo ? 0.12 : 0.22,
+        opacity: edge.is_demo ? 0.18 : 0.3,
         depthWrite: false
       });
       const line = new THREE.Line(geometry, material);
@@ -288,19 +242,9 @@ function Graph3DView({
     resize();
 
     let animationFrame = 0;
-    const clock = new THREE.Clock();
     function animate() {
       animationFrame = requestAnimationFrame(animate);
       controls.update();
-      const selectedMesh = selectedIdRef.current
-        ? nodeMeshes.get(selectedIdRef.current)
-        : undefined;
-      const glow = selectedMesh?.userData.glow as THREE.Sprite | undefined;
-      if (glow) {
-        const baseScale = Number(glow.userData.baseScale ?? 30);
-        const pulse = 1 + Math.sin(clock.getElapsedTime() * 2.4) * 0.08;
-        glow.scale.set(baseScale * pulse, baseScale * pulse, 1);
-      }
       renderer.domElement.dataset.cameraPosition = camera.position
         .toArray()
         .map((value) => value.toFixed(2))
@@ -343,26 +287,19 @@ function Graph3DView({
       mesh.scale.setScalar(selected ? 1.35 : 1);
       mesh.userData.displayRadius = baseRadius * (selected ? 1.35 : 1);
       const material = mesh.material as THREE.MeshPhysicalMaterial;
-      material.emissiveIntensity = selected ? 0.9 : 0.34;
-      material.opacity = selected
-        ? 0.98
-        : Number(mesh.userData.baseOpacity ?? 0.8);
-      const glow = mesh.userData.glow as THREE.Sprite | undefined;
-      const glowMaterial = glow?.material as THREE.SpriteMaterial | undefined;
-      if (glowMaterial) {
-        glowMaterial.opacity = selected
-          ? 0.78
-          : Number(glow?.userData.baseOpacity ?? 0.38);
+      material.emissiveIntensity = selected ? 0.62 : 0.12;
+      material.opacity = selected ? 0.88 : 0.68;
+      const halo = mesh.userData.halo as THREE.Mesh | undefined;
+      if (halo) {
+        const haloMaterial = halo.material as THREE.MeshBasicMaterial;
+        haloMaterial.opacity = selected ? 0.28 : 0.08;
       }
-      const label = mesh.userData.label as THREE.Sprite | undefined;
-      const labelMaterial = label?.material as THREE.SpriteMaterial | undefined;
-      if (labelMaterial) labelMaterial.opacity = selected ? 1 : 0.92;
     });
     edgeObjectsRef.current.forEach(({ edge, line }) => {
       const active = edge.source === selectedId || edge.target === selectedId;
       const material = line.material as THREE.LineBasicMaterial;
-      material.opacity = active ? 0.72 : edge.is_demo ? 0.12 : 0.22;
-      material.color.set(active ? 0x5eead4 : edge.is_demo ? 0x52667a : 0x2dd4bf);
+      material.opacity = active ? 0.72 : edge.is_demo ? 0.18 : 0.3;
+      material.color.set(active ? 0x0f766e : edge.is_demo ? 0xaab7c4 : 0x2b9f94);
     });
   }, [selectedId]);
 

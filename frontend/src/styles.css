@@ -1204,11 +1204,23 @@ a {
   font-size: 13px;
 }
 
-.graph-page,
 .evidence-page {
   max-width: 1500px;
   margin: 0 auto;
   padding: 28px 30px 34px;
+}
+
+.graph-page {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 20px 0 0;
+}
+
+.graph-page .page-heading,
+.graph-page .graph-toolbar {
+  margin-left: 20px;
+  margin-right: 20px;
 }
 
 .graph-heading-side {
@@ -1349,8 +1361,11 @@ a {
   grid-template-columns: 250px minmax(0, 1fr) 270px;
   height: calc(100vh - 250px);
   min-height: 520px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
   background: white;
   overflow: hidden;
 }
@@ -2349,6 +2364,12 @@ a {
     grid-template-columns: 1fr;
   }
 
+  .graph-page .page-heading,
+  .graph-page .graph-toolbar {
+    margin-left: 16px;
+    margin-right: 16px;
+  }
+
   .graph-workspace {
     grid-template-columns: 1fr;
     height: 620px;
@@ -2380,6 +2401,16 @@ a {
 
   .page-heading {
     display: block;
+  }
+
+  .graph-page {
+    padding-top: 14px;
+  }
+
+  .graph-page .page-heading,
+  .graph-page .graph-toolbar {
+    margin-left: 12px;
+    margin-right: 12px;
   }
 
   .page-heading h1 {

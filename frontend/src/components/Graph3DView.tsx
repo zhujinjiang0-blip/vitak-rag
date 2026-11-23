@@ -21,15 +21,15 @@ const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 function nodeLabel(text: string): THREE.Sprite {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
-  canvas.height = 128;
+  canvas.height = 96;
   const context = canvas.getContext("2d");
   if (context) {
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.font =
-      '700 38px "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif';
+      '650 30px "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif';
     context.textAlign = "center";
     context.textBaseline = "middle";
-    context.lineWidth = 8;
+    context.lineWidth = 6;
     context.strokeStyle = "rgba(255,255,255,0.96)";
     context.strokeText(text.slice(0, 22), canvas.width / 2, canvas.height / 2);
     context.fillStyle = "#243244";
@@ -44,7 +44,59 @@ function nodeLabel(text: string): THREE.Sprite {
     depthWrite: false
   });
   const sprite = new THREE.Sprite(material);
-  sprite.scale.set(54, 13.5, 1);
+  sprite.scale.set(43, 8.1, 1);
+  return sprite;
+}
+
+function glowSprite(color: string): THREE.Sprite {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+  const context = canvas.getContext("2d");
+  if (context) {
+    const gradient = context.createRadialGradient(128, 128, 0, 128, 128, 128);
+    gradient.addColorStop(0, "rgba(255, 255, 255, 0.78)");
+    gradient.addColorStop(0.22, `${color}aa`);
+    gradient.addColorStop(0.52, `${color}35`);
+    gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, 256, 256);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      opacity: 0.2,
+      depthWrite: false
+    })
+  );
+}
+
+function selectionRing(color: string): THREE.Sprite {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+  const context = canvas.getContext("2d");
+  if (context) {
+    context.strokeStyle = color;
+    context.lineWidth = 8;
+    context.beginPath();
+    context.arc(128, 128, 90, 0, Math.PI * 2);
+    context.stroke();
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      opacity: 0.92,
+      depthWrite: false
+    })
+  );
+  sprite.visible = false;
   return sprite;
 }
 
@@ -58,10 +110,15 @@ function Graph3DView({
   const nodeMeshesRef = useRef(new Map<string, THREE.Mesh>());
   const edgeObjectsRef = useRef<EdgeObject[]>([]);
   const onSelectRef = useRef(onSelect);
+  const selectedIdRef = useRef(selectedId);
 
   useEffect(() => {
     onSelectRef.current = onSelect;
   }, [onSelect]);
+
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
 
   useEffect(() => {
     const root = containerRef.current!;
@@ -124,22 +181,37 @@ function Graph3DView({
     const nodeMeshes = nodeMeshesRef.current;
     nodeMeshes.clear();
     const nodeById = new Map(nodes.map((node) => [node.id, node]));
+    const degree = new Map<string, number>();
+    edges.forEach((edge) => {
+      degree.set(edge.source, (degree.get(edge.source) ?? 0) + 1);
+      degree.set(edge.target, (degree.get(edge.target) ?? 0) + 1);
+    });
+    const persistentLabels = new Set(
+      [...nodes]
+        .sort(
+          (left, right) =>
+            (degree.get(right.id) ?? 0) - (degree.get(left.id) ?? 0)
+        )
+        .slice(0, 9)
+        .map((node) => node.id)
+    );
+    persistentLabels.add(center.id);
     nodes.forEach((node) => {
       const point = positions.get(node.id);
       if (!point) return;
       const isCenter = node.id === center.id;
-      const baseRadius = isCenter ? 12 : 7.2;
+      const baseRadius = isCenter ? 10.5 : 6.2;
       const geometry = new THREE.SphereGeometry(baseRadius, 24, 18);
       const color = new THREE.Color(graphDomainColor(node.domain));
       const material = new THREE.MeshPhysicalMaterial({
         color,
         emissive: color,
-        emissiveIntensity: isCenter ? 0.34 : 0.12,
-        roughness: 0.2,
-        metalness: 0.06,
+        emissiveIntensity: isCenter ? 0.3 : 0.1,
+        roughness: 0.18,
+        metalness: 0.08,
         transparent: true,
-        opacity: isCenter ? 0.82 : 0.68,
-        transmission: 0.24,
+        opacity: isCenter ? 0.86 : 0.7,
+        transmission: 0.28,
         thickness: 1.4,
         clearcoat: 1,
         clearcoatRoughness: 0.12
@@ -148,27 +220,35 @@ function Graph3DView({
       mesh.position.copy(point);
       mesh.userData.nodeId = node.id;
       mesh.userData.baseRadius = baseRadius;
+      mesh.userData.baseOpacity = material.opacity;
       mesh.renderOrder = 2;
       scene.add(mesh);
       nodeMeshes.set(node.id, mesh);
 
-      const halo = new THREE.Mesh(
-        new THREE.SphereGeometry(baseRadius * 1.32, 18, 12),
-        new THREE.MeshBasicMaterial({
-          color,
-          transparent: true,
-          opacity: isCenter ? 0.16 : 0.08,
-          wireframe: true,
-          depthWrite: false
-        })
-      );
-      halo.renderOrder = 1;
-      mesh.add(halo);
-      mesh.userData.halo = halo;
+      const glow = glowSprite(graphDomainColor(node.domain));
+      const glowSize = baseRadius * 3.2;
+      glow.scale.set(glowSize, glowSize, 1);
+      glow.userData.baseScale = glowSize;
+      glow.userData.baseOpacity = isCenter ? 0.3 : 0.16;
+      const glowMaterial = glow.material as THREE.SpriteMaterial;
+      glowMaterial.opacity = glow.userData.baseOpacity;
+      glow.renderOrder = 1;
+      mesh.add(glow);
+      mesh.userData.glow = glow;
+
+      const ring = selectionRing(graphDomainColor(node.domain));
+      const ringSize = baseRadius * 2.75;
+      ring.scale.set(ringSize, ringSize, 1);
+      ring.renderOrder = 3;
+      mesh.add(ring);
+      mesh.userData.ring = ring;
 
       const label = nodeLabel(node.name);
-      label.position.copy(point).add(new THREE.Vector3(0, baseRadius + 10, 0));
+      label.position.copy(point).add(new THREE.Vector3(0, baseRadius + 8, 0));
+      label.visible = persistentLabels.has(node.id);
+      label.userData.persistent = persistentLabels.has(node.id);
       scene.add(label);
+      mesh.userData.label = label;
     });
 
     const edgeObjects: EdgeObject[] = [];
@@ -176,7 +256,13 @@ function Graph3DView({
       const source = positions.get(edge.source);
       const target = positions.get(edge.target);
       if (!source || !target) return;
-      const geometry = new THREE.BufferGeometry().setFromPoints([source, target]);
+      const midpoint = source
+        .clone()
+        .add(target)
+        .multiplyScalar(0.5)
+        .add(new THREE.Vector3(0, 6, 3));
+      const curve = new THREE.QuadraticBezierCurve3(source, midpoint, target);
+      const geometry = new THREE.BufferGeometry().setFromPoints(curve.getPoints(18));
       const material = new THREE.LineBasicMaterial({
         color: edge.is_demo ? 0xaab7c4 : 0x2b9f94,
         transparent: true,
@@ -223,12 +309,32 @@ function Graph3DView({
       updatePointer(event);
       raycaster.setFromCamera(pointer, camera);
       const hit = raycaster.intersectObjects([...nodeMeshes.values()])[0];
-      renderer.domElement.style.cursor = hit ? "pointer" : "grab";
+      const hoveredId = hit?.object.userData.nodeId as string | undefined;
+      renderer.domElement.style.cursor = hoveredId ? "pointer" : "grab";
+      nodeMeshes.forEach((mesh, nodeId) => {
+        const label = mesh.userData.label as THREE.Sprite | undefined;
+        if (!label) return;
+        label.visible =
+          nodeId === hoveredId ||
+          nodeId === selectedIdRef.current ||
+          Boolean(label.userData.persistent);
+      });
+    }
+
+    function handlePointerLeave() {
+      renderer.domElement.style.cursor = "grab";
+      nodeMeshes.forEach((nodeMesh, nodeId) => {
+        const label = nodeMesh.userData.label as THREE.Sprite | undefined;
+        if (!label) return;
+        label.visible =
+          nodeId === selectedIdRef.current || Boolean(label.userData.persistent);
+      });
     }
 
     renderer.domElement.addEventListener("pointerdown", handlePointerDown);
     renderer.domElement.addEventListener("pointerup", handlePointerUp);
     renderer.domElement.addEventListener("pointermove", handlePointerMove);
+    renderer.domElement.addEventListener("pointerleave", handlePointerLeave);
 
     function resize() {
       const width = Math.max(1, root.clientWidth);
@@ -260,6 +366,7 @@ function Graph3DView({
       renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
       renderer.domElement.removeEventListener("pointerup", handlePointerUp);
       renderer.domElement.removeEventListener("pointermove", handlePointerMove);
+      renderer.domElement.removeEventListener("pointerleave", handlePointerLeave);
       scene.traverse((object) => {
         if (object instanceof THREE.Mesh || object instanceof THREE.Line) {
           object.geometry.dispose();
@@ -284,15 +391,25 @@ function Graph3DView({
     nodeMeshesRef.current.forEach((mesh, nodeId) => {
       const selected = nodeId === selectedId;
       const baseRadius = Number(mesh.userData.baseRadius ?? 7.2);
-      mesh.scale.setScalar(selected ? 1.35 : 1);
-      mesh.userData.displayRadius = baseRadius * (selected ? 1.35 : 1);
+      mesh.scale.setScalar(selected ? 1.22 : 1);
+      mesh.userData.displayRadius = baseRadius * (selected ? 1.22 : 1);
       const material = mesh.material as THREE.MeshPhysicalMaterial;
-      material.emissiveIntensity = selected ? 0.62 : 0.12;
-      material.opacity = selected ? 0.88 : 0.68;
-      const halo = mesh.userData.halo as THREE.Mesh | undefined;
-      if (halo) {
-        const haloMaterial = halo.material as THREE.MeshBasicMaterial;
-        haloMaterial.opacity = selected ? 0.28 : 0.08;
+      material.emissiveIntensity = selected ? 0.62 : 0.1;
+      material.opacity = selected
+        ? 0.94
+        : Number(mesh.userData.baseOpacity ?? 0.7);
+      const glow = mesh.userData.glow as THREE.Sprite | undefined;
+      const glowMaterial = glow?.material as THREE.SpriteMaterial | undefined;
+      if (glowMaterial) {
+        glowMaterial.opacity = selected
+          ? 0.42
+          : Number(glow?.userData.baseOpacity ?? 0.16);
+      }
+      const ring = mesh.userData.ring as THREE.Sprite | undefined;
+      if (ring) ring.visible = selected;
+      const label = mesh.userData.label as THREE.Sprite | undefined;
+      if (label) {
+        label.visible = selected || Boolean(label.userData.persistent);
       }
     });
     edgeObjectsRef.current.forEach(({ edge, line }) => {

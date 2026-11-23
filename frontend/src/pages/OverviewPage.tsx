@@ -48,7 +48,9 @@ function OverviewPage() {
   const overview = useQuery({
     queryKey: ["project-overview"],
     queryFn: async () => {
-      const response = await fetch(`${import.meta.env.BASE_URL}project-overview.json`);
+      const response = await fetch(`${import.meta.env.BASE_URL}project-overview.json`, {
+        cache: "no-cache"
+      });
       if (!response.ok) throw new Error("项目概览数据加载失败");
       return response.json() as Promise<OverviewData>;
     }

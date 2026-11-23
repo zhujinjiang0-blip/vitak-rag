@@ -33,7 +33,9 @@ let dataPromise: Promise<StaticData> | null = null;
 
 function loadData(): Promise<StaticData> {
   if (!dataPromise) {
-    dataPromise = fetch(`${import.meta.env.BASE_URL}real-evidence.json`).then((response) => {
+    dataPromise = fetch(`${import.meta.env.BASE_URL}real-evidence.json`, {
+      cache: "no-cache"
+    }).then((response) => {
       if (!response.ok) throw new Error(`静态知识库加载失败：${response.status}`);
       return response.json() as Promise<StaticData>;
     });

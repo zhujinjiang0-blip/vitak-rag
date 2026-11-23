@@ -14,7 +14,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Box, Filter, GitFork, Network, RotateCcw, Search, X } from "lucide-react";
 import Graph3DView from "../components/Graph3DView";
 import { getGraphMeta, getSubgraph, searchGraph } from "../lib/api";
-import { graphDomainColor } from "../lib/graphTheme";
+import { DOMAIN_COLORS, graphDomainColor } from "../lib/graphTheme";
 import type { GraphNode } from "../lib/types";
 
 function GraphPage() {
@@ -214,6 +214,40 @@ function GraphPage() {
 
         <section className={`graph-canvas ${viewMode === "3d" ? "is-3d" : ""}`}>
           {subgraph.isFetching && <div className="canvas-status">正在查询邻居关系...</div>}
+          <div className="graph-legend-panel" aria-label="知识领域图例">
+            <div className="graph-legend-heading">
+              <strong>图例</strong>
+              {viewMode === "2d" ? (
+                <button
+                  type="button"
+                  onClick={resetLayout}
+                  title="恢复默认布局"
+                  aria-label="恢复默认布局"
+                >
+                  <RotateCcw size={14} />
+                </button>
+              ) : (
+                <span>{meta.data?.domains.length ?? 0} 类</span>
+              )}
+            </div>
+            <div className="graph-legend-grid">
+              {meta.data?.domains.map((domain) => {
+                const dimmed =
+                  enabledDomains.length > 0 &&
+                  !enabledDomains.includes(domain);
+                return (
+                  <span key={domain} className={dimmed ? "dimmed" : ""}>
+                    <i
+                      style={{
+                        background: DOMAIN_COLORS[domain] ?? "#64748b"
+                      }}
+                    />
+                    {domain}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
           {viewMode === "3d" ? (
             <Graph3DView
               nodes={subgraph.data?.nodes ?? []}
@@ -223,15 +257,6 @@ function GraphPage() {
             />
           ) : (
             <>
-              <button
-                className="graph-reset-layout"
-                type="button"
-                onClick={resetLayout}
-                title="恢复默认布局"
-                aria-label="恢复默认布局"
-              >
-                <RotateCcw size={16} />
-              </button>
               <ReactFlow
                 nodes={flowNodes}
                 edges={flowEdges}

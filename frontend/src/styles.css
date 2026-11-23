@@ -1481,41 +1481,99 @@ a {
   cursor: grabbing;
 }
 
-.graph-reset-layout {
+.graph-legend-panel {
   position: absolute;
-  z-index: 12;
+  z-index: 14;
   top: 12px;
   right: 12px;
-  width: 32px;
-  height: 32px;
+  width: min(210px, calc(100% - 24px));
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+  backdrop-filter: blur(12px);
+}
+
+.graph-legend-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.graph-legend-heading strong {
+  color: var(--ink);
+  font-size: 11px;
+}
+
+.graph-legend-heading span {
+  font-size: 9px;
+}
+
+.graph-legend-heading button {
+  width: 24px;
+  height: 24px;
   display: grid;
   place-items: center;
+  padding: 0;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 5px;
   color: var(--muted);
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  background: white;
   cursor: pointer;
 }
 
-.graph-reset-layout:hover {
+.graph-legend-heading button:hover {
   color: var(--teal-dark);
   border-color: #75bdb4;
   background: #eefaf7;
+}
+
+.graph-legend-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 8px;
+}
+
+.graph-legend-grid span {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  color: #536174;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: opacity 120ms ease;
+}
+
+.graph-legend-grid span.dimmed {
+  opacity: 0.32;
+}
+
+.graph-legend-grid i {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px white;
 }
 
 .canvas-status {
   position: absolute;
   z-index: 10;
   top: 12px;
-  left: 50%;
+  left: 12px;
   padding: 7px 10px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: white;
   color: var(--muted);
   font-size: 10px;
-  transform: translateX(-50%);
 }
 
 .node-inspector h3 {

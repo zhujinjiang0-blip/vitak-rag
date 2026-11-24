@@ -11,11 +11,13 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Box,
   Download,
   Filter,
   GitFork,
+  Info,
   Network,
   RotateCcw,
   Search,
@@ -29,6 +31,12 @@ import {
   exportThreeGraphPng
 } from "../lib/graphExport";
 import {
+  buildGraphPathSubgraph,
+  clearGraphPathHandoff,
+  readGraphPathHandoff,
+  type GraphPathHandoff
+} from "../lib/graphPathHandoff";
+import {
   DOMAIN_COLORS,
   RELATION_THEMES,
   graphDomainColor,
@@ -38,6 +46,20 @@ import {
 import type { GraphNode } from "../lib/types";
 
 function GraphPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sourceIsAnswer = searchParams.get("source") === "answer";
+  const [answerHandoff, setAnswerHandoff] = useState<GraphPathHandoff | null>(
+    () => {
+      if (!sourceIsAnswer) {
+        clearGraphPathHandoff();
+        return null;
+      }
+      return readGraphPathHandoff();
+    }
+  );
+  const [answerPathUnavailable] = useState(
+    sourceIsAnswer && !answerHandoff
+  );
   const [query, setQuery] = useState("维生素K");
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [selected, setSelected] = useState<GraphNode | null>(null);
@@ -57,22 +79,40 @@ function GraphPage() {
   const subgraph = useQuery({
     queryKey: ["subgraph", selectedIds, enabledDomains],
     queryFn: () => getSubgraph(selectedIds, 1, enabledDomains),
-    enabled: selectedIds.length > 0
+    enabled: selectedIds.length > 0 && !answerHandoff
   });
   const fullGraph = useQuery({
     queryKey: ["full-graph", enabledDomains],
-    queryFn: () => getFullGraph(enabledDomains)
+    queryFn: () => getFullGraph(enabledDomains),
+    enabled: !answerHandoff
   });
-  const visibleGraph = selectedIds.length > 0 ? subgraph.data : fullGraph.data;
+  const answerSubgraph = useMemo(
+    () => (answerHandoff ? buildGraphPathSubgraph(answerHandoff) : null),
+    [answerHandoff]
+  );
+  const visibleGraph =
+    answerSubgraph ??
+    (selectedIds.length > 0 ? subgraph.data : fullGraph.data);
   const graphLoading =
-    selectedIds.length > 0 ? subgraph.isFetching : fullGraph.isFetching;
-  const isOverview = selectedIds.length === 0;
+    !answerHandoff &&
+    (selectedIds.length > 0 ? subgraph.isFetching : fullGraph.isFetching);
+  const isAnswerMode = Boolean(answerHandoff);
+  const isOverview = !isAnswerMode && selectedIds.length === 0;
+  const graphScope = isAnswerMode ? "answer" : isOverview ? "all" : "focus";
+  const versionMismatch =
+    isAnswerMode &&
+    Boolean(meta.data?.data_version.version) &&
+    answerHandoff?.dataVersion !== meta.data?.data_version.version;
+  const answerEvidenceCount = answerHandoff
+    ? new Set(answerHandoff.paths.flatMap((path) => path.evidence_ids)).size
+    : 0;
 
   const baseFlow = useMemo(() => {
     const items = visibleGraph;
     if (!items) return { nodes: [], edges: [] };
 
-    const overview = selectedIds.length === 0 && items.nodes.length > 200;
+    const overview =
+      !isAnswerMode && selectedIds.length === 0 && items.nodes.length > 200;
     const centerId = selectedIds[0] ?? items.nodes[0]?.id;
     const others = items.nodes.filter((node) => node.id !== centerId);
     const radius = Math.max(210, Math.min(320, others.length * 18));
@@ -127,7 +167,9 @@ function GraphPage() {
               backdropFilter: "blur(12px)",
               boxShadow: isCenter
                 ? `0 16px 36px ${domainColor}45`
-                : "0 12px 30px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.72)"
+                : isAnswerMode
+                  ? `0 10px 26px ${domainColor}38, 0 0 0 2px ${domainColor}35`
+                  : "0 12px 30px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.72)"
             }
       };
     });
@@ -140,8 +182,8 @@ function GraphPage() {
       animated: !overview && edge.is_demo,
       style: {
         stroke: graphRelationColor(edge.predicate),
-        strokeWidth: overview ? 0.65 : 1.35,
-        opacity: overview ? 0.12 : edge.is_demo ? 0.4 : 0.7
+        strokeWidth: overview ? 0.65 : isAnswerMode ? 2.15 : 1.35,
+        opacity: overview ? 0.12 : isAnswerMode ? 0.92 : edge.is_demo ? 0.4 : 0.7
       },
       ...(overview
         ? {}
@@ -154,7 +196,7 @@ function GraphPage() {
           })
     }));
     return { nodes, edges };
-  }, [selectedIds, visibleGraph]);
+  }, [isAnswerMode, selectedIds, visibleGraph]);
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState<FlowNode>([]);
   const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
   const relationCounts = useMemo(() => {
@@ -171,17 +213,38 @@ function GraphPage() {
     setFlowEdges(baseFlow.edges);
   }, [baseFlow, setFlowEdges, setFlowNodes]);
 
+  useEffect(() => {
+    if (!answerPathUnavailable) return;
+    setSearchParams({}, { replace: true });
+  }, [answerPathUnavailable, setSearchParams]);
+
+  useEffect(() => {
+    if (sourceIsAnswer || !answerHandoff) return;
+    clearGraphPathHandoff();
+    setAnswerHandoff(null);
+  }, [answerHandoff, sourceIsAnswer]);
+
   function handleSearch(event: FormEvent) {
     event.preventDefault();
     setSubmittedQuery(query.trim());
   }
 
   function selectEntity(node: GraphNode) {
+    if (answerHandoff) {
+      clearGraphPathHandoff();
+      setAnswerHandoff(null);
+      setSearchParams({}, { replace: true });
+    }
     setSelected(node);
     setSelectedIds([node.id]);
   }
 
   function toggleDomain(domain: string) {
+    if (answerHandoff) {
+      clearGraphPathHandoff();
+      setAnswerHandoff(null);
+      setSearchParams({}, { replace: true });
+    }
     setEnabledDomains((current) =>
       current.includes(domain)
         ? current.filter((item) => item !== domain)
@@ -190,6 +253,11 @@ function GraphPage() {
   }
 
   function showAllGraph() {
+    if (answerHandoff) {
+      clearGraphPathHandoff();
+      setAnswerHandoff(null);
+      setSearchParams({}, { replace: true });
+    }
     setSelected(null);
     setSelectedIds([]);
   }
@@ -204,7 +272,11 @@ function GraphPage() {
     try {
       const meta = {
         mode: viewMode,
-        scope: isOverview ? ("all" as const) : ("focus" as const),
+        scope: isAnswerMode
+          ? ("answer" as const)
+          : isOverview
+            ? ("all" as const)
+            : ("focus" as const),
         entityCount: visibleGraph.nodes.length,
         relationCount: visibleGraph.edges.length,
         dataVersion: visibleGraph.data_version.version,
@@ -228,7 +300,7 @@ function GraphPage() {
       const date = new Date().toISOString().slice(0, 10).replaceAll("-", "");
       downloadPng(
         blob,
-        `vitak-graph-${viewMode}-${isOverview ? "all" : "focus"}-${date}.png`
+        `vitak-graph-${viewMode}-${graphScope}-${date}.png`
       );
       setExportStatus("done");
     } catch {
@@ -289,11 +361,11 @@ function GraphPage() {
           <Filter size={17} />
           <span>领域</span>
           <div className="filter-chips">
-            {meta.data?.domains.map((domain) => (
-              <button
-                key={domain}
-                className={enabledDomains.includes(domain) ? "active" : ""}
-                onClick={() => toggleDomain(domain)}
+                {meta.data?.domains.map((domain) => (
+                  <button
+                    key={domain}
+                    className={enabledDomains.includes(domain) ? "active" : ""}
+                    onClick={() => toggleDomain(domain)}
               >
                 {domain}
               </button>
@@ -339,11 +411,51 @@ function GraphPage() {
 
         <section
           className={`graph-canvas ${viewMode === "3d" ? "is-3d" : ""}`}
-          data-graph-scope={isOverview ? "all" : "focus"}
+          data-graph-scope={graphScope}
         >
           {graphLoading && (
             <div className="canvas-status">
               {isOverview ? "正在加载全部图谱..." : "正在查询邻居关系..."}
+            </div>
+          )}
+          {isAnswerMode && answerHandoff && (
+            <div className="graph-answer-context">
+              <div className="graph-answer-context-icon">
+                <Info size={16} />
+              </div>
+              <div className="graph-answer-context-copy">
+                <span>来自智能问答 · {graphIntentLabel(answerHandoff.intent)}</span>
+                <strong>{answerHandoff.query}</strong>
+                <small>
+                  {answerSubgraph?.nodes.length ?? 0} 个实体 ·{" "}
+                  {answerSubgraph?.edges.length ?? 0} 条关系 ·{" "}
+                  {answerEvidenceCount} 条证据 · {answerHandoff.dataVersion}
+                </small>
+                {versionMismatch && (
+                  <em>
+                    回答数据版本与当前图谱版本不同，当前展示回答生成时的路径快照。
+                  </em>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={showAllGraph}
+                aria-label="退出回答路径并显示全部图谱"
+              >
+                <X size={14} />
+                全部图谱
+              </button>
+            </div>
+          )}
+          {answerPathUnavailable && (
+            <div className="graph-answer-context unavailable">
+              <div className="graph-answer-context-icon">
+                <Info size={16} />
+              </div>
+              <div className="graph-answer-context-copy">
+                <strong>回答图谱路径已过期</strong>
+                <small>已恢复当前完整知识图谱。</small>
+              </div>
             </div>
           )}
           <div className="graph-legend-panel" aria-label="知识领域图例">
@@ -428,12 +540,13 @@ function GraphPage() {
               nodes={visibleGraph?.nodes ?? []}
               edges={visibleGraph?.edges ?? []}
               selectedId={selected?.id ?? selectedIds[0] ?? null}
+              pathMode={isAnswerMode}
               onSelect={selectEntity}
             />
           ) : (
             <>
               <ReactFlow
-                key={`${isOverview ? "all" : selectedIds.join("-")}-${enabledDomains.join("-")}`}
+                key={`${graphScope}-${selectedIds.join("-")}-${enabledDomains.join("-")}`}
                 nodes={flowNodes}
                 edges={flowEdges}
                 fitView
@@ -508,6 +621,26 @@ function GraphPage() {
       </div>
     </div>
   );
+}
+
+function graphIntentLabel(intent: string) {
+  const labels: Record<string, string> = {
+    food_sources: "食物来源",
+    drug_interactions: "药物关系",
+    deficiency: "缺乏风险",
+    functions: "功能机制",
+    lab_tests: "检测指标",
+    recommendations: "建议信息",
+    research: "研究证据",
+    comparison: "关系比较",
+    definition: "知识介绍",
+    emergency: "紧急安全",
+    medication: "用药安全",
+    diagnosis: "诊断边界",
+    general: "图谱检索",
+    capabilities: "能力说明"
+  };
+  return labels[intent] ?? intent;
 }
 
 export default GraphPage;

@@ -8,6 +8,7 @@ interface Graph3DViewProps {
   nodes: GraphNode[];
   edges: GraphEdge[];
   selectedId: string | null;
+  pathMode?: boolean;
   onSelect: (node: GraphNode) => void;
 }
 
@@ -106,6 +107,7 @@ function Graph3DView({
   nodes,
   edges,
   selectedId,
+  pathMode = false,
   onSelect
 }: Graph3DViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -271,7 +273,7 @@ function Graph3DView({
       if (!overview || persistentLabels.has(node.id)) {
         const label = nodeLabel(node.name);
         label.position.copy(point).add(new THREE.Vector3(0, baseRadius + 8, 0));
-        label.visible = persistentLabels.has(node.id);
+        label.visible = pathMode || persistentLabels.has(node.id);
         label.userData.persistent = persistentLabels.has(node.id);
         scene.add(label);
         mesh.userData.label = label;
@@ -502,6 +504,7 @@ function Graph3DView({
         const label = mesh.userData.label as THREE.Sprite | undefined;
         if (!label) return;
         label.visible =
+          pathMode ||
           nodeId === hoveredId ||
           nodeId === selectedIdRef.current ||
           Boolean(label.userData.persistent);
@@ -514,7 +517,9 @@ function Graph3DView({
         const label = nodeMesh.userData.label as THREE.Sprite | undefined;
         if (!label) return;
         label.visible =
-          nodeId === selectedIdRef.current || Boolean(label.userData.persistent);
+          pathMode ||
+          nodeId === selectedIdRef.current ||
+          Boolean(label.userData.persistent);
       });
     }
 
@@ -574,7 +579,7 @@ function Graph3DView({
       nodeMeshes.clear();
       edgeObjectsRef.current = [];
     };
-  }, [edges, nodes]);
+  }, [edges, nodes, pathMode]);
 
   useEffect(() => {
     nodeMeshesRef.current.forEach((mesh, nodeId) => {
@@ -598,12 +603,14 @@ function Graph3DView({
       if (ring) ring.visible = selected;
       const label = mesh.userData.label as THREE.Sprite | undefined;
       if (label) {
-        label.visible = selected || Boolean(label.userData.persistent);
+        label.visible =
+          pathMode || selected || Boolean(label.userData.persistent);
       }
     });
     const denseGraph = edgeObjectsRef.current.length > 350;
     edgeObjectsRef.current.forEach(({ edge, line, handle }) => {
-      const active = edge.source === selectedId || edge.target === selectedId;
+      const active =
+        pathMode || edge.source === selectedId || edge.target === selectedId;
       const material = line.material as THREE.LineBasicMaterial;
       const theme = graphRelationTheme(edge.predicate);
       material.opacity = active ? 0.92 : denseGraph ? 0.1 : edge.is_demo ? 0.24 : 0.48;
@@ -613,7 +620,7 @@ function Graph3DView({
         handleMaterial.opacity = active ? 0.88 : 0.42;
       }
     });
-  }, [selectedId]);
+  }, [pathMode, selectedId]);
 
   return <div className="graph-3d-canvas" ref={containerRef} />;
 }

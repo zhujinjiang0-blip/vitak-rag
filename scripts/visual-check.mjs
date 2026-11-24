@@ -59,6 +59,9 @@ await page.screenshot({
   path: `${outputDir}/chat-capabilities-desktop.png`,
   fullPage: true
 });
+if ((await page.locator(".graph-path-button").count()) !== 0) {
+  throw new Error("能力说明不应显示图谱路径入口");
+}
 
 await page.getByPlaceholder("输入关于维生素K的问题...").fill("维生素K有哪些食物来源？");
 await page.getByRole("button", { name: "发送问题" }).click();
@@ -86,6 +89,93 @@ await page.locator(".origin-legend.compact").waitFor();
 await page.screenshot({
   path: `${outputDir}/chat-answer-desktop.png`,
   fullPage: true
+});
+await page.getByRole("button", { name: "在图谱中查看" }).waitFor({
+  timeout: 15_000
+});
+await page.getByRole("button", { name: "在图谱中查看" }).click();
+await page.locator('[data-graph-scope="answer"]').waitFor({ timeout: 15_000 });
+await page.locator(".graph-answer-context").waitFor({ timeout: 15_000 });
+const answerHandoffRaw = await page.evaluate(() =>
+  sessionStorage.getItem("vitak-rag:graph-path-handoff:v1")
+);
+if (!answerHandoffRaw) throw new Error("问答图谱路径未写入 sessionStorage");
+const answerGraphState = await page.evaluate(() => {
+  const values = [...document.querySelectorAll(".graph-stats strong")].map((node) =>
+    Number(node.textContent?.replace(/[^\d]/g, "") || 0)
+  );
+  return {
+    scope: document.querySelector(".graph-canvas")?.getAttribute("data-graph-scope"),
+    nodes: values[0],
+    edges: values[1],
+    context: document.querySelector(".graph-answer-context")?.textContent
+  };
+});
+if (
+  answerGraphState.scope !== "answer" ||
+  answerGraphState.nodes < 2 ||
+  answerGraphState.edges < 1 ||
+  !answerGraphState.context?.includes("维生素K有哪些食物来源")
+) {
+  throw new Error(`问答路径展示不完整：${JSON.stringify(answerGraphState)}`);
+}
+await page.screenshot({
+  path: `${outputDir}/graph-answer-path-desktop.png`,
+  fullPage: true
+});
+await page.getByRole("button", { name: "二维图谱" }).click();
+await page.locator(".react-flow").waitFor({ state: "visible", timeout: 15_000 });
+await page.waitForFunction(
+  ({ expectedNodes, expectedEdges }) =>
+    document.querySelectorAll(".react-flow__node").length === expectedNodes &&
+    document.querySelectorAll(".react-flow__edge").length === expectedEdges,
+  {
+    expectedNodes: answerGraphState.nodes,
+    expectedEdges: answerGraphState.edges
+  },
+  { timeout: 15_000 }
+);
+const answerPathFlowCounts = await page.evaluate(() => ({
+  nodes: document.querySelectorAll(".react-flow__node").length,
+  edges: document.querySelectorAll(".react-flow__edge").length,
+  labels: document.querySelectorAll(".react-flow__edge-text").length
+}));
+if (
+  answerPathFlowCounts.nodes !== answerGraphState.nodes ||
+  answerPathFlowCounts.edges !== answerGraphState.edges ||
+  answerPathFlowCounts.labels !== answerGraphState.edges
+) {
+  throw new Error(`二维问答路径数量不一致：${JSON.stringify(answerPathFlowCounts)}`);
+}
+await page.screenshot({
+  path: `${outputDir}/graph-answer-path-2d-desktop.png`,
+  fullPage: true
+});
+
+await page.evaluate(() => {
+  const raw = sessionStorage.getItem("vitak-rag:graph-path-handoff:v1");
+  if (!raw) return;
+  const handoff = JSON.parse(raw);
+  handoff.dataVersion = "stale-answer-version";
+  sessionStorage.setItem("vitak-rag:graph-path-handoff:v1", JSON.stringify(handoff));
+});
+await page.reload({ waitUntil: "networkidle" });
+await page.locator('[data-graph-scope="answer"]').waitFor({ timeout: 15_000 });
+await page.locator(".graph-answer-context em", {
+  hasText: "回答数据版本与当前图谱版本不同"
+}).waitFor({ timeout: 15_000 });
+await page
+  .locator(".graph-answer-context")
+  .getByRole("button", { name: "退出回答路径并显示全部图谱" })
+  .click();
+await page.locator('[data-graph-scope="all"]').waitFor({ timeout: 20_000 });
+const handoffAfterExit = await page.evaluate(() =>
+  sessionStorage.getItem("vitak-rag:graph-path-handoff:v1")
+);
+if (handoffAfterExit) throw new Error("退出回答路径后未清理 sessionStorage");
+await page.goto(`${baseUrl}/#/chat`, { waitUntil: "networkidle" });
+await page.getByPlaceholder("输入关于维生素K的问题...").waitFor({
+  state: "visible"
 });
 
 await page.getByPlaceholder("输入关于维生素K的问题...").fill(
@@ -277,6 +367,35 @@ await page.screenshot({
   path: `${outputDir}/graph-3d-mobile.png`,
   fullPage: true
 });
+await page.evaluate(
+  (raw) => sessionStorage.setItem("vitak-rag:graph-path-handoff:v1", raw),
+  answerHandoffRaw
+);
+await page.goto(`${baseUrl}/#/chat`, { waitUntil: "networkidle" });
+await page.goto(`${baseUrl}/#/graph?source=answer`, { waitUntil: "networkidle" });
+await page.locator('[data-graph-scope="answer"]').waitFor({ timeout: 15_000 });
+await page.locator(".graph-answer-context").waitFor({ timeout: 15_000 });
+const mobileAnswerPathOverflow = await page.evaluate(
+  () => document.documentElement.scrollWidth > window.innerWidth
+);
+if (mobileAnswerPathOverflow) throw new Error("移动端问答图谱路径出现横向溢出");
+await page.screenshot({
+  path: `${outputDir}/graph-answer-path-mobile.png`,
+  fullPage: true
+});
+await page.evaluate(
+  (raw) => sessionStorage.setItem("vitak-rag:graph-path-handoff:v1", raw),
+  answerHandoffRaw
+);
+await page.goto(`${baseUrl}/#/chat`, { waitUntil: "networkidle" });
+await page.goto(`${baseUrl}/#/graph`, { waitUntil: "networkidle" });
+await page.locator('[data-graph-scope="all"]').waitFor({ timeout: 20_000 });
+const staleHandoffAfterNormalNavigation = await page.evaluate(() =>
+  sessionStorage.getItem("vitak-rag:graph-path-handoff:v1")
+);
+if (staleHandoffAfterNormalNavigation) {
+  throw new Error("普通进入图谱页时未清理旧的回答路径");
+}
 await page.goto(`${baseUrl}/#/evidence`, { waitUntil: "networkidle" });
 await page
   .getByPlaceholder("输入关键词、实体或研究主题...")
@@ -295,7 +414,7 @@ const mobileOverflow = await page.evaluate(
 
 await page.setViewportSize({ width: 1440, height: 1000 });
 await page.goto(`${baseUrl}/#/chat`, { waitUntil: "networkidle" });
-await page.evaluate(() => {
+await page.evaluate(async (appBaseUrl) => {
   const timestamp = Date.now();
   const messages = Array.from({ length: 28 }, (_, index) => ({
     id: `scroll-message-${index}`,
@@ -305,6 +424,31 @@ await page.evaluate(() => {
         ? `连续提问测试 ${index / 2 + 1}：维生素K与这个健康问题有什么关系？`
         : `这是第 ${Math.ceil(index / 2)} 个回答。内容用于验证只有中间问答区域产生滚动条，页面主体和输入框保持固定。`
   }));
+  const data = await fetch(`${appBaseUrl}/real-evidence.json`).then((response) =>
+    response.json()
+  );
+  const relatedEntity =
+    data.nodes.find((node) => node.name === "APOE") ?? data.nodes[0];
+  messages.push({
+    id: "related-entity-answer",
+    role: "assistant",
+    text: "当前知识库没有足够的多跳关系，请在知识图谱中查看识别到的相关实体。",
+    answer: {
+      session_id: "scroll-session",
+      query: "APOE是什么？",
+      normalized_query: "apoe是什么",
+      intent: "definition",
+      answer_text: "当前知识库没有足够的多跳关系。",
+      claims: [],
+      citations: [],
+      graph_paths: [],
+      sufficiency: "none",
+      safety_notice: null,
+      related_entities: [relatedEntity],
+      data_version: data.version,
+      elapsed_ms: 0
+    }
+  });
   const project = {
     id: "scroll-project",
     title: "连续问答滚动测试",
@@ -323,7 +467,7 @@ await page.evaluate(() => {
   localStorage.setItem("vitak-rag:projects:v2", JSON.stringify([project]));
   localStorage.setItem("vitak-rag:active-project:v2", project.id);
   localStorage.setItem("vitak-rag:active-conversation:v2", project.sessions[0].id);
-});
+}, baseUrl);
 await page.reload({ waitUntil: "networkidle" });
 await page.locator(".chat-scroll").waitFor({ state: "visible" });
 const chatScrollMetrics = await page.evaluate(() => {
@@ -358,6 +502,29 @@ await page.screenshot({
   path: `${outputDir}/chat-long-scroll-desktop.png`,
   fullPage: false
 });
+await page.getByRole("button", { name: "查看相关实体" }).click();
+await page.locator('[data-graph-scope="answer"]').waitFor({ timeout: 15_000 });
+const relatedEntityGraph = await page.evaluate(() => {
+  const values = [...document.querySelectorAll(".graph-stats strong")].map((node) =>
+    Number(node.textContent?.replace(/[^\d]/g, "") || 0)
+  );
+  return {
+    nodes: values[0],
+    edges: values[1],
+    context: document.querySelector(".graph-answer-context")?.textContent
+  };
+});
+if (
+  relatedEntityGraph.nodes !== 1 ||
+  relatedEntityGraph.edges !== 0 ||
+  !relatedEntityGraph.context?.includes("APOE是什么")
+) {
+  throw new Error(`相关实体降级图谱不正确：${JSON.stringify(relatedEntityGraph)}`);
+}
+await page.screenshot({
+  path: `${outputDir}/graph-related-entities-desktop.png`,
+  fullPage: false
+});
 
 const screenshots = [
   "overview-desktop.png",
@@ -370,11 +537,15 @@ const screenshots = [
   ...(checkInternal ? ["chat-internal-desktop.png"] : []),
   "graph-3d-desktop.png",
   "graph-2d-desktop.png",
+  "graph-answer-path-desktop.png",
+  "graph-answer-path-2d-desktop.png",
+  "graph-related-entities-desktop.png",
   "evidence-json-desktop.png",
   "evidence-desktop.png",
   "import-desktop.png",
   "chat-mobile.png",
   "graph-3d-mobile.png",
+  "graph-answer-path-mobile.png",
   "evidence-json-mobile.png",
   "chat-long-scroll-desktop.png"
 ];

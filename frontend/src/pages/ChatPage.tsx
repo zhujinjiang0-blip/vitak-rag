@@ -10,6 +10,7 @@ import {
   Info,
   LoaderCircle,
   MessageSquareText,
+  Network,
   Pencil,
   Plus,
   Search,
@@ -18,7 +19,12 @@ import {
   Trash2,
   X
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { askQuestion } from "../lib/api";
+import {
+  createGraphPathHandoff,
+  saveGraphPathHandoff
+} from "../lib/graphPathHandoff";
 import { STATIC_DEMO_MODE } from "../lib/staticDemo";
 import type { Answer } from "../lib/types";
 import DataSourceLegend from "../components/DataSourceLegend";
@@ -226,6 +232,7 @@ const PRIVATE_SUGGESTIONS = [
 ];
 
 function ChatPage() {
+  const navigate = useNavigate();
   const [input, setInput] = useState("");
   const [conversation, setConversation] =
     useState<ConversationState>(loadConversationState);
@@ -669,6 +676,13 @@ function ChatPage() {
     void submit(input);
   }
 
+  function openAnswerGraph(answer: Answer) {
+    const handoff = createGraphPathHandoff(answer);
+    if (!handoff) return;
+    saveGraphPathHandoff(handoff);
+    navigate("/graph?source=answer");
+  }
+
   return (
     <div className="chat-layout">
       <aside className="conversation-sidebar">
@@ -1072,9 +1086,28 @@ function ChatPage() {
             )}
 
             <div className="rail-section">
-              <h3>图谱路径</h3>
+              <div className="rail-section-heading">
+                <h3>图谱路径</h3>
+                {(activeAnswer.graph_paths.length > 0 ||
+                  activeAnswer.related_entities.length > 0) && (
+                  <button
+                    type="button"
+                    className="graph-path-button"
+                    onClick={() => openAnswerGraph(activeAnswer)}
+                  >
+                    <Network size={13} />
+                    {activeAnswer.graph_paths.length > 0
+                      ? "在图谱中查看"
+                      : "查看相关实体"}
+                  </button>
+                )}
+              </div>
               {activeAnswer.graph_paths.length === 0 ? (
-                <p className="muted">本次回答由单跳关系或证据片段直接组装。</p>
+                <p className="muted">
+                  {activeAnswer.related_entities.length > 0
+                    ? "本次回答没有多跳关系，可在图谱中查看识别到的相关实体。"
+                    : "本次回答由证据片段直接组装，没有可展示的图谱路径。"}
+                </p>
               ) : (
                 activeAnswer.graph_paths.map((path, index) => (
                   <div className="path-block" key={`path-${index}`}>

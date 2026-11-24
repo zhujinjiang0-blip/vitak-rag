@@ -9,7 +9,7 @@ import type { GraphNode } from "./types";
 
 export interface GraphExportMeta {
   mode: "2d" | "3d";
-  scope: "all" | "focus";
+  scope: "all" | "focus" | "answer";
   entityCount: number;
   relationCount: number;
   dataVersion: string;
@@ -73,7 +73,9 @@ function drawTitle(
   const title =
     meta.scope === "all"
       ? "维K智问 · 维生素K知识图谱全图"
-      : `维K智问 · ${meta.focusName ?? "实体"}知识邻域`;
+      : meta.scope === "answer"
+        ? "维K智问 · 问答引用图谱路径"
+        : `维K智问 · ${meta.focusName ?? "实体"}知识邻域`;
   context.fillStyle = "#172033";
   context.font = '700 22px "Noto Sans SC", "PingFang SC", sans-serif';
   context.fillText(title, 38, 40);
@@ -337,7 +339,9 @@ export async function exportThreeGraphPng(
   const title =
     meta.scope === "all"
       ? "维K智问 · 维生素K知识图谱全图"
-      : `维K智问 · ${meta.focusName ?? "实体"}知识邻域`;
+      : meta.scope === "answer"
+        ? "维K智问 · 问答引用图谱路径"
+        : `维K智问 · ${meta.focusName ?? "实体"}知识邻域`;
   context.fillText(title, 24 * uiScale, 30 * uiScale);
   context.fillStyle = "#64748b";
   context.font = `500 ${10 * uiScale}px "Noto Sans SC", "PingFang SC", sans-serif`;

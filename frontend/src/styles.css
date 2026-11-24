@@ -1055,11 +1055,38 @@ a {
   margin-top: 22px;
 }
 
+.rail-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
 .rail-section h3 {
-  margin: 0 0 10px;
+  margin: 0;
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.graph-path-button {
+  min-height: 27px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
+  border: 1px solid #9bcfc7;
+  border-radius: 5px;
+  color: var(--teal-dark);
+  background: #eefaf7;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.graph-path-button:hover {
+  border-color: #4aa89d;
+  background: #e1f6f1;
 }
 
 .path-block {
@@ -1529,6 +1556,96 @@ a {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.graph-answer-context {
+  position: absolute;
+  z-index: 16;
+  left: 12px;
+  bottom: 12px;
+  width: min(620px, calc(100% - 270px));
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 11px;
+  border: 1px solid #8bcfc5;
+  border-radius: 8px;
+  background: rgba(247, 253, 251, 0.96);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(12px);
+}
+
+.graph-answer-context.unavailable {
+  border-color: #e5c48f;
+  background: rgba(255, 251, 235, 0.97);
+}
+
+.graph-answer-context-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #dff4ef;
+  color: var(--teal-dark);
+}
+
+.graph-answer-context-copy {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 3px;
+}
+
+.graph-answer-context-copy span {
+  color: var(--teal-dark);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.graph-answer-context-copy strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graph-answer-context-copy small {
+  color: #667486;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.graph-answer-context-copy em {
+  color: #9a5b0a;
+  font-size: 8px;
+  font-style: normal;
+  line-height: 1.45;
+}
+
+.graph-answer-context > button {
+  min-height: 27px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
+  border: 1px solid #9bcfc7;
+  border-radius: 5px;
+  color: var(--teal-dark);
+  background: white;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.graph-answer-context > button:hover {
+  border-color: #4aa89d;
+  background: #eefaf7;
 }
 
 .graph-canvas .react-flow__node {
@@ -2710,6 +2827,10 @@ a {
   .graph-workspace {
     grid-template-columns: 1fr;
     height: 620px;
+  }
+
+  .graph-answer-context {
+    width: calc(100% - 24px);
   }
 
   .entity-results {

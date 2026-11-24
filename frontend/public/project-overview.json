@@ -1,19 +1,17 @@
 {
-  "audit_date": "2026-11-19",
-  "total_records": 73396,
-  "graph_edges": 73279,
-  "merged_duplicate_records": 117,
-  "answer_eligible_records": 54249,
-  "review_only_records": 19147,
-  "unique_entities": 36638,
-  "literal_nodes": 25527,
-  "sources": 566,
+  "audit_date": "2026-11-25",
+  "total_records": 5335,
+  "graph_edges": 5335,
+  "merged_duplicate_records": 0,
+  "answer_eligible_records": 4135,
+  "review_only_records": 1200,
+  "unique_entities": 1547,
+  "sources": 3436,
   "public_evidence_pack": {
     "version": "real-public-2026.11-structured",
     "eligible_literature_records": 1012,
     "eligible_structured_records": 3123,
     "research_only_literature_records": 1200,
-    "internal_records": 0,
     "nodes": 1547,
     "edges": 5335
   },
@@ -21,33 +19,23 @@
     {
       "id": "structured",
       "name": "外部结构化／半结构化",
-      "records": 60030,
+      "records": 3123,
       "origin": "external",
-      "description": "FDC、USDA、PubChem、FooDB、KEGG、ClinicalTrials 等来源实例化后的逻辑关系"
+      "description": "FDC、USDA、PubChem、FooDB、KEGG、ClinicalTrials 等来源实例化后的公开关系"
     },
     {
       "id": "literature",
       "name": "外部文献证据",
-      "records": 13118,
+      "records": 2212,
       "origin": "external",
-      "description": "564 项文献研究记录，保留 PMID、来源定位、关系等级与审核状态"
-    },
-    {
-      "id": "internal",
-      "name": "内部 RCT 证据",
-      "records": 248,
-      "origin": "internal",
-      "description": "395 人队列的横断面、纵向、餐后、交互、剂量、中介及反向探索测试证据"
+      "description": "已审核外部文献及仅用于研究检索的待审或暂定记录，保留 PMID 和来源定位"
     }
   ],
   "review_statuses": {
-    "accepted": 53980,
+    "accepted": 4114,
     "adopted_with_warning": 21,
-    "accepted_internal_ledger": 204,
-    "conflict_retained_internal": 44,
-    "manual_pending": 12519,
-    "provisional": 6511,
-    "merged_duplicate": 117
+    "manual_pending": 541,
+    "provisional": 659
   },
   "mvp_pages": [
     "项目概览",
@@ -56,9 +44,9 @@
     "智能问答"
   ],
   "limits": [
-    "在线问答读取已审核外部文献和公开结构化证据，不公开内部队列数据",
+    "在线问答只读取已审核外部文献和公开结构化证据",
     "正式回答不引用候选、暂定或重复合并证据",
-    "内部原始队列数据只保存在本地私有快照",
-    "当前问答采用确定性图谱检索和模板回答，不使用运行时生成模型"
+    "系统用于知识检索和科普演示，不能替代医生诊断、处方或个体化用药建议",
+    "当前公开问答采用确定性图谱检索和模板回答"
   ]
 }

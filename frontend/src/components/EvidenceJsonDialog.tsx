@@ -55,7 +55,7 @@ function evidencePayload(item: SearchResult) {
 }
 
 function EvidenceJsonDialog({ item, onClose }: EvidenceJsonDialogProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const payload = evidencePayload(item);
   const jsonText = JSON.stringify(payload, null, 2);
@@ -63,11 +63,18 @@ function EvidenceJsonDialog({ item, onClose }: EvidenceJsonDialogProps) {
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-    if (!dialog.open) dialog.showModal();
-    return () => {
-      if (dialog.open) dialog.close();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialog.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
     };
-  }, []);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [onClose]);
 
   async function copyJson() {
     try {
@@ -93,65 +100,71 @@ function EvidenceJsonDialog({ item, onClose }: EvidenceJsonDialogProps) {
   }
 
   return (
-    <dialog
-      ref={dialogRef}
-      className="evidence-json-dialog"
-      aria-labelledby="evidence-json-title"
-      onClose={onClose}
-      onClick={(event) => {
+    <div
+      className="evidence-json-backdrop"
+      onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
-          dialogRef.current?.close();
+          onClose();
         }
       }}
     >
-      <div className="evidence-json-shell">
-        <header className="evidence-json-header">
-          <div>
-            <span className="eyebrow">结构化证据</span>
-            <h2 id="evidence-json-title">
-              <FileJson2 size={18} />
-              {item.title}
-            </h2>
+      <section
+        ref={dialogRef}
+        className="evidence-json-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="evidence-json-title"
+        tabIndex={-1}
+      >
+        <div className="evidence-json-shell">
+          <header className="evidence-json-header">
+            <div>
+              <span className="eyebrow">结构化证据</span>
+              <h2 id="evidence-json-title">
+                <FileJson2 size={18} />
+                {item.title}
+              </h2>
+            </div>
+            <button
+              type="button"
+              className="icon-button"
+              onClick={onClose}
+              aria-label="关闭 JSON 详情"
+            >
+              <X size={17} />
+            </button>
+          </header>
+          <div className="evidence-json-meta">
+            <span className={`origin-pill ${item.data_origin}`}>
+              {originLabel(item.data_origin)}
+            </span>
+            <span
+              className={`eligibility-pill ${item.answer_eligible ? "eligible" : "research-only"}`}
+            >
+              {item.answer_eligible ? "可用于正式回答" : "仅研究检索"}
+            </span>
+            <code>{item.chunk_id}</code>
           </div>
-          <button
-            type="button"
-            className="icon-button"
-            onClick={() => dialogRef.current?.close()}
-            aria-label="关闭 JSON 详情"
-          >
-            <X size={17} />
-          </button>
-        </header>
-        <div className="evidence-json-meta">
-          <span className={`origin-pill ${item.data_origin}`}>
-            {originLabel(item.data_origin)}
-          </span>
-          <span
-            className={`eligibility-pill ${item.answer_eligible ? "eligible" : "research-only"}`}
-          >
-            {item.answer_eligible ? "可用于正式回答" : "仅研究检索"}
-          </span>
-          <code>{item.chunk_id}</code>
+          <pre className="evidence-json-code" data-testid="evidence-json">
+            {jsonText}
+          </pre>
+          <footer className="evidence-json-actions">
+            <button type="button" className="result-action" onClick={copyJson}>
+              {copyState === "copied" ? <Check size={15} /> : <Copy size={15} />}
+              {copyState === "copied"
+                ? "已复制"
+                : copyState === "error"
+                  ? "复制失败"
+                  : "复制 JSON"}
+            </button>
+            <button type="button" className="result-action primary" onClick={downloadJson}>
+              <Download size={15} />
+              下载 JSON
+            </button>
+          </footer>
         </div>
-        <pre className="evidence-json-code" data-testid="evidence-json">
-          {jsonText}
-        </pre>
-        <footer className="evidence-json-actions">
-          <button type="button" className="result-action" onClick={copyJson}>
-            {copyState === "copied" ? <Check size={15} /> : <Copy size={15} />}
-            {copyState === "copied"
-              ? "已复制"
-              : copyState === "error"
-                ? "复制失败"
-                : "复制 JSON"}
-          </button>
-          <button type="button" className="result-action primary" onClick={downloadJson}>
-            <Download size={15} />
-            下载 JSON
-          </button>
-        </footer>
-      </div>
-    </dialog>
+      </section>
+    </div>
   );
 }
 

@@ -1,0 +1,3098 @@
+{
+  "run_id": "v2.0-t04-02-gold-20",
+  "generated_at": "2026-11-24T16:03:45.139Z",
+  "data_version": "real-public-2026.11-structured",
+  "gold_set": "/Users/kevin/Documents/ChatGPT/雷雷毕业设计/data/eval/gold-questions-v2.jsonl",
+  "summary": {
+    "question_count": 20,
+    "passed": 20,
+    "failed": 0,
+    "errors": 0,
+    "evidence_recall_any": 1,
+    "intent_accuracy": 1,
+    "abstain_accuracy": 1,
+    "claim_citation_coverage": 1,
+    "checkpoint_coverage": 0.25000000000000006,
+    "safety_triggered": 1,
+    "average_latency_ms": 531,
+    "console_errors": []
+  },
+  "results": [
+    {
+      "id": "Q01",
+      "category": "definition_form",
+      "query": "维生素K1和K2有哪些主要区别？",
+      "expected_intent": "comparison",
+      "actual_intent": "comparison",
+      "intent_match": true,
+      "expect_abstain": false,
+      "abstained": false,
+      "safety_case": false,
+      "safety_triggered": false,
+      "expected_evidence_ids": [
+        "LIT_f91c44a4fcecf564",
+        "LIT_55aab78188cd063b",
+        "LIT_64dc551a03ac2145"
+      ],
+      "actual_evidence_ids": [
+        "LIT_f91c44a4fcecf564",
+        "LIT_55aab78188cd063b",
+        "LIT_64dc551a03ac2145"
+      ],
+      "evidence_hits": [
+        "LIT_f91c44a4fcecf564",
+        "LIT_55aab78188cd063b",
+        "LIT_64dc551a03ac2145"
+      ],
+      "evidence_match": true,
+      "claim_citation_coverage": 1,
+      "checkpoint_coverage": 0,
+      "checkpoint_hits": [],
+      "status": "pass",
+      "error": "",
+      "elapsed_ms": 549,
+      "answer_text": "维生素K1和维生素K2都属于维生素K家族，但它们是不同形式，来源和体内行为并不完全相同。\n\n维生素K1又称叶绿醌，是植物性食物中的主要形式，常见于深绿色叶菜和植物油。维生素K2是一组甲萘醌类形式，包括MK-4和MK-7，常见于肉类、蛋类、奶酪和纳豆等食物。两类形式都参与维生素K依赖蛋白的羧化，但侧链长度、半衰期和组织分布存在差异。\n\n实际比较时不能简单判断哪一种更好，还要看食物来源、吸收、半衰期和具体健康目标。",
+      "claims": [
+        {
+          "id": "static-claim-0",
+          "text": "维生素K1又称叶绿醌，是植物性食物中的主要形式，常见于深绿色叶菜和植物油。",
+          "evidence_ids": [
+            "LIT_f91c44a4fcecf564"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        },
+        {
+          "id": "static-claim-1",
+          "text": "维生素K2是一组甲萘醌类形式，包括MK-4和MK-7，常见于肉类、蛋类、奶酪和纳豆等食物。",
+          "evidence_ids": [
+            "LIT_55aab78188cd063b"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        },
+        {
+          "id": "static-claim-2",
+          "text": "两类形式都参与维生素K依赖蛋白的羧化，但侧链长度、半衰期和组织分布存在差异。",
+          "evidence_ids": [
+            "LIT_64dc551a03ac2145"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "mechanism",
+          "boundary_note": "机制证据说明潜在生物学路径，不能直接推导出临床疗效。"
+        }
+      ],
+      "citations": [
+        {
+          "id": "LIT_f91c44a4fcecf564",
+          "source_id": "VK0064:9541523",
+          "source_title": "PMID 9541523 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/9541523/",
+          "evidence_level": "A",
+          "locator": "PMID 9541523 | Phylloquinone (vitamin K1), the predominant form in the diet, is present in high concentrations in leafy green vegetables and certain oils [38].",
+          "snippet": "Phylloquinone (vitamin K1), the predominant form in the diet, is present in high concentrations in leafy green vegetables and certain oils [38].",
+          "is_demo": false,
+          "document_id": "LIT_f91c44a4fcecf564",
+          "entity_ids": [
+            "phylloquinone",
+            "real-ad3045ece2da7a"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 9541523 | Phylloquinone (vitamin K1), the predominant form in the diet, is present in high concentrations in leafy green vegetables and certain oils [38].",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "contains"
+        },
+        {
+          "id": "LIT_55aab78188cd063b",
+          "source_id": "VK0297:24835435",
+          "source_title": "PMID 24835435 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/24835435/",
+          "evidence_level": "A",
+          "locator": "PMID 24835435 | Two forms of Vitamin K are found in our diet: vitamin K1 (phylloquinone, found in leafy green vegetables) and vitamin K2 (menaquinones, found in cheese, meat, eggs, etc.).",
+          "snippet": "Two forms of Vitamin K are found in our diet: vitamin K1 (phylloquinone, found in leafy green vegetables) and vitamin K2 (menaquinones, found in cheese, meat, eggs, etc.).",
+          "is_demo": false,
+          "document_id": "LIT_55aab78188cd063b",
+          "entity_ids": [
+            "vitamin-k1",
+            "phylloquinone"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 24835435 | Two forms of Vitamin K are found in our diet: vitamin K1 (phylloquinone, found in leafy green vegetables) and vitamin K2 (menaquinones, found in cheese, meat, eggs, etc.).",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "contains"
+        },
+        {
+          "id": "LIT_64dc551a03ac2145",
+          "source_id": "VK0412:29882816",
+          "source_title": "PMID 29882816 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/29882816/",
+          "evidence_level": "B-",
+          "locator": "PMID 29882816 | Vitamin K2 is distinguished from K1 by the presence of unsaturated side chain units varying in length from 1 to 14 repeats, hence named menaquinone-4, menaquinone-7 etc.",
+          "snippet": "Vitamin K2 is distinguished from K1 by the presence of unsaturated side chain units varying in length from 1 to 14 repeats, hence named menaquinone-4, menaquinone-7 etc.",
+          "is_demo": false,
+          "document_id": "LIT_64dc551a03ac2145",
+          "entity_ids": [
+            "vitamin-k2",
+            "real-e6fa0bf999fdf9"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 29882816 | Vitamin K2 is distinguished from K1 by the presence of unsaturated side chain units varying in length from 1 to 14 repeats, hence named menaquinone-4, menaquinone-7 etc.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "contains"
+        }
+      ],
+      "comparisons": []
+    },
+    {
+      "id": "Q02",
+      "category": "subtype_metabolism",
+      "query": "MK-4和MK-7在人体内的代谢和生物学作用有什么区别？",
+      "expected_intent": "comparison",
+      "actual_intent": "comparison",
+      "intent_match": true,
+      "expect_abstain": false,
+      "abstained": false,
+      "safety_case": false,
+      "safety_triggered": false,
+      "expected_evidence_ids": [
+        "LIT_d3d131b95d758d27",
+        "LIT_641bb6efc31e01aa",
+        "LIT_232424c9ac277c7f"
+      ],
+      "actual_evidence_ids": [
+        "LIT_d3d131b95d758d27",
+        "LIT_641bb6efc31e01aa",
+        "LIT_232424c9ac277c7f"
+      ],
+      "evidence_hits": [
+        "LIT_d3d131b95d758d27",
+        "LIT_641bb6efc31e01aa",
+        "LIT_232424c9ac277c7f"
+      ],
+      "evidence_match": true,
+      "claim_citation_coverage": 1,
+      "checkpoint_coverage": 0.25,
+      "checkpoint_hits": [
+        "MK-4主要与动物性食物相关"
+      ],
+      "status": "pass",
+      "error": "",
+      "elapsed_ms": 543,
+      "answer_text": "MK-4和MK-7都属于维生素K2，但它们的食物来源、半衰期和体内暴露特征不同，不能按同一种补充形式互换理解。\n\nMK-4主要与动物性食物相关，而MK-7更常见于纳豆和部分发酵食品。MK-7通常具有更长半衰期和更高生物利用度，因此血清水平更稳定。两者都能参与维生素K依赖蛋白的羧化，但组织分布和具体生物学效应仍需结合研究条件解释。\n\n现有证据支持两者在代谢特征和暴露稳定性上存在差异，但不能简单推导出哪一种在所有人身上效果更好。",
+      "claims": [
+        {
+          "id": "static-claim-0",
+          "text": "MK-4主要与动物性食物相关，而MK-7更常见于纳豆和部分发酵食品。",
+          "evidence_ids": [
+            "LIT_d3d131b95d758d27"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        },
+        {
+          "id": "static-claim-1",
+          "text": "MK-7通常具有更长半衰期和更高生物利用度，因此血清水平更稳定。",
+          "evidence_ids": [
+            "LIT_641bb6efc31e01aa"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        },
+        {
+          "id": "static-claim-2",
+          "text": "两者都能参与维生素K依赖蛋白的羧化，但组织分布和具体生物学效应仍需结合研究条件解释。",
+          "evidence_ids": [
+            "LIT_232424c9ac277c7f"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "mechanism",
+          "boundary_note": "机制证据说明潜在生物学路径，不能直接推导出临床疗效。"
+        }
+      ],
+      "citations": [
+        {
+          "id": "LIT_d3d131b95d758d27",
+          "source_id": "VK0351:26908424",
+          "source_title": "PMID 26908424 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/26908424/",
+          "evidence_level": "B",
+          "locator": "PMID 26908424 | Food sources of phylloquinone are green vegetables and several plant oils, whereas menaquinones are primarily found in meat and egg yolk (short-chain MK-4) and in fermented foods such as cheese and curd (MK-7 through MK-10, also referred to as the long-chain menaquinones).",
+          "snippet": "Food sources of phylloquinone are green vegetables and several plant oils, whereas menaquinones are primarily found in meat and egg yolk (short-chain MK-4) and in fermented foods such as cheese and curd (MK-7 through MK-10, also referred to as the long-chain menaquinones).",
+          "is_demo": false,
+          "document_id": "LIT_d3d131b95d758d27",
+          "entity_ids": [
+            "mk-7",
+            "real-f7eb022a9e7500"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 26908424 | Food sources of phylloquinone are green vegetables and several plant oils, whereas menaquinones are primarily found in meat and egg yolk (short-chain MK-4) and in fermented foods such as cheese and curd (MK-7 through MK-10, also referred to as the long-chain menaquinones).",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "contains"
+        },
+        {
+          "id": "LIT_641bb6efc31e01aa",
+          "source_id": "VK0676:41393956",
+          "source_title": "PMID 41393956 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/41393956/",
+          "evidence_level": "A",
+          "locator": "PMID 41393956 | Unlike other forms of vitamin K2, MK-7 derived from fermented soy has a long half-life and superior bioavailability, allowing for sustained carboxylation of Vitamin K–dependent proteins in extrahepatic tissues such as bone.",
+          "snippet": "Unlike other forms of vitamin K2, MK-7 derived from fermented soy has a long half-life and superior bioavailability, allowing for sustained carboxylation of Vitamin K–dependent proteins in extrahepatic tissues such as bone.",
+          "is_demo": false,
+          "document_id": "LIT_641bb6efc31e01aa",
+          "entity_ids": [
+            "mk-7",
+            "real-ffdf4ccbf050a0"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 41393956 | Unlike other forms of vitamin K2, MK-7 derived from fermented soy has a long half-life and superior bioavailability, allowing for sustained carboxylation of Vitamin K–dependent proteins in extrahepatic tissues such as bone.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "targets_tissue"
+        },
+        {
+          "id": "LIT_232424c9ac277c7f",
+          "source_id": "VK0092:10874601",
+          "source_title": "PMID 10874601 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/10874601/",
+          "evidence_level": "C",
+          "locator": "PMID 10874601 | MK-7 has been shown to have anabolic effects on bone calcification as does MK-4.",
+          "snippet": "MK-7 has been shown to have anabolic effects on bone calcification as does MK-4.",
+          "is_demo": false,
+          "document_id": "LIT_232424c9ac277c7f",
+          "entity_ids": [
+            "mk-7",
+            "real-ffdf4ccbf050a0"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 10874601 | MK-7 has been shown to have anabolic effects on bone calcification as does MK-4.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "targets_tissue"
+        }
+      ],
+      "comparisons": []
+    },
+    {
+      "id": "Q03",
+      "category": "mechanism",
+      "query": "MK-7与骨钙素羧化有什么关系？",
+      "expected_intent": "mechanism",
+      "actual_intent": "mechanism",
+      "intent_match": true,
+      "expect_abstain": false,
+      "abstained": false,
+      "safety_case": false,
+      "safety_triggered": false,
+      "expected_evidence_ids": [
+        "LIT_2757058ad9cc013e",
+        "LIT_1f3efd3114928846"
+      ],
+      "actual_evidence_ids": [
+        "LIT_2757058ad9cc013e",
+        "LIT_1f3efd3114928846"
+      ],
+      "evidence_hits": [
+        "LIT_2757058ad9cc013e",
+        "LIT_1f3efd3114928846"
+      ],
+      "evidence_match": true,
+      "claim_citation_coverage": 1,
+      "checkpoint_coverage": 0,
+      "checkpoint_hits": [],
+      "status": "pass",
+      "error": "",
+      "elapsed_ms": 674,
+      "answer_text": "从现有真实证据看，可以确认的信息如下。\n\nMK-7参与骨钙素的活化或羧化。现有文献记录了MK-7与骨钙素之间的关系。\n\n以上内容仅代表当前真实证据能够支持的范围。",
+      "claims": [
+        {
+          "id": "static-claim-0",
+          "text": "MK-7参与骨钙素的活化或羧化。",
+          "evidence_ids": [
+            "LIT_2757058ad9cc013e"
+          ],
+          "relation": "activates_protein",
+          "claim_type": "mechanism",
+          "boundary_note": "机制证据说明潜在生物学路径，不能直接推导出临床疗效。"
+        },
+        {
+          "id": "static-claim-1",
+          "text": "现有文献记录了MK-7与骨钙素之间的关系。",
+          "evidence_ids": [
+            "LIT_1f3efd3114928846"
+          ],
+          "relation": "is_carboxylated_by",
+          "claim_type": "mechanism",
+          "boundary_note": "机制证据说明潜在生物学路径，不能直接推导出临床疗效。"
+        }
+      ],
+      "citations": [
+        {
+          "id": "LIT_2757058ad9cc013e",
+          "source_id": "VK0676:41393956",
+          "source_title": "PMID 41393956 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/41393956/",
+          "evidence_level": "A",
+          "locator": "PMID 41393956 | Natto, a traditional Japanese fermented soybean food, is the richest natural source of menaquinone-7 (MK-7), a form of vitamin K2 involved in osteocalcin activation and bone mineralization.",
+          "snippet": "Natto, a traditional Japanese fermented soybean food, is the richest natural source of menaquinone-7 (MK-7), a form of vitamin K2 involved in osteocalcin activation and bone mineralization.",
+          "is_demo": false,
+          "document_id": "LIT_2757058ad9cc013e",
+          "entity_ids": [
+            "mk-7",
+            "osteocalcin"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 41393956 | Natto, a traditional Japanese fermented soybean food, is the richest natural source of menaquinone-7 (MK-7), a form of vitamin K2 involved in osteocalcin activation and bone mineralization.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "activates_protein"
+        },
+        {
+          "id": "LIT_1f3efd3114928846",
+          "source_id": "VK0092:10874601",
+          "source_title": "PMID 10874601 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/10874601/",
+          "evidence_level": "C",
+          "locator": "PMID 10874601 | Vitamin K2 is essential for the γ-carboxylation of osteocalcin, a bone matrix protein containing γ2-carboxyglutamic acid, which is synthesized in osteoblasts in bone tissues.",
+          "snippet": "Vitamin K2 is essential for the γ-carboxylation of osteocalcin, a bone matrix protein containing γ2-carboxyglutamic acid, which is synthesized in osteoblasts in bone tissues.",
+          "is_demo": false,
+          "document_id": "LIT_1f3efd3114928846",
+          "entity_ids": [
+            "mk-7",
+            "osteocalcin"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 10874601 | Vitamin K2 is essential for the γ-carboxylation of osteocalcin, a bone matrix protein containing γ2-carboxyglutamic acid, which is synthesized in osteoblasts in bone tissues.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "is_carboxylated_by"
+        }
+      ],
+      "comparisons": []
+    },
+    {
+      "id": "Q04",
+      "category": "drug_interaction",
+      "query": "维生素K与华法林之间有什么相互作用？",
+      "expected_intent": "drug_interactions",
+      "actual_intent": "drug_interactions",
+      "intent_match": true,
+      "expect_abstain": false,
+      "abstained": false,
+      "safety_case": false,
+      "safety_triggered": false,
+      "expected_evidence_ids": [
+        "LIT_3eb692b49386a5c0",
+        "LIT_3107166c9f4f5b63",
+        "LIT_bcfbd7ed6f1387bf",
+        "LIT_02980c4eec52b985"
+      ],
+      "actual_evidence_ids": [
+        "LIT_3eb692b49386a5c0",
+        "LIT_3107166c9f4f5b63",
+        "LIT_bcfbd7ed6f1387bf",
+        "LIT_02980c4eec52b985"
+      ],
+      "evidence_hits": [
+        "LIT_3eb692b49386a5c0",
+        "LIT_3107166c9f4f5b63",
+        "LIT_bcfbd7ed6f1387bf",
+        "LIT_02980c4eec52b985"
+      ],
+      "evidence_match": true,
+      "claim_citation_coverage": 1,
+      "checkpoint_coverage": 0.25,
+      "checkpoint_hits": [
+        "INR监测"
+      ],
+      "status": "pass",
+      "error": "",
+      "elapsed_ms": 549,
+      "answer_text": "华法林与维生素 K 属于明确的药理学拮抗关系，需要结合机制、饮食和 INR 监测理解。\n\n华法林通过抑制 VKORC1，阻断维生素 K 环氧化物还原，减少活性维生素 K 的再生，并影响维生素 K 依赖凝血因子的活化。两者是明确的药理学拮抗关系：维生素 K 摄入或补充会影响华法林的抗凝强度，需要结合 INR 和用药情况管理。富含维生素 K 的食物，例如菠菜、羽衣甘蓝等深绿色叶菜，可能降低 INR。华法林抗凝过度时，维生素 K 可在专业评估下用于纠正凝血状态，具体处理取决于 INR、出血情况和临床背景。华法林使用期间需要按医嘱监测 INR，并尽量保持日常维生素 K 摄入相对稳定，不应自行改变补充剂或摄入量。\n\n以上结论由真实外部文献证据合成，具体剂量调整、停药或抗凝过度处理必须由医生或药师评估。",
+      "claims": [
+        {
+          "id": "static-claim-0",
+          "text": "华法林通过抑制 VKORC1，阻断维生素 K 环氧化物还原，减少活性维生素 K 的再生，并影响维生素 K 依赖凝血因子的活化。",
+          "evidence_ids": [
+            "LIT_3eb692b49386a5c0"
+          ],
+          "relation": "warfarin_vitamin_k_synthesis",
+          "claim_type": "mechanism",
+          "boundary_note": "机制证据说明潜在生物学路径，不能直接推导出临床疗效。"
+        },
+        {
+          "id": "static-claim-1",
+          "text": "两者是明确的药理学拮抗关系：维生素 K 摄入或补充会影响华法林的抗凝强度，需要结合 INR 和用药情况管理。",
+          "evidence_ids": [
+            "LIT_3107166c9f4f5b63",
+            "LIT_bcfbd7ed6f1387bf"
+          ],
+          "relation": "warfarin_vitamin_k_synthesis",
+          "claim_type": "mechanism",
+          "boundary_note": "机制证据说明潜在生物学路径，不能直接推导出临床疗效。"
+        },
+        {
+          "id": "static-claim-2",
+          "text": "富含维生素 K 的食物，例如菠菜、羽衣甘蓝等深绿色叶菜，可能降低 INR。",
+          "evidence_ids": [
+            "LIT_3107166c9f4f5b63"
+          ],
+          "relation": "warfarin_vitamin_k_synthesis",
+          "claim_type": "mechanism",
+          "boundary_note": "机制证据说明潜在生物学路径，不能直接推导出临床疗效。"
+        },
+        {
+          "id": "static-claim-3",
+          "text": "华法林抗凝过度时，维生素 K 可在专业评估下用于纠正凝血状态，具体处理取决于 INR、出血情况和临床背景。",
+          "evidence_ids": [
+            "LIT_bcfbd7ed6f1387bf"
+          ],
+          "relation": "warfarin_vitamin_k_synthesis",
+          "claim_type": "mechanism",
+          "boundary_note": "机制证据说明潜在生物学路径，不能直接推导出临床疗效。"
+        },
+        {
+          "id": "static-claim-4",
+          "text": "华法林使用期间需要按医嘱监测 INR，并尽量保持日常维生素 K 摄入相对稳定，不应自行改变补充剂或摄入量。",
+          "evidence_ids": [
+            "LIT_02980c4eec52b985"
+          ],
+          "relation": "warfarin_vitamin_k_synthesis",
+          "claim_type": "mechanism",
+          "boundary_note": "机制证据说明潜在生物学路径，不能直接推导出临床疗效。"
+        }
+      ],
+      "citations": [
+        {
+          "id": "LIT_3eb692b49386a5c0",
+          "source_id": "VK0336:26433837",
+          "source_title": "PMID 26433837 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/26433837/",
+          "evidence_level": "A",
+          "locator": "PMID 26433837 | Warfarin exerts its anticoagulant effect by acting as a VKORC1 inhibitor, preventing the production of reduced Vitamin K, which is essential for the synthesis of blood clotting factors and other regulatory proteins.",
+          "snippet": "Warfarin exerts its anticoagulant effect by acting as a VKORC1 inhibitor, preventing the production of reduced Vitamin K, which is essential for the synthesis of blood clotting factors and other regulatory proteins.",
+          "is_demo": false,
+          "document_id": "LIT_3eb692b49386a5c0",
+          "entity_ids": [
+            "warfarin",
+            "real-33152baef7f599"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 26433837 | Warfarin exerts its anticoagulant effect by acting as a VKORC1 inhibitor, preventing the production of reduced Vitamin K, which is essential for the synthesis of blood clotting factors and other regulatory proteins.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "is_antagonized_by"
+        },
+        {
+          "id": "LIT_3107166c9f4f5b63",
+          "source_id": "UNKNOWN_wadhera2014",
+          "source_title": "UNKNOWN_wadhera2014 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "真实外部文献",
+          "published_at": "",
+          "url": "",
+          "evidence_level": "C",
+          "locator": "PMID NA | Certain foods that contain large amounts of Vitamin K (such as dark green leafy vegetables including spinach, brussel sprouts, and kale) can lower the INR, whereas certain medications (including many antibiotics) can increase the INR.",
+          "snippet": "Certain foods that contain large amounts of Vitamin K (such as dark green leafy vegetables including spinach, brussel sprouts, and kale) can lower the INR, whereas certain medications (including many antibiotics) can increase the INR.",
+          "is_demo": false,
+          "document_id": "LIT_3107166c9f4f5b63",
+          "entity_ids": [
+            "warfarin",
+            "real-ad3045ece2da7a"
+          ],
+          "review_status": "adopted_with_warning",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID NA | Certain foods that contain large amounts of Vitamin K (such as dark green leafy vegetables including spinach, brussel sprouts, and kale) can lower the INR, whereas certain medications (including many antibiotics) can increase the INR.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "is_antagonized_by"
+        },
+        {
+          "id": "LIT_bcfbd7ed6f1387bf",
+          "source_id": "UNKNOWN_unknown_Love DG_1999:10364766",
+          "source_title": "PMID 10364766 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/10364766/",
+          "evidence_level": "B-",
+          "locator": "PMID 10364766 | With minor INR elevation (INR <6) and no bleeding, simply stopping or reducing warfarin and monitoring may be sufficient. More excessive anticoagulation (INR 6-10) or minor bleeding can be managed with low-dose Vitamin K (1-5 mg subcutaneously or orally).",
+          "snippet": "With minor INR elevation (INR <6) and no bleeding, simply stopping or reducing warfarin and monitoring may be sufficient. More excessive anticoagulation (INR 6-10) or minor bleeding can be managed with low-dose Vitamin K (1-5 mg subcutaneously or orally).",
+          "is_demo": false,
+          "document_id": "LIT_bcfbd7ed6f1387bf",
+          "entity_ids": [
+            "warfarin",
+            "real-8461648c76880d"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 10364766 | With minor INR elevation (INR <6) and no bleeding, simply stopping or reducing warfarin and monitoring may be sufficient. More excessive anticoagulation (INR 6-10) or minor bleeding can be managed with low-dose Vitamin K (1-5 mg subcutaneously or orally).",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "is_antagonized_by"
+        },
+        {
+          "id": "LIT_02980c4eec52b985",
+          "source_id": "UNKNOWN_phillips2010",
+          "source_title": "UNKNOWN_phillips2010 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "真实外部文献",
+          "published_at": "",
+          "url": "",
+          "evidence_level": "A",
+          "locator": "PMID NA | Warfarin therapy requires vigilant coagulation monitoring, clinical surveillance, and continuous patient education (Table 1).",
+          "snippet": "Warfarin therapy requires vigilant coagulation monitoring, clinical surveillance, and continuous patient education (Table 1).",
+          "is_demo": false,
+          "document_id": "LIT_02980c4eec52b985",
+          "entity_ids": [
+            "warfarin",
+            "real-45b0825ba45e2c"
+          ],
+          "review_status": "adopted_with_warning",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID NA | Warfarin therapy requires vigilant coagulation monitoring, clinical surveillance, and continuous patient education (Table 1).",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "targets_tissue"
+        }
+      ],
+      "comparisons": []
+    },
+    {
+      "id": "Q05",
+      "category": "clinical_research",
+      "query": "MK-7与胰岛素抵抗之间有哪些临床研究证据？",
+      "expected_intent": "research",
+      "actual_intent": "research",
+      "intent_match": true,
+      "expect_abstain": false,
+      "abstained": false,
+      "safety_case": false,
+      "safety_triggered": false,
+      "expected_evidence_ids": [
+        "LIT_43cfdfa5b1211fc6",
+        "LIT_51232c9fa8ce9243",
+        "LIT_f4b9a152a7d5b7a1"
+      ],
+      "actual_evidence_ids": [
+        "LIT_43cfdfa5b1211fc6",
+        "LIT_51232c9fa8ce9243",
+        "LIT_f4b9a152a7d5b7a1"
+      ],
+      "evidence_hits": [
+        "LIT_43cfdfa5b1211fc6",
+        "LIT_51232c9fa8ce9243",
+        "LIT_f4b9a152a7d5b7a1"
+      ],
+      "evidence_match": true,
+      "claim_citation_coverage": 1,
+      "checkpoint_coverage": 0,
+      "checkpoint_hits": [],
+      "status": "pass",
+      "error": "",
+      "elapsed_ms": 533,
+      "answer_text": "现有公开证据还不能支持“补充MK-7一定能够降低HOMA-IR”这一结论。\n\n叶绿醌摄入与空腹胰岛素、血糖、HOMA-IR和HbA1c没有显著关联。另有随机对照研究显示，两组HOMA-IR没有显著差异。但也有研究报告部分男性在补充后HOMA-IR下降，说明研究结果并不完全一致，且不能直接外推为MK-7的确定疗效。\n\n这些研究并没有形成一致、可直接外推的MK-7干预结论。观察性关联或叶绿醌研究不能自动等同于MK-7的因果效果。",
+      "claims": [
+        {
+          "id": "static-claim-0",
+          "text": "叶绿醌摄入与空腹胰岛素、血糖、HOMA-IR和HbA1c没有显著关联。",
+          "evidence_ids": [
+            "LIT_43cfdfa5b1211fc6"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "negative",
+          "boundary_note": "未观察到显著关系不等于证明该关系不存在或证明干预无效。"
+        },
+        {
+          "id": "static-claim-1",
+          "text": "另有随机对照研究显示，两组HOMA-IR没有显著差异。",
+          "evidence_ids": [
+            "LIT_51232c9fa8ce9243"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "negative",
+          "boundary_note": "未观察到显著关系不等于证明该关系不存在或证明干预无效。"
+        },
+        {
+          "id": "static-claim-2",
+          "text": "但也有研究报告部分男性在补充后HOMA-IR下降，说明研究结果并不完全一致，且不能直接外推为MK-7的确定疗效。",
+          "evidence_ids": [
+            "LIT_f4b9a152a7d5b7a1"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "conflict",
+          "boundary_note": "不同研究或分析存在结论差异，应按研究条件和证据层级分别解释。"
+        }
+      ],
+      "citations": [
+        {
+          "id": "LIT_43cfdfa5b1211fc6",
+          "source_id": "VK0177:18614743",
+          "source_title": "PMID 18614743 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/18614743/",
+          "evidence_level": "B",
+          "locator": "PMID 18614743 | Phylloquinone intake was not associated with fasting insulin and glucose concentrations, HOMA-IR, or HbA1c.",
+          "snippet": "Phylloquinone intake was not associated with fasting insulin and glucose concentrations, HOMA-IR, or HbA1c.",
+          "is_demo": false,
+          "document_id": "LIT_43cfdfa5b1211fc6",
+          "entity_ids": [
+            "phylloquinone",
+            "real-915b381d9e7c73"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 18614743 | Phylloquinone intake was not associated with fasting insulin and glucose concentrations, HOMA-IR, or HbA1c.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "cross_sectionally_associated_with"
+        },
+        {
+          "id": "LIT_51232c9fa8ce9243",
+          "source_id": "VK0223:20881072",
+          "source_title": "PMID 20881072 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/20881072/",
+          "evidence_level": "A",
+          "locator": "PMID 20881072 | HOMA-IR was similar in the 2 groups (1.52 ± 0.23 in the placebo-treated group compared with 2.24 ± 0.54 in the phylloquinone-treated group; P = NS).",
+          "snippet": "HOMA-IR was similar in the 2 groups (1.52 ± 0.23 in the placebo-treated group compared with 2.24 ± 0.54 in the phylloquinone-treated group; P = NS).",
+          "is_demo": false,
+          "document_id": "LIT_51232c9fa8ce9243",
+          "entity_ids": [
+            "phylloquinone",
+            "real-915b381d9e7c73"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 20881072 | HOMA-IR was similar in the 2 groups (1.52 ± 0.23 in the placebo-treated group compared with 2.24 ± 0.54 in the phylloquinone-treated group; P = NS).",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "has_outcome_biomarker"
+        },
+        {
+          "id": "LIT_f4b9a152a7d5b7a1",
+          "source_id": "VK0261:23034962",
+          "source_title": "PMID 23034962 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/23034962/",
+          "evidence_level": "A",
+          "locator": "PMID 23034962 | the HOMA-IR significantly decreased during the intervention in men in the supplemented group.",
+          "snippet": "the HOMA-IR significantly decreased during the intervention in men in the supplemented group.",
+          "is_demo": false,
+          "document_id": "LIT_f4b9a152a7d5b7a1",
+          "entity_ids": [
+            "phylloquinone",
+            "real-915b381d9e7c73"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 23034962 | the HOMA-IR significantly decreased during the intervention in men in the supplemented group.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "has_outcome_biomarker"
+        }
+      ],
+      "comparisons": [
+        {
+          "id": "comparison-reported-conflict",
+          "status": "reported_difference",
+          "summary": "现有研究报告了不一致或相反的结果，应结合研究设计、暴露、人群和结局分别解释，不能强行合并成单一结论。",
+          "claim_ids": [
+            "static-claim-2"
+          ],
+          "evidence_ids": [
+            "LIT_f4b9a152a7d5b7a1"
+          ]
+        },
+        {
+          "id": "comparison-significance",
+          "status": "significance_difference",
+          "summary": "回答同时保留了阳性或方向性证据与阴性证据。未观察到显著关系不等于证明该关系不存在或证明干预无效。",
+          "claim_ids": [
+            "static-claim-0",
+            "static-claim-1",
+            "static-claim-2"
+          ],
+          "evidence_ids": [
+            "LIT_43cfdfa5b1211fc6",
+            "LIT_51232c9fa8ce9243",
+            "LIT_f4b9a152a7d5b7a1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Q06",
+      "category": "negative_evidence",
+      "query": "有没有研究发现维生素K与代谢指标无显著关联？",
+      "expected_intent": "negative_evidence",
+      "actual_intent": "negative_evidence",
+      "intent_match": true,
+      "expect_abstain": false,
+      "abstained": false,
+      "safety_case": false,
+      "safety_triggered": false,
+      "expected_evidence_ids": [
+        "LIT_7e0d549aa3a2f44e",
+        "LIT_43cfdfa5b1211fc6",
+        "LIT_51232c9fa8ce9243"
+      ],
+      "actual_evidence_ids": [
+        "LIT_7e0d549aa3a2f44e",
+        "LIT_43cfdfa5b1211fc6",
+        "LIT_51232c9fa8ce9243"
+      ],
+      "evidence_hits": [
+        "LIT_7e0d549aa3a2f44e",
+        "LIT_43cfdfa5b1211fc6",
+        "LIT_51232c9fa8ce9243"
+      ],
+      "evidence_match": true,
+      "claim_citation_coverage": 1,
+      "checkpoint_coverage": 0,
+      "checkpoint_hits": [],
+      "status": "pass",
+      "error": "",
+      "elapsed_ms": 527,
+      "answer_text": "有。当前真实文献中保留了与代谢指标相关的阴性或未观察到显著关联的结果。\n\n一项随机对照研究显示，叶绿醌补充没有显著影响CRP、IL-6、sVCAM-1、sICAM-1、总胆固醇或LDL-C。另一项研究显示，叶绿醌摄入与空腹胰岛素、血糖、HOMA-IR和HbA1c没有显著关联。还有研究报告两组HOMA-IR没有显著差异。\n\n阴性结果不等于证明维生素K对所有指标完全无效，它说明在特定人群、剂量、时间和结局下没有观察到显著效应。",
+      "claims": [
+        {
+          "id": "static-claim-0",
+          "text": "一项随机对照研究显示，叶绿醌补充没有显著影响CRP、IL-6、sVCAM-1、sICAM-1、总胆固醇或LDL-C。",
+          "evidence_ids": [
+            "LIT_7e0d549aa3a2f44e"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "negative",
+          "boundary_note": "未观察到显著关系不等于证明该关系不存在或证明干预无效。"
+        },
+        {
+          "id": "static-claim-1",
+          "text": "另一项研究显示，叶绿醌摄入与空腹胰岛素、血糖、HOMA-IR和HbA1c没有显著关联。",
+          "evidence_ids": [
+            "LIT_43cfdfa5b1211fc6"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "negative",
+          "boundary_note": "未观察到显著关系不等于证明该关系不存在或证明干预无效。"
+        },
+        {
+          "id": "static-claim-2",
+          "text": "还有研究报告两组HOMA-IR没有显著差异。",
+          "evidence_ids": [
+            "LIT_51232c9fa8ce9243"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "negative",
+          "boundary_note": "未观察到显著关系不等于证明该关系不存在或证明干预无效。"
+        }
+      ],
+      "citations": [
+        {
+          "id": "LIT_7e0d549aa3a2f44e",
+          "source_id": "VK0182:18807108",
+          "source_title": "PMID 18807108 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/18807108/",
+          "evidence_level": "A",
+          "locator": "PMID 18807108 | Compared to placebo, daily supplementation with 500 μg of phylloquinone did not affect inflammatory markers (CRP, IL-6, sVCAM-1 and sICAM-1), fibrinolytic activity (factor VIIc, fibrinogen-c and PAI-1), TC or LDL-C (Table 2). The supplementation did however result in a 15% increase in TG (P = 0.015) and a near-significant 5% decrease in HDL-C (P = 0.06).",
+          "snippet": "Compared to placebo, daily supplementation with 500 μg of phylloquinone did not affect inflammatory markers (CRP, IL-6, sVCAM-1 and sICAM-1), fibrinolytic activity (factor VIIc, fibrinogen-c and PAI-1), TC or LDL-C (Table 2). The supplementation did however result in a 15% increase in TG (P = 0.015) and a near-significant 5% decrease in HDL-C (P = 0.06).",
+          "is_demo": false,
+          "document_id": "LIT_7e0d549aa3a2f44e",
+          "entity_ids": [
+            "phylloquinone",
+            "real-e45a817e74538b"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 18807108 | Compared to placebo, daily supplementation with 500 μg of phylloquinone did not affect inflammatory markers (CRP, IL-6, sVCAM-1 and sICAM-1), fibrinolytic activity (factor VIIc, fibrinogen-c and PAI-1), TC or LDL-C (Table 2). The supplementation did however result in a 15% increase in TG (P = 0.015) and a near-significant 5% decrease in HDL-C (P = 0.06).",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "has_outcome_biomarker"
+        },
+        {
+          "id": "LIT_43cfdfa5b1211fc6",
+          "source_id": "VK0177:18614743",
+          "source_title": "PMID 18614743 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/18614743/",
+          "evidence_level": "B",
+          "locator": "PMID 18614743 | Phylloquinone intake was not associated with fasting insulin and glucose concentrations, HOMA-IR, or HbA1c.",
+          "snippet": "Phylloquinone intake was not associated with fasting insulin and glucose concentrations, HOMA-IR, or HbA1c.",
+          "is_demo": false,
+          "document_id": "LIT_43cfdfa5b1211fc6",
+          "entity_ids": [
+            "phylloquinone",
+            "real-915b381d9e7c73"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 18614743 | Phylloquinone intake was not associated with fasting insulin and glucose concentrations, HOMA-IR, or HbA1c.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "cross_sectionally_associated_with"
+        },
+        {
+          "id": "LIT_51232c9fa8ce9243",
+          "source_id": "VK0223:20881072",
+          "source_title": "PMID 20881072 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/20881072/",
+          "evidence_level": "A",
+          "locator": "PMID 20881072 | HOMA-IR was similar in the 2 groups (1.52 ± 0.23 in the placebo-treated group compared with 2.24 ± 0.54 in the phylloquinone-treated group; P = NS).",
+          "snippet": "HOMA-IR was similar in the 2 groups (1.52 ± 0.23 in the placebo-treated group compared with 2.24 ± 0.54 in the phylloquinone-treated group; P = NS).",
+          "is_demo": false,
+          "document_id": "LIT_51232c9fa8ce9243",
+          "entity_ids": [
+            "phylloquinone",
+            "real-915b381d9e7c73"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 20881072 | HOMA-IR was similar in the 2 groups (1.52 ± 0.23 in the placebo-treated group compared with 2.24 ± 0.54 in the phylloquinone-treated group; P = NS).",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "has_outcome_biomarker"
+        }
+      ],
+      "comparisons": []
+    },
+    {
+      "id": "Q07",
+      "category": "interaction",
+      "query": "MK-7与维生素D是否存在协同作用？",
+      "expected_intent": "interaction",
+      "actual_intent": "interaction",
+      "intent_match": true,
+      "expect_abstain": false,
+      "abstained": false,
+      "safety_case": false,
+      "safety_triggered": false,
+      "expected_evidence_ids": [
+        "LIT_58561b7f9fa9b28c",
+        "LIT_5eeb496e7af892ac"
+      ],
+      "actual_evidence_ids": [
+        "LIT_58561b7f9fa9b28c",
+        "LIT_5eeb496e7af892ac"
+      ],
+      "evidence_hits": [
+        "LIT_58561b7f9fa9b28c",
+        "LIT_5eeb496e7af892ac"
+      ],
+      "evidence_match": true,
+      "claim_citation_coverage": 1,
+      "checkpoint_coverage": 0,
+      "checkpoint_hits": [],
+      "status": "pass",
+      "error": "",
+      "elapsed_ms": 517,
+      "answer_text": "现有公开证据不足以确认MK-7和维生素D之间存在明确的协同或统计交互作用。\n\n已有随机干预研究把钙、维生素D3和MK-7作为联合营养背景，但研究目的并不是单独验证两者的统计交互。联合补充可同时提高维生素K2和25-羟基维生素D水平，但生物标志物升高不等于两者发生协同作用。\n\n联合补充后两种营养素水平升高，只能说明暴露或依从性变化，不能单独证明协同效应。是否优于单独补充仍需针对交互结局的对照研究。",
+      "claims": [
+        {
+          "id": "static-claim-0",
+          "text": "已有随机干预研究把钙、维生素D3和MK-7作为联合营养背景，但研究目的并不是单独验证两者的统计交互。",
+          "evidence_ids": [
+            "LIT_58561b7f9fa9b28c"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        },
+        {
+          "id": "static-claim-1",
+          "text": "联合补充可同时提高维生素K2和25-羟基维生素D水平，但生物标志物升高不等于两者发生协同作用。",
+          "evidence_ids": [
+            "LIT_5eeb496e7af892ac"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        }
+      ],
+      "citations": [
+        {
+          "id": "LIT_58561b7f9fa9b28c",
+          "source_id": "VK0248:22392526",
+          "source_title": "PMID 22392526 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/22392526/",
+          "evidence_level": "B",
+          "locator": "PMID 22392526 | The objective of the present study was to examine the effect of dairy products enriched with calcium, vitamin D3, and phylloquinone (vitamin K1) or menaquinone-7 (vitamin K2) on parameters of bone metabolism in postmenopausal women following a 12-month intervention.",
+          "snippet": "The objective of the present study was to examine the effect of dairy products enriched with calcium, vitamin D3, and phylloquinone (vitamin K1) or menaquinone-7 (vitamin K2) on parameters of bone metabolism in postmenopausal women following a 12-month intervention.",
+          "is_demo": false,
+          "document_id": "LIT_58561b7f9fa9b28c",
+          "entity_ids": [
+            "phylloquinone",
+            "real-0dadedd750c8d4"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 22392526 | The objective of the present study was to examine the effect of dairy products enriched with calcium, vitamin D3, and phylloquinone (vitamin K1) or menaquinone-7 (vitamin K2) on parameters of bone metabolism in postmenopausal women following a 12-month intervention.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "requires"
+        },
+        {
+          "id": "LIT_5eeb496e7af892ac",
+          "source_id": "VK0203:19959915",
+          "source_title": "PMID 19959915 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/19959915/",
+          "evidence_level": "A",
+          "locator": "PMID 19959915 | Menatetrenone with calcium and vitamin D supplementation increased the serum levels of vitamin K2 and 25-hydroxyvitamin D.",
+          "snippet": "Menatetrenone with calcium and vitamin D supplementation increased the serum levels of vitamin K2 and 25-hydroxyvitamin D.",
+          "is_demo": false,
+          "document_id": "LIT_5eeb496e7af892ac",
+          "entity_ids": [
+            "real-65ba29b491a038",
+            "vitamin-k2"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 19959915 | Menatetrenone with calcium and vitamin D supplementation increased the serum levels of vitamin K2 and 25-hydroxyvitamin D.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "measured_vitamin_k_form"
+        }
+      ],
+      "comparisons": []
+    },
+    {
+      "id": "Q08",
+      "category": "research_conflict",
+      "query": "不同研究关于维生素K与血脂的结论是否一致？",
+      "expected_intent": "comparison",
+      "actual_intent": "comparison",
+      "intent_match": true,
+      "expect_abstain": false,
+      "abstained": false,
+      "safety_case": false,
+      "safety_triggered": false,
+      "expected_evidence_ids": [
+        "LIT_7e0d549aa3a2f44e",
+        "LIT_ef90d70f264c1ab1",
+        "LIT_2a8d8df32f1e9c55"
+      ],
+      "actual_evidence_ids": [
+        "LIT_7e0d549aa3a2f44e",
+        "LIT_ef90d70f264c1ab1",
+        "LIT_2a8d8df32f1e9c55"
+      ],
+      "evidence_hits": [
+        "LIT_7e0d549aa3a2f44e",
+        "LIT_ef90d70f264c1ab1",
+        "LIT_2a8d8df32f1e9c55"
+      ],
+      "evidence_match": true,
+      "claim_citation_coverage": 1,
+      "checkpoint_coverage": 0,
+      "checkpoint_hits": [],
+      "status": "pass",
+      "error": "",
+      "elapsed_ms": 550,
+      "answer_text": "现有研究关于维生素K与血脂的结论并不完全一致，差异还会随血脂指标、维生素K形式和人群而变化。\n\n一项随机对照研究显示，叶绿醌补充未显著改变总胆固醇和LDL-C，但甘油三酯增加约15%，HDL-C出现接近显著的变化。观察性研究则发现，循环叶绿醌与甘油三酯和LDL胆固醇呈正相关。另有研究提示较高甲萘醌摄入与HDL胆固醇/总胆固醇比值较高有关，说明不同血脂结局的方向并不一致。\n\n因此不能把不同研究简单合并成一个统一方向。需要分别比较甘油三酯、总胆固醇、LDL-C和HDL-C，并区分干预研究与观察性关联。",
+      "claims": [
+        {
+          "id": "static-claim-0",
+          "text": "一项随机对照研究显示，叶绿醌补充未显著改变总胆固醇和LDL-C，但甘油三酯增加约15%，HDL-C出现接近显著的变化。",
+          "evidence_ids": [
+            "LIT_7e0d549aa3a2f44e"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "intervention",
+          "boundary_note": "方向性结果需结合研究设计、人群、剂量和对照解释，不等同于普遍治疗结论。"
+        },
+        {
+          "id": "static-claim-1",
+          "text": "观察性研究则发现，循环叶绿醌与甘油三酯和LDL胆固醇呈正相关。",
+          "evidence_ids": [
+            "LIT_ef90d70f264c1ab1"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        },
+        {
+          "id": "static-claim-2",
+          "text": "另有研究提示较高甲萘醌摄入与HDL胆固醇/总胆固醇比值较高有关，说明不同血脂结局的方向并不一致。",
+          "evidence_ids": [
+            "LIT_2a8d8df32f1e9c55"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "conflict",
+          "boundary_note": "不同研究或分析存在结论差异，应按研究条件和证据层级分别解释。"
+        }
+      ],
+      "citations": [
+        {
+          "id": "LIT_7e0d549aa3a2f44e",
+          "source_id": "VK0182:18807108",
+          "source_title": "PMID 18807108 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/18807108/",
+          "evidence_level": "A",
+          "locator": "PMID 18807108 | Compared to placebo, daily supplementation with 500 μg of phylloquinone did not affect inflammatory markers (CRP, IL-6, sVCAM-1 and sICAM-1), fibrinolytic activity (factor VIIc, fibrinogen-c and PAI-1), TC or LDL-C (Table 2). The supplementation did however result in a 15% increase in TG (P = 0.015) and a near-significant 5% decrease in HDL-C (P = 0.06).",
+          "snippet": "Compared to placebo, daily supplementation with 500 μg of phylloquinone did not affect inflammatory markers (CRP, IL-6, sVCAM-1 and sICAM-1), fibrinolytic activity (factor VIIc, fibrinogen-c and PAI-1), TC or LDL-C (Table 2). The supplementation did however result in a 15% increase in TG (P = 0.015) and a near-significant 5% decrease in HDL-C (P = 0.06).",
+          "is_demo": false,
+          "document_id": "LIT_7e0d549aa3a2f44e",
+          "entity_ids": [
+            "phylloquinone",
+            "real-e45a817e74538b"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 18807108 | Compared to placebo, daily supplementation with 500 μg of phylloquinone did not affect inflammatory markers (CRP, IL-6, sVCAM-1 and sICAM-1), fibrinolytic activity (factor VIIc, fibrinogen-c and PAI-1), TC or LDL-C (Table 2). The supplementation did however result in a 15% increase in TG (P = 0.015) and a near-significant 5% decrease in HDL-C (P = 0.06).",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "has_outcome_biomarker"
+        },
+        {
+          "id": "LIT_ef90d70f264c1ab1",
+          "source_id": "VK0461:32359159",
+          "source_title": "PMID 32359159 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/32359159/",
+          "evidence_level": "A",
+          "locator": "PMID 32359159 | Circulating phylloquinone was significantly positively correlated with triglycerides, LDL cholesterol, systolic blood pressure, hypertension, and β-carotene intake (all P ≤ 0.03) and inversely correlated with CRP (P < 0.001).",
+          "snippet": "Circulating phylloquinone was significantly positively correlated with triglycerides, LDL cholesterol, systolic blood pressure, hypertension, and β-carotene intake (all P ≤ 0.03) and inversely correlated with CRP (P < 0.001).",
+          "is_demo": false,
+          "document_id": "LIT_ef90d70f264c1ab1",
+          "entity_ids": [
+            "phylloquinone",
+            "real-5bd2fb7a91e066"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 32359159 | Circulating phylloquinone was significantly positively correlated with triglycerides, LDL cholesterol, systolic blood pressure, hypertension, and β-carotene intake (all P ≤ 0.03) and inversely correlated with CRP (P < 0.001).",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "reflects_status_of"
+        },
+        {
+          "id": "LIT_2a8d8df32f1e9c55",
+          "source_id": "VK0215:20424220",
+          "source_title": "PMID 20424220 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/20424220/",
+          "evidence_level": "B",
+          "locator": "PMID 20424220 | The HDL cholesterol-to-total cholesterol ratio was higher with higher menaquinones intake (? 0.003 ± 0.001; P =0.034).",
+          "snippet": "The HDL cholesterol-to-total cholesterol ratio was higher with higher menaquinones intake (? 0.003 ± 0.001; P =0.034).",
+          "is_demo": false,
+          "document_id": "LIT_2a8d8df32f1e9c55",
+          "entity_ids": [
+            "real-e314884cf1c65c",
+            "real-573c844586d9f7"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 20424220 | The HDL cholesterol-to-total cholesterol ratio was higher with higher menaquinones intake (? 0.003 ± 0.001; P =0.034).",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "indicates_risk_of"
+        }
+      ],
+      "comparisons": [
+        {
+          "id": "comparison-reported-conflict",
+          "status": "reported_difference",
+          "summary": "现有研究报告了不一致或相反的结果，应结合研究设计、暴露、人群和结局分别解释，不能强行合并成单一结论。",
+          "claim_ids": [
+            "static-claim-2"
+          ],
+          "evidence_ids": [
+            "LIT_2a8d8df32f1e9c55"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Q09",
+      "category": "causal_boundary",
+      "query": "有没有证据证明补充MK-7能够降低HOMA-IR？",
+      "expected_intent": "research",
+      "actual_intent": "research",
+      "intent_match": true,
+      "expect_abstain": false,
+      "abstained": false,
+      "safety_case": false,
+      "safety_triggered": false,
+      "expected_evidence_ids": [
+        "LIT_43cfdfa5b1211fc6",
+        "LIT_51232c9fa8ce9243",
+        "LIT_f4b9a152a7d5b7a1"
+      ],
+      "actual_evidence_ids": [
+        "LIT_43cfdfa5b1211fc6",
+        "LIT_51232c9fa8ce9243",
+        "LIT_f4b9a152a7d5b7a1"
+      ],
+      "evidence_hits": [
+        "LIT_43cfdfa5b1211fc6",
+        "LIT_51232c9fa8ce9243",
+        "LIT_f4b9a152a7d5b7a1"
+      ],
+      "evidence_match": true,
+      "claim_citation_coverage": 1,
+      "checkpoint_coverage": 0.3333333333333333,
+      "checkpoint_hits": [
+        "HOMA-IR"
+      ],
+      "status": "pass",
+      "error": "",
+      "elapsed_ms": 534,
+      "answer_text": "现有公开证据还不能支持“补充MK-7一定能够降低HOMA-IR”这一结论。\n\n叶绿醌摄入与空腹胰岛素、血糖、HOMA-IR和HbA1c没有显著关联。另有随机对照研究显示，两组HOMA-IR没有显著差异。但也有研究报告部分男性在补充后HOMA-IR下降，说明研究结果并不完全一致，且不能直接外推为MK-7的确定疗效。\n\n这些研究并没有形成一致、可直接外推的MK-7干预结论。观察性关联或叶绿醌研究不能自动等同于MK-7的因果效果。",
+      "claims": [
+        {
+          "id": "static-claim-0",
+          "text": "叶绿醌摄入与空腹胰岛素、血糖、HOMA-IR和HbA1c没有显著关联。",
+          "evidence_ids": [
+            "LIT_43cfdfa5b1211fc6"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "negative",
+          "boundary_note": "未观察到显著关系不等于证明该关系不存在或证明干预无效。"
+        },
+        {
+          "id": "static-claim-1",
+          "text": "另有随机对照研究显示，两组HOMA-IR没有显著差异。",
+          "evidence_ids": [
+            "LIT_51232c9fa8ce9243"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "negative",
+          "boundary_note": "未观察到显著关系不等于证明该关系不存在或证明干预无效。"
+        },
+        {
+          "id": "static-claim-2",
+          "text": "但也有研究报告部分男性在补充后HOMA-IR下降，说明研究结果并不完全一致，且不能直接外推为MK-7的确定疗效。",
+          "evidence_ids": [
+            "LIT_f4b9a152a7d5b7a1"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "conflict",
+          "boundary_note": "不同研究或分析存在结论差异，应按研究条件和证据层级分别解释。"
+        }
+      ],
+      "citations": [
+        {
+          "id": "LIT_43cfdfa5b1211fc6",
+          "source_id": "VK0177:18614743",
+          "source_title": "PMID 18614743 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/18614743/",
+          "evidence_level": "B",
+          "locator": "PMID 18614743 | Phylloquinone intake was not associated with fasting insulin and glucose concentrations, HOMA-IR, or HbA1c.",
+          "snippet": "Phylloquinone intake was not associated with fasting insulin and glucose concentrations, HOMA-IR, or HbA1c.",
+          "is_demo": false,
+          "document_id": "LIT_43cfdfa5b1211fc6",
+          "entity_ids": [
+            "phylloquinone",
+            "real-915b381d9e7c73"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 18614743 | Phylloquinone intake was not associated with fasting insulin and glucose concentrations, HOMA-IR, or HbA1c.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "cross_sectionally_associated_with"
+        },
+        {
+          "id": "LIT_51232c9fa8ce9243",
+          "source_id": "VK0223:20881072",
+          "source_title": "PMID 20881072 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/20881072/",
+          "evidence_level": "A",
+          "locator": "PMID 20881072 | HOMA-IR was similar in the 2 groups (1.52 ± 0.23 in the placebo-treated group compared with 2.24 ± 0.54 in the phylloquinone-treated group; P = NS).",
+          "snippet": "HOMA-IR was similar in the 2 groups (1.52 ± 0.23 in the placebo-treated group compared with 2.24 ± 0.54 in the phylloquinone-treated group; P = NS).",
+          "is_demo": false,
+          "document_id": "LIT_51232c9fa8ce9243",
+          "entity_ids": [
+            "phylloquinone",
+            "real-915b381d9e7c73"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 20881072 | HOMA-IR was similar in the 2 groups (1.52 ± 0.23 in the placebo-treated group compared with 2.24 ± 0.54 in the phylloquinone-treated group; P = NS).",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "has_outcome_biomarker"
+        },
+        {
+          "id": "LIT_f4b9a152a7d5b7a1",
+          "source_id": "VK0261:23034962",
+          "source_title": "PMID 23034962 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/23034962/",
+          "evidence_level": "A",
+          "locator": "PMID 23034962 | the HOMA-IR significantly decreased during the intervention in men in the supplemented group.",
+          "snippet": "the HOMA-IR significantly decreased during the intervention in men in the supplemented group.",
+          "is_demo": false,
+          "document_id": "LIT_f4b9a152a7d5b7a1",
+          "entity_ids": [
+            "phylloquinone",
+            "real-915b381d9e7c73"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 23034962 | the HOMA-IR significantly decreased during the intervention in men in the supplemented group.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "has_outcome_biomarker"
+        }
+      ],
+      "comparisons": [
+        {
+          "id": "comparison-reported-conflict",
+          "status": "reported_difference",
+          "summary": "现有研究报告了不一致或相反的结果，应结合研究设计、暴露、人群和结局分别解释，不能强行合并成单一结论。",
+          "claim_ids": [
+            "static-claim-2"
+          ],
+          "evidence_ids": [
+            "LIT_f4b9a152a7d5b7a1"
+          ]
+        },
+        {
+          "id": "comparison-significance",
+          "status": "significance_difference",
+          "summary": "回答同时保留了阳性或方向性证据与阴性证据。未观察到显著关系不等于证明该关系不存在或证明干预无效。",
+          "claim_ids": [
+            "static-claim-0",
+            "static-claim-1",
+            "static-claim-2"
+          ],
+          "evidence_ids": [
+            "LIT_43cfdfa5b1211fc6",
+            "LIT_51232c9fa8ce9243",
+            "LIT_f4b9a152a7d5b7a1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Q10",
+      "category": "measurement_interpretation",
+      "query": "血清MK-7浓度多少属于低、中、高？",
+      "expected_intent": "measurement_interpretation",
+      "actual_intent": "measurement_interpretation",
+      "intent_match": true,
+      "expect_abstain": false,
+      "abstained": false,
+      "safety_case": false,
+      "safety_triggered": false,
+      "expected_evidence_ids": [
+        "LIT_b301a3990e99491f",
+        "LIT_e06e70bfce32daa1",
+        "LIT_c26aad1ad239cdf0"
+      ],
+      "actual_evidence_ids": [
+        "LIT_b301a3990e99491f",
+        "LIT_e06e70bfce32daa1",
+        "LIT_c26aad1ad239cdf0"
+      ],
+      "evidence_hits": [
+        "LIT_b301a3990e99491f",
+        "LIT_e06e70bfce32daa1",
+        "LIT_c26aad1ad239cdf0"
+      ],
+      "evidence_match": true,
+      "claim_citation_coverage": 1,
+      "checkpoint_coverage": 0,
+      "checkpoint_hits": [],
+      "status": "pass",
+      "error": "",
+      "elapsed_ms": 531,
+      "answer_text": "目前没有可普遍用于临床判读的血清MK-7低、中、高统一阈值，研究通常按人群分布、四分位数或检测方法来分组。\n\n不同地区人群的血清MK-7差异很大，例如东京绝经后女性的水平可比英国女性高约14倍，主要与纳豆摄入有关。研究可测量血浆维生素K1、MK-4和MK-7浓度，但测量本身不等于建立了统一的低、中、高临床范围。干预研究中的剂量和浓度分组均服务于特定研究设计，不能直接转换为面向所有人的临床阈值。\n\n同一个MK-7浓度在不同地区、饮食背景、采样时间和检测平台下不能直接套用固定标签，更不应据此自行判断缺乏或决定补充剂量。",
+      "claims": [
+        {
+          "id": "static-claim-0",
+          "text": "不同地区人群的血清MK-7差异很大，例如东京绝经后女性的水平可比英国女性高约14倍，主要与纳豆摄入有关。",
+          "evidence_ids": [
+            "LIT_b301a3990e99491f"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        },
+        {
+          "id": "static-claim-1",
+          "text": "研究可测量血浆维生素K1、MK-4和MK-7浓度，但测量本身不等于建立了统一的低、中、高临床范围。",
+          "evidence_ids": [
+            "LIT_e06e70bfce32daa1"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        },
+        {
+          "id": "static-claim-2",
+          "text": "干预研究中的剂量和浓度分组均服务于特定研究设计，不能直接转换为面向所有人的临床阈值。",
+          "evidence_ids": [
+            "LIT_c26aad1ad239cdf0"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        }
+      ],
+      "citations": [
+        {
+          "id": "LIT_b301a3990e99491f",
+          "source_id": "VK0274:23828145",
+          "source_title": "PMID 23828145 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/23828145/",
+          "evidence_level": "A",
+          "locator": "PMID 23828145 | In fact, serum MK-7 is 14 times higher in postmenopausal women living in Tokyo than in English women, and this difference is largely attributable to intake of natto, a fermented soybean food.",
+          "snippet": "In fact, serum MK-7 is 14 times higher in postmenopausal women living in Tokyo than in English women, and this difference is largely attributable to intake of natto, a fermented soybean food.",
+          "is_demo": false,
+          "document_id": "LIT_b301a3990e99491f",
+          "entity_ids": [
+            "vitamin-k2",
+            "real-0dadedd750c8d4"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 23828145 | In fact, serum MK-7 is 14 times higher in postmenopausal women living in Tokyo than in English women, and this difference is largely attributable to intake of natto, a fermented soybean food.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "has_subject"
+        },
+        {
+          "id": "LIT_e06e70bfce32daa1",
+          "source_id": "VK0350:26875489",
+          "source_title": "PMID 26875489 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/26875489/",
+          "evidence_level": "A",
+          "locator": "PMID 26875489 | Plasma vitamin K1, MK-4, and MK-7 concentrations were analyzed as described previously.",
+          "snippet": "Plasma vitamin K1, MK-4, and MK-7 concentrations were analyzed as described previously.",
+          "is_demo": false,
+          "document_id": "LIT_e06e70bfce32daa1",
+          "entity_ids": [
+            "real-8615bce0047a68",
+            "mk-7"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 26875489 | Plasma vitamin K1, MK-4, and MK-7 concentrations were analyzed as described previously.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "measured_vitamin_k_form"
+        },
+        {
+          "id": "LIT_c26aad1ad239cdf0",
+          "source_id": "VK0491:33159574",
+          "source_title": "PMID 33159574 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/33159574/",
+          "evidence_level": "A",
+          "locator": "PMID 33159574 | The vitamin K2 group received 180 μg vitamin K2 capsules in the form of MK-7 twice a day after breakfast and dinner for 12 weeks (3 months).",
+          "snippet": "The vitamin K2 group received 180 μg vitamin K2 capsules in the form of MK-7 twice a day after breakfast and dinner for 12 weeks (3 months).",
+          "is_demo": false,
+          "document_id": "LIT_c26aad1ad239cdf0",
+          "entity_ids": [
+            "vitamin-k2",
+            "mk-7"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 33159574 | The vitamin K2 group received 180 μg vitamin K2 capsules in the form of MK-7 twice a day after breakfast and dinner for 12 weeks (3 months).",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "contains_exposure"
+        }
+      ],
+      "comparisons": []
+    },
+    {
+      "id": "Q11",
+      "category": "food_source",
+      "query": "维生素K1的主要食物来源是什么？",
+      "expected_intent": "food_sources",
+      "actual_intent": "food_sources",
+      "intent_match": true,
+      "expect_abstain": false,
+      "abstained": false,
+      "safety_case": false,
+      "safety_triggered": false,
+      "expected_evidence_ids": [
+        "LIT_f91c44a4fcecf564",
+        "LIT_9043cd9f754d0a9e",
+        "LIT_57b7c9c7771a5728",
+        "LIT_32a43abbd7b6bbfd"
+      ],
+      "actual_evidence_ids": [
+        "LIT_32a43abbd7b6bbfd",
+        "LIT_bc418285d16b4698"
+      ],
+      "evidence_hits": [
+        "LIT_32a43abbd7b6bbfd"
+      ],
+      "evidence_match": true,
+      "claim_citation_coverage": 1,
+      "checkpoint_coverage": 0.6666666666666666,
+      "checkpoint_hits": [
+        "深绿色叶菜",
+        "植物油"
+      ],
+      "status": "pass",
+      "error": "",
+      "elapsed_ms": 523,
+      "answer_text": "维生素K1（叶绿醌）的主要膳食来源是深绿色叶菜和植物油。\n\n叶绿醌主要存在于深绿色叶菜和部分植物油中。菠菜、羽衣甘蓝、西兰花、卷心菜等绿色蔬菜通常含有较高水平的叶绿醌。\n\n具体含量会受食物部位、品种、加工和烹饪方式影响。",
+      "claims": [
+        {
+          "id": "static-claim-0",
+          "text": "叶绿醌主要存在于深绿色叶菜和部分植物油中。",
+          "evidence_ids": [
+            "LIT_32a43abbd7b6bbfd"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        },
+        {
+          "id": "static-claim-1",
+          "text": "菠菜、羽衣甘蓝、西兰花、卷心菜等绿色蔬菜通常含有较高水平的叶绿醌。",
+          "evidence_ids": [
+            "LIT_bc418285d16b4698"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        }
+      ],
+      "citations": [
+        {
+          "id": "LIT_32a43abbd7b6bbfd",
+          "source_id": "VK0390:28794209",
+          "source_title": "PMID 28794209 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/28794209/",
+          "evidence_level": "B",
+          "locator": "PMID 28794209 | Phylloquinone, the major dietary source of Vitamin K, is found primarily in dark-green leafy vegetables and certain plant oils and is the Vitamin K form best characterized in US food composition databases (9, 10).",
+          "snippet": "Phylloquinone, the major dietary source of Vitamin K, is found primarily in dark-green leafy vegetables and certain plant oils and is the Vitamin K form best characterized in US food composition databases (9, 10).",
+          "is_demo": false,
+          "document_id": "LIT_32a43abbd7b6bbfd",
+          "entity_ids": [
+            "phylloquinone",
+            "real-ad3045ece2da7a"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 28794209 | Phylloquinone, the major dietary source of Vitamin K, is found primarily in dark-green leafy vegetables and certain plant oils and is the Vitamin K form best characterized in US food composition databases (9, 10).",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "contains"
+        },
+        {
+          "id": "LIT_bc418285d16b4698",
+          "source_id": "VK0019:2750683",
+          "source_title": "PMID 2750683 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/2750683/",
+          "evidence_level": "B-",
+          "locator": "PMID 2750683 | Green leafy vegetables, such as spinach, kale, broccoli, cabbage, brussels sprouts, and lettuce, generally contain phylloquinone at a concentration >200 μg/100 g fresh weight.",
+          "snippet": "Green leafy vegetables, such as spinach, kale, broccoli, cabbage, brussels sprouts, and lettuce, generally contain phylloquinone at a concentration >200 μg/100 g fresh weight.",
+          "is_demo": false,
+          "document_id": "LIT_bc418285d16b4698",
+          "entity_ids": [
+            "phylloquinone",
+            "real-ad3045ece2da7a"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 2750683 | Green leafy vegetables, such as spinach, kale, broccoli, cabbage, brussels sprouts, and lettuce, generally contain phylloquinone at a concentration >200 μg/100 g fresh weight.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "is_synthesized_by"
+        }
+      ],
+      "comparisons": []
+    },
+    {
+      "id": "Q12",
+      "category": "food_source",
+      "query": "纳豆为什么常被作为MK-7的重要食物来源？",
+      "expected_intent": "food_sources",
+      "actual_intent": "food_sources",
+      "intent_match": true,
+      "expect_abstain": false,
+      "abstained": false,
+      "safety_case": false,
+      "safety_triggered": false,
+      "expected_evidence_ids": [
+        "LIT_641bb6efc31e01aa",
+        "LIT_b301a3990e99491f"
+      ],
+      "actual_evidence_ids": [
+        "LIT_2757058ad9cc013e",
+        "LIT_b301a3990e99491f"
+      ],
+      "evidence_hits": [
+        "LIT_b301a3990e99491f"
+      ],
+      "evidence_match": true,
+      "claim_citation_coverage": 1,
+      "checkpoint_coverage": 0.75,
+      "checkpoint_hits": [
+        "纳豆",
+        "发酵大豆",
+        "MK-7"
+      ],
+      "status": "pass",
+      "error": "",
+      "elapsed_ms": 507,
+      "answer_text": "纳豆是发酵大豆食品，也是MK-7较典型、含量较高的天然食物来源。\n\n纳豆被认为是MK-7最丰富的天然来源之一。东京绝经后女性的血清MK-7显著高于英国女性，这一差异主要可归因于纳豆摄入。\n\n纳豆摄入会明显影响MK-7暴露，但食物含量受发酵工艺和份量影响，不能仅凭食物名称推算个人实际摄入量。",
+      "claims": [
+        {
+          "id": "static-claim-0",
+          "text": "纳豆被认为是MK-7最丰富的天然来源之一。",
+          "evidence_ids": [
+            "LIT_2757058ad9cc013e"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        },
+        {
+          "id": "static-claim-1",
+          "text": "东京绝经后女性的血清MK-7显著高于英国女性，这一差异主要可归因于纳豆摄入。",
+          "evidence_ids": [
+            "LIT_b301a3990e99491f"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        }
+      ],
+      "citations": [
+        {
+          "id": "LIT_2757058ad9cc013e",
+          "source_id": "VK0676:41393956",
+          "source_title": "PMID 41393956 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/41393956/",
+          "evidence_level": "A",
+          "locator": "PMID 41393956 | Natto, a traditional Japanese fermented soybean food, is the richest natural source of menaquinone-7 (MK-7), a form of vitamin K2 involved in osteocalcin activation and bone mineralization.",
+          "snippet": "Natto, a traditional Japanese fermented soybean food, is the richest natural source of menaquinone-7 (MK-7), a form of vitamin K2 involved in osteocalcin activation and bone mineralization.",
+          "is_demo": false,
+          "document_id": "LIT_2757058ad9cc013e",
+          "entity_ids": [
+            "mk-7",
+            "osteocalcin"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 41393956 | Natto, a traditional Japanese fermented soybean food, is the richest natural source of menaquinone-7 (MK-7), a form of vitamin K2 involved in osteocalcin activation and bone mineralization.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "activates_protein"
+        },
+        {
+          "id": "LIT_b301a3990e99491f",
+          "source_id": "VK0274:23828145",
+          "source_title": "PMID 23828145 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/23828145/",
+          "evidence_level": "A",
+          "locator": "PMID 23828145 | In fact, serum MK-7 is 14 times higher in postmenopausal women living in Tokyo than in English women, and this difference is largely attributable to intake of natto, a fermented soybean food.",
+          "snippet": "In fact, serum MK-7 is 14 times higher in postmenopausal women living in Tokyo than in English women, and this difference is largely attributable to intake of natto, a fermented soybean food.",
+          "is_demo": false,
+          "document_id": "LIT_b301a3990e99491f",
+          "entity_ids": [
+            "vitamin-k2",
+            "real-0dadedd750c8d4"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 23828145 | In fact, serum MK-7 is 14 times higher in postmenopausal women living in Tokyo than in English women, and this difference is largely attributable to intake of natto, a fermented soybean food.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "has_subject"
+        }
+      ],
+      "comparisons": []
+    },
+    {
+      "id": "Q13",
+      "category": "structured_food",
+      "query": "羽衣甘蓝含有哪种维生素K？",
+      "expected_intent": "food_sources",
+      "actual_intent": "food_sources",
+      "intent_match": true,
+      "expect_abstain": false,
+      "abstained": false,
+      "safety_case": false,
+      "safety_triggered": false,
+      "expected_evidence_ids": [
+        "STR_36663a47cae7c644",
+        "LIT_9043cd9f754d0a9e"
+      ],
+      "actual_evidence_ids": [
+        "STR_36663a47cae7c644",
+        "STR_5856051eaa7541d7"
+      ],
+      "evidence_hits": [
+        "STR_36663a47cae7c644"
+      ],
+      "evidence_match": true,
+      "claim_citation_coverage": 1,
+      "checkpoint_coverage": 0.3333333333333333,
+      "checkpoint_hits": [
+        "羽衣甘蓝"
+      ],
+      "status": "pass",
+      "error": "",
+      "elapsed_ms": 510,
+      "answer_text": "结构化食物数据记录羽衣甘蓝含有叶绿醌，即维生素K1；部分记录还包含二氢叶绿醌。\n\n羽衣甘蓝含有叶绿醌（维生素K1）。部分羽衣甘蓝记录还包含二氢叶绿醌。\n\n不同数据库记录的食物形态和检测项目不同，含量数值应结合食物品种、烹饪方式和数据库口径解释。",
+      "claims": [
+        {
+          "id": "static-claim-0",
+          "text": "羽衣甘蓝含有叶绿醌（维生素K1）。",
+          "evidence_ids": [
+            "STR_36663a47cae7c644"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        },
+        {
+          "id": "static-claim-1",
+          "text": "部分羽衣甘蓝记录还包含二氢叶绿醌。",
+          "evidence_ids": [
+            "STR_5856051eaa7541d7"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        }
+      ],
+      "citations": [
+        {
+          "id": "STR_36663a47cae7c644",
+          "source_id": "M000374:1",
+          "source_title": "USDA FoodData Central · 外部结构化证据",
+          "source_type": "structured",
+          "source_classification": "external_structured_triple",
+          "data_origin": "external",
+          "data_owner": "FDC、USDA、PubChem、FooDB、KEGG、ClinicalTrials 等外部结构化数据",
+          "access_scope": "public",
+          "publisher": "USDA FoodData Central",
+          "published_at": "",
+          "url": "",
+          "evidence_level": "structured",
+          "locator": "结构化数据/USDA FoodData Central(FDC)/vk_project/usda_vk_extracted_fixed.csv::default::row 2::vk_subtype",
+          "snippet": "Kale - NFY1214SU含有Phylloquinone。",
+          "is_demo": false,
+          "document_id": "STR_36663a47cae7c644",
+          "entity_ids": [
+            "real-76e6916fa92d68",
+            "phylloquinone"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "Structured_Mapping_Report_Reviewed.csv@0092ab0c8f39",
+          "source_locator": "结构化数据/USDA FoodData Central(FDC)/vk_project/usda_vk_extracted_fixed.csv::default::row 2::vk_subtype",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "deterministic_mapping",
+          "predicate": "contains"
+        },
+        {
+          "id": "STR_5856051eaa7541d7",
+          "source_id": "M000374:675",
+          "source_title": "USDA FoodData Central · 外部结构化证据",
+          "source_type": "structured",
+          "source_classification": "external_structured_triple",
+          "data_origin": "external",
+          "data_owner": "FDC、USDA、PubChem、FooDB、KEGG、ClinicalTrials 等外部结构化数据",
+          "access_scope": "public",
+          "publisher": "USDA FoodData Central",
+          "published_at": "",
+          "url": "",
+          "evidence_level": "structured",
+          "locator": "结构化数据/USDA FoodData Central(FDC)/vk_project/usda_vk_extracted_fixed.csv::default::row 676::vk_subtype",
+          "snippet": "Kale - NFY1212E0含有Dihydrophylloquinone。",
+          "is_demo": false,
+          "document_id": "STR_5856051eaa7541d7",
+          "entity_ids": [
+            "real-9f72ce5f5e1df1",
+            "real-9e24b6856207b9"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "Structured_Mapping_Report_Reviewed.csv@0092ab0c8f39",
+          "source_locator": "结构化数据/USDA FoodData Central(FDC)/vk_project/usda_vk_extracted_fixed.csv::default::row 676::vk_subtype",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "deterministic_mapping",
+          "predicate": "contains"
+        }
+      ],
+      "comparisons": []
+    },
+    {
+      "id": "Q14",
+      "category": "drug_monitoring",
+      "query": "华法林治疗为什么需要监测INR？",
+      "expected_intent": "drug_interactions",
+      "actual_intent": "drug_interactions",
+      "intent_match": true,
+      "expect_abstain": false,
+      "abstained": false,
+      "safety_case": false,
+      "safety_triggered": false,
+      "expected_evidence_ids": [
+        "LIT_02980c4eec52b985",
+        "LIT_3107166c9f4f5b63"
+      ],
+      "actual_evidence_ids": [
+        "LIT_13046d3800381566",
+        "LIT_02980c4eec52b985",
+        "LIT_3107166c9f4f5b63"
+      ],
+      "evidence_hits": [
+        "LIT_02980c4eec52b985",
+        "LIT_3107166c9f4f5b63"
+      ],
+      "evidence_match": true,
+      "claim_citation_coverage": 1,
+      "checkpoint_coverage": 0,
+      "checkpoint_hits": [],
+      "status": "pass",
+      "error": "",
+      "elapsed_ms": 523,
+      "answer_text": "华法林治疗需要监测INR，因为INR反映维生素K依赖凝血因子的抗凝抑制程度，也是评估出血与血栓风险的重要指标。\n\n华法林通过拮抗维生素K，抑制维生素K依赖凝血蛋白的活性。华法林治疗需要持续进行凝血监测和临床随访。富含维生素K的食物可能降低INR，因此饮食稳定性会影响监测解释。\n\n维生素K摄入变化、合并用药和身体状况都可能改变INR；监测应由专业医疗人员结合具体临床情况安排。",
+      "claims": [
+        {
+          "id": "static-claim-0",
+          "text": "华法林通过拮抗维生素K，抑制维生素K依赖凝血蛋白的活性。",
+          "evidence_ids": [
+            "LIT_13046d3800381566"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        },
+        {
+          "id": "static-claim-1",
+          "text": "华法林治疗需要持续进行凝血监测和临床随访。",
+          "evidence_ids": [
+            "LIT_02980c4eec52b985"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        },
+        {
+          "id": "static-claim-2",
+          "text": "富含维生素K的食物可能降低INR，因此饮食稳定性会影响监测解释。",
+          "evidence_ids": [
+            "LIT_3107166c9f4f5b63"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "intervention",
+          "boundary_note": "方向性结果需结合研究设计、人群、剂量和对照解释，不等同于普遍治疗结论。"
+        }
+      ],
+      "citations": [
+        {
+          "id": "LIT_13046d3800381566",
+          "source_id": "VK0195:19436136",
+          "source_title": "PMID 19436136 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/19436136/",
+          "evidence_level": "A",
+          "locator": "PMID 19436136 | Warfarin functions as a Vitamin K antagonist and thus inhibits the activity of the Vitamin K-dependent coagulation proteins",
+          "snippet": "Warfarin functions as a Vitamin K antagonist and thus inhibits the activity of the Vitamin K-dependent coagulation proteins",
+          "is_demo": false,
+          "document_id": "LIT_13046d3800381566",
+          "entity_ids": [
+            "real-33152baef7f599",
+            "warfarin"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 19436136 | Warfarin functions as a Vitamin K antagonist and thus inhibits the activity of the Vitamin K-dependent coagulation proteins",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "is_antagonized_by"
+        },
+        {
+          "id": "LIT_02980c4eec52b985",
+          "source_id": "UNKNOWN_phillips2010",
+          "source_title": "UNKNOWN_phillips2010 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "真实外部文献",
+          "published_at": "",
+          "url": "",
+          "evidence_level": "A",
+          "locator": "PMID NA | Warfarin therapy requires vigilant coagulation monitoring, clinical surveillance, and continuous patient education (Table 1).",
+          "snippet": "Warfarin therapy requires vigilant coagulation monitoring, clinical surveillance, and continuous patient education (Table 1).",
+          "is_demo": false,
+          "document_id": "LIT_02980c4eec52b985",
+          "entity_ids": [
+            "warfarin",
+            "real-45b0825ba45e2c"
+          ],
+          "review_status": "adopted_with_warning",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID NA | Warfarin therapy requires vigilant coagulation monitoring, clinical surveillance, and continuous patient education (Table 1).",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "targets_tissue"
+        },
+        {
+          "id": "LIT_3107166c9f4f5b63",
+          "source_id": "UNKNOWN_wadhera2014",
+          "source_title": "UNKNOWN_wadhera2014 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "真实外部文献",
+          "published_at": "",
+          "url": "",
+          "evidence_level": "C",
+          "locator": "PMID NA | Certain foods that contain large amounts of Vitamin K (such as dark green leafy vegetables including spinach, brussel sprouts, and kale) can lower the INR, whereas certain medications (including many antibiotics) can increase the INR.",
+          "snippet": "Certain foods that contain large amounts of Vitamin K (such as dark green leafy vegetables including spinach, brussel sprouts, and kale) can lower the INR, whereas certain medications (including many antibiotics) can increase the INR.",
+          "is_demo": false,
+          "document_id": "LIT_3107166c9f4f5b63",
+          "entity_ids": [
+            "warfarin",
+            "real-ad3045ece2da7a"
+          ],
+          "review_status": "adopted_with_warning",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID NA | Certain foods that contain large amounts of Vitamin K (such as dark green leafy vegetables including spinach, brussel sprouts, and kale) can lower the INR, whereas certain medications (including many antibiotics) can increase the INR.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "is_antagonized_by"
+        }
+      ],
+      "comparisons": []
+    },
+    {
+      "id": "Q15",
+      "category": "deficiency_risk",
+      "query": "新生儿为什么需要关注维生素K缺乏？",
+      "expected_intent": "deficiency",
+      "actual_intent": "deficiency",
+      "intent_match": true,
+      "expect_abstain": false,
+      "abstained": false,
+      "safety_case": false,
+      "safety_triggered": false,
+      "expected_evidence_ids": [
+        "LIT_2c892a6aa781edd1",
+        "LIT_ee0467a143e9f87d",
+        "LIT_6bd07eaef818d008"
+      ],
+      "actual_evidence_ids": [
+        "LIT_2c892a6aa781edd1",
+        "LIT_6bd07eaef818d008",
+        "LIT_32eca57aae8c52c6"
+      ],
+      "evidence_hits": [
+        "LIT_2c892a6aa781edd1",
+        "LIT_6bd07eaef818d008"
+      ],
+      "evidence_match": true,
+      "claim_citation_coverage": 1,
+      "checkpoint_coverage": 0.6666666666666666,
+      "checkpoint_hits": [
+        "新生儿",
+        "维生素K缺乏性出血"
+      ],
+      "status": "pass",
+      "error": "",
+      "elapsed_ms": 526,
+      "answer_text": "新生儿出生后需要关注维生素K，因为其维生素K储备和摄入有限，严重缺乏可导致维生素K缺乏性出血。\n\n所有新生儿出生后都需要叶绿醌以预防维生素K缺乏性出血。维生素K缺乏可能导致新生儿出血。新生儿维生素K问题还可见于出血性疾病或吸收不良相关情况。\n\n新生儿维生素K预防应由产科、儿科或相关医疗人员按规范执行，本系统不提供个体化给药决定。",
+      "claims": [
+        {
+          "id": "static-claim-0",
+          "text": "所有新生儿出生后都需要叶绿醌以预防维生素K缺乏性出血。",
+          "evidence_ids": [
+            "LIT_2c892a6aa781edd1"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "intervention",
+          "boundary_note": "方向性结果需结合研究设计、人群、剂量和对照解释，不等同于普遍治疗结论。"
+        },
+        {
+          "id": "static-claim-1",
+          "text": "维生素K缺乏可能导致新生儿出血。",
+          "evidence_ids": [
+            "LIT_6bd07eaef818d008"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        },
+        {
+          "id": "static-claim-2",
+          "text": "新生儿维生素K问题还可见于出血性疾病或吸收不良相关情况。",
+          "evidence_ids": [
+            "LIT_32eca57aae8c52c6"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        }
+      ],
+      "citations": [
+        {
+          "id": "LIT_2c892a6aa781edd1",
+          "source_id": "VK0335:26426042",
+          "source_title": "PMID 26426042 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/26426042/",
+          "evidence_level": "A",
+          "locator": "PMID 26426042 | All newborns require phylloquinone after birth to prevent Vitamin K deficiency bleeding.",
+          "snippet": "All newborns require phylloquinone after birth to prevent Vitamin K deficiency bleeding.",
+          "is_demo": false,
+          "document_id": "LIT_2c892a6aa781edd1",
+          "entity_ids": [
+            "phylloquinone",
+            "real-548de685600a0b"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 26426042 | All newborns require phylloquinone after birth to prevent Vitamin K deficiency bleeding.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "deficiency_causes"
+        },
+        {
+          "id": "LIT_6bd07eaef818d008",
+          "source_id": "VK0146:16452918",
+          "source_title": "PMID 16452918 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/16452918/",
+          "evidence_level": "B",
+          "locator": "PMID 16452918 | Vitamin K is necessary for carboxylation of proteins that are important in blood coagulation and bone formation, and deficiency may cause neonatal hemorrhage.",
+          "snippet": "Vitamin K is necessary for carboxylation of proteins that are important in blood coagulation and bone formation, and deficiency may cause neonatal hemorrhage.",
+          "is_demo": false,
+          "document_id": "LIT_6bd07eaef818d008",
+          "entity_ids": [
+            "vitamin-k1",
+            "real-c2be85e2beee72"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 16452918 | Vitamin K is necessary for carboxylation of proteins that are important in blood coagulation and bone formation, and deficiency may cause neonatal hemorrhage.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "deficiency_causes"
+        },
+        {
+          "id": "LIT_32eca57aae8c52c6",
+          "source_id": "VK0097:11101481",
+          "source_title": "PMID 11101481 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/11101481/",
+          "evidence_level": "A",
+          "locator": "PMID 11101481 | Volunteers with a medical history of renal or hepatic disease or malabsorption or who were receiving current warfarin therapy were excluded from participation.",
+          "snippet": "Volunteers with a medical history of renal or hepatic disease or malabsorption or who were receiving current warfarin therapy were excluded from participation.",
+          "is_demo": false,
+          "document_id": "LIT_32eca57aae8c52c6",
+          "entity_ids": [
+            "phylloquinone",
+            "warfarin"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 11101481 | Volunteers with a medical history of renal or hepatic disease or malabsorption or who were receiving current warfarin therapy were excluded from participation.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "is_antagonized_by"
+        }
+      ],
+      "comparisons": []
+    },
+    {
+      "id": "Q16",
+      "category": "biomarker",
+      "query": "PIVKA-II可以反映什么？",
+      "expected_intent": "lab_tests",
+      "actual_intent": "lab_tests",
+      "intent_match": true,
+      "expect_abstain": false,
+      "abstained": false,
+      "safety_case": false,
+      "safety_triggered": false,
+      "expected_evidence_ids": [
+        "LIT_84711522de895144",
+        "LIT_eab40aec2865d481",
+        "LIT_1947cad16fa1fdb6"
+      ],
+      "actual_evidence_ids": [
+        "LIT_0b18a943b9edb574",
+        "LIT_1947cad16fa1fdb6",
+        "LIT_5e0aa8215544311b"
+      ],
+      "evidence_hits": [
+        "LIT_1947cad16fa1fdb6"
+      ],
+      "evidence_match": true,
+      "claim_citation_coverage": 1,
+      "checkpoint_coverage": 0.3333333333333333,
+      "checkpoint_hits": [
+        "维生素K缺乏或拮抗"
+      ],
+      "status": "pass",
+      "error": "",
+      "elapsed_ms": 506,
+      "answer_text": "PIVKA-II是维生素K缺乏或拮抗时出现的一种未羧化凝血酶原，可作为维生素K状态的功能性指标。\n\n维生素K耗竭可使PIVKA-II从正常范围升高，因此它能够反映维生素K依赖凝血因子的羧化状态。除维生素K缺乏外，华法林等VKOR抑制剂、肝病、饮酒和广谱抗生素也可能导致PIVKA-II升高。较高PIVKA-II水平可能提示凝血异常和出血风险增加，需要结合其他凝血指标判断。\n\nPIVKA-II升高并不只由维生素K缺乏引起，还需要结合华法林、肝病、饮酒和抗生素使用等情况解释。",
+      "claims": [
+        {
+          "id": "static-claim-0",
+          "text": "维生素K耗竭可使PIVKA-II从正常范围升高，因此它能够反映维生素K依赖凝血因子的羧化状态。",
+          "evidence_ids": [
+            "LIT_0b18a943b9edb574"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "mechanism",
+          "boundary_note": "机制证据说明潜在生物学路径，不能直接推导出临床疗效。"
+        },
+        {
+          "id": "static-claim-1",
+          "text": "除维生素K缺乏外，华法林等VKOR抑制剂、肝病、饮酒和广谱抗生素也可能导致PIVKA-II升高。",
+          "evidence_ids": [
+            "LIT_1947cad16fa1fdb6"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        },
+        {
+          "id": "static-claim-2",
+          "text": "较高PIVKA-II水平可能提示凝血异常和出血风险增加，需要结合其他凝血指标判断。",
+          "evidence_ids": [
+            "LIT_5e0aa8215544311b"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "intervention",
+          "boundary_note": "方向性结果需结合研究设计、人群、剂量和对照解释，不等同于普遍治疗结论。"
+        }
+      ],
+      "citations": [
+        {
+          "id": "LIT_0b18a943b9edb574",
+          "source_id": "VK0118:12888638",
+          "source_title": "PMID 12888638 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/12888638/",
+          "evidence_level": "A",
+          "locator": "PMID 12888638 | Plasma PIVKA-II increased (P < 0.001) from within the normal range (≤2 μg/L) on d 1 to the abnormal range at the end of the Vitamin K depletion period.",
+          "snippet": "Plasma PIVKA-II increased (P < 0.001) from within the normal range (≤2 μg/L) on d 1 to the abnormal range at the end of the Vitamin K depletion period.",
+          "is_demo": false,
+          "document_id": "LIT_0b18a943b9edb574",
+          "entity_ids": [
+            "phylloquinone",
+            "real-c4f373d7543227"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 12888638 | Plasma PIVKA-II increased (P < 0.001) from within the normal range (≤2 μg/L) on d 1 to the abnormal range at the end of the Vitamin K depletion period.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "has_outcome_biomarker"
+        },
+        {
+          "id": "LIT_1947cad16fa1fdb6",
+          "source_id": "VK0396:29094808",
+          "source_title": "PMID 29094808 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/29094808/",
+          "evidence_level": "B-",
+          "locator": "PMID 29094808 | There are other reasons why an individual might exhibit an elevated PIVKA-II concentration besides Vitamin K deficiency, including liver disease, consumption of alcohol, treatment with VKOR inhibitors like warfarin, and use of broad-spectrum antibiotics",
+          "snippet": "There are other reasons why an individual might exhibit an elevated PIVKA-II concentration besides Vitamin K deficiency, including liver disease, consumption of alcohol, treatment with VKOR inhibitors like warfarin, and use of broad-spectrum antibiotics",
+          "is_demo": false,
+          "document_id": "LIT_1947cad16fa1fdb6",
+          "entity_ids": [
+            "vitamin-k1",
+            "real-f0cd123e78476d"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 29094808 | There are other reasons why an individual might exhibit an elevated PIVKA-II concentration besides Vitamin K deficiency, including liver disease, consumption of alcohol, treatment with VKOR inhibitors like warfarin, and use of broad-spectrum antibiotics",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "is_antagonized_by"
+        },
+        {
+          "id": "LIT_5e0aa8215544311b",
+          "source_id": "VK0338:26501317",
+          "source_title": "PMID 26501317 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/26501317/",
+          "evidence_level": "B",
+          "locator": "PMID 26501317 | PIVKA-II concentrations greater than 5 AU/mL are likely associated with abnormal coagulopathy and an increased risk for spontaneous bleeding.",
+          "snippet": "PIVKA-II concentrations greater than 5 AU/mL are likely associated with abnormal coagulopathy and an increased risk for spontaneous bleeding.",
+          "is_demo": false,
+          "document_id": "LIT_5e0aa8215544311b",
+          "entity_ids": [
+            "real-c4f373d7543227",
+            "real-548de685600a0b"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 26501317 | PIVKA-II concentrations greater than 5 AU/mL are likely associated with abnormal coagulopathy and an increased risk for spontaneous bleeding.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "indicates_risk_of"
+        }
+      ],
+      "comparisons": [
+        {
+          "id": "comparison-layer",
+          "status": "evidence_layer_difference",
+          "summary": "机制证据与临床关联或干预证据属于不同证据层级，机制发现不能直接等同于临床效果。",
+          "claim_ids": [
+            "static-claim-0",
+            "static-claim-2"
+          ],
+          "evidence_ids": [
+            "LIT_0b18a943b9edb574",
+            "LIT_5e0aa8215544311b"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Q17",
+      "category": "mechanism",
+      "query": "骨钙素与维生素K2有什么关系？",
+      "expected_intent": "mechanism",
+      "actual_intent": "mechanism",
+      "intent_match": true,
+      "expect_abstain": false,
+      "abstained": false,
+      "safety_case": false,
+      "safety_triggered": false,
+      "expected_evidence_ids": [
+        "LIT_2757058ad9cc013e",
+        "LIT_1f3efd3114928846",
+        "LIT_543ea513945866c8",
+        "LIT_c91e983e3c95f1c8"
+      ],
+      "actual_evidence_ids": [
+        "LIT_543ea513945866c8",
+        "LIT_c91e983e3c95f1c8"
+      ],
+      "evidence_hits": [
+        "LIT_543ea513945866c8",
+        "LIT_c91e983e3c95f1c8"
+      ],
+      "evidence_match": true,
+      "claim_citation_coverage": 1,
+      "checkpoint_coverage": 0.75,
+      "checkpoint_hits": [
+        "维生素K2",
+        "骨钙素",
+        "羧化"
+      ],
+      "status": "pass",
+      "error": "",
+      "elapsed_ms": 513,
+      "answer_text": "维生素K2与骨钙素的关系，主要体现在维生素K2参与骨钙素的羧化活化。\n\n维生素K2参与骨钙素的γ-羧化，使未羧化骨钙素向羧化形式转化。未羧化骨钙素和羧化骨钙素的比例，常被研究用作反映维生素K功能状态的指标。\n\n这属于机制和功能指标层面的证据，不能直接等同于补充维生素K2一定能预防骨折或治疗骨质疏松。",
+      "claims": [
+        {
+          "id": "static-claim-0",
+          "text": "维生素K2参与骨钙素的γ-羧化，使未羧化骨钙素向羧化形式转化。",
+          "evidence_ids": [
+            "LIT_543ea513945866c8"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "mechanism",
+          "boundary_note": "机制证据说明潜在生物学路径，不能直接推导出临床疗效。"
+        },
+        {
+          "id": "static-claim-1",
+          "text": "未羧化骨钙素和羧化骨钙素的比例，常被研究用作反映维生素K功能状态的指标。",
+          "evidence_ids": [
+            "LIT_c91e983e3c95f1c8"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "mechanism",
+          "boundary_note": "机制证据说明潜在生物学路径，不能直接推导出临床疗效。"
+        }
+      ],
+      "citations": [
+        {
+          "id": "LIT_543ea513945866c8",
+          "source_id": "VK0125:15242015",
+          "source_title": "PMID 15242015 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/15242015/",
+          "evidence_level": "B",
+          "locator": "PMID 15242015 | Since vitamin K2 activates osteocalcin through y-carboxylation, its deficiency may increase the circulating level of undercarboxylated osteocalcin (Glu) and the risk of hip fracture (5).",
+          "snippet": "Since vitamin K2 activates osteocalcin through y-carboxylation, its deficiency may increase the circulating level of undercarboxylated osteocalcin (Glu) and the risk of hip fracture (5).",
+          "is_demo": false,
+          "document_id": "LIT_543ea513945866c8",
+          "entity_ids": [
+            "vitamin-k2",
+            "osteocalcin"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 15242015 | Since vitamin K2 activates osteocalcin through y-carboxylation, its deficiency may increase the circulating level of undercarboxylated osteocalcin (Glu) and the risk of hip fracture (5).",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "activates_protein"
+        },
+        {
+          "id": "LIT_c91e983e3c95f1c8",
+          "source_id": "VK0108:12042454",
+          "source_title": "PMID 12042454 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/12042454/",
+          "evidence_level": "B",
+          "locator": "PMID 12042454 | Associations were examined between two sensitive biomarkers of Vitamin K status, plasma phylloquinone and serum percent undercarboxylated osteocalcin (%ucOC), and self-reported usual phylloquinone intake as estimated from a FFQ.",
+          "snippet": "Associations were examined between two sensitive biomarkers of Vitamin K status, plasma phylloquinone and serum percent undercarboxylated osteocalcin (%ucOC), and self-reported usual phylloquinone intake as estimated from a FFQ.",
+          "is_demo": false,
+          "document_id": "LIT_c91e983e3c95f1c8",
+          "entity_ids": [
+            "real-eeec3fd9428165",
+            "phylloquinone"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 12042454 | Associations were examined between two sensitive biomarkers of Vitamin K status, plasma phylloquinone and serum percent undercarboxylated osteocalcin (%ucOC), and self-reported usual phylloquinone intake as estimated from a FFQ.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "reflects_status_of"
+        }
+      ],
+      "comparisons": []
+    },
+    {
+      "id": "Q18",
+      "category": "biomarker",
+      "query": "dp-ucMGP可以作为什么指标？",
+      "expected_intent": "lab_tests",
+      "actual_intent": "lab_tests",
+      "intent_match": true,
+      "expect_abstain": false,
+      "abstained": false,
+      "safety_case": false,
+      "safety_triggered": false,
+      "expected_evidence_ids": [
+        "LIT_0d43f87a213e39cb",
+        "LIT_9d530600b5a5779a",
+        "LIT_e08f25c592090080"
+      ],
+      "actual_evidence_ids": [
+        "LIT_0d43f87a213e39cb",
+        "LIT_600409c7867a7ad8"
+      ],
+      "evidence_hits": [
+        "LIT_0d43f87a213e39cb"
+      ],
+      "evidence_match": true,
+      "claim_citation_coverage": 1,
+      "checkpoint_coverage": 0.6666666666666666,
+      "checkpoint_hits": [
+        "血管钙化风险",
+        "不能单独诊断"
+      ],
+      "status": "pass",
+      "error": "",
+      "elapsed_ms": 500,
+      "answer_text": "dp-ucMGP主要是反映血管维生素K功能状态的生物标志物，也与血管钙化风险相关。\n\n血管维生素K不足会导致无活性MGP升高，即dp-ucMGP升高。研究可使用dp-ucMGP评估动脉壁钙化程度或血管风险。\n\n它适合用于研究维生素K状态和血管健康关联，但不能单独诊断血管钙化或替代影像学检查。",
+      "claims": [
+        {
+          "id": "static-claim-0",
+          "text": "血管维生素K不足会导致无活性MGP升高，即dp-ucMGP升高。",
+          "evidence_ids": [
+            "LIT_0d43f87a213e39cb"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        },
+        {
+          "id": "static-claim-1",
+          "text": "研究可使用dp-ucMGP评估动脉壁钙化程度或血管风险。",
+          "evidence_ids": [
+            "LIT_600409c7867a7ad8"
+          ],
+          "relation": "evidence_synthesis",
+          "claim_type": "general",
+          "boundary_note": null
+        }
+      ],
+      "citations": [
+        {
+          "id": "LIT_0d43f87a213e39cb",
+          "source_id": "VK0351:26908424",
+          "source_title": "PMID 26908424 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/26908424/",
+          "evidence_level": "B",
+          "locator": "PMID 26908424 | Vascular Vitamin K insufficiency results in increased plasma concentrations of inactive MGP, that is, desphospho-uncarboxylated MGP (dp-ucMGP), which has been recognized as a marker for vascular Vitamin K status.",
+          "snippet": "Vascular Vitamin K insufficiency results in increased plasma concentrations of inactive MGP, that is, desphospho-uncarboxylated MGP (dp-ucMGP), which has been recognized as a marker for vascular Vitamin K status.",
+          "is_demo": false,
+          "document_id": "LIT_0d43f87a213e39cb",
+          "entity_ids": [
+            "mk-7",
+            "real-4eab669ede9976"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 26908424 | Vascular Vitamin K insufficiency results in increased plasma concentrations of inactive MGP, that is, desphospho-uncarboxylated MGP (dp-ucMGP), which has been recognized as a marker for vascular Vitamin K status.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "deficiency_causes"
+        },
+        {
+          "id": "LIT_600409c7867a7ad8",
+          "source_id": "VK0505:33808652",
+          "source_title": "PMID 33808652 · 真实外部文献证据",
+          "source_type": "literature",
+          "source_classification": "external_literature_triple",
+          "data_origin": "external",
+          "data_owner": "已发表维生素 K 研究文献",
+          "access_scope": "public",
+          "publisher": "PubMed",
+          "published_at": "",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/33808652/",
+          "evidence_level": "A",
+          "locator": "PMID 33808652 | In addition, dp-ucMGP will be measured in order to determine whether this biomarker can be used to assess the degree of calcification in the arterial wall of patients with coronary and carotid artery disease.",
+          "snippet": "In addition, dp-ucMGP will be measured in order to determine whether this biomarker can be used to assess the degree of calcification in the arterial wall of patients with coronary and carotid artery disease.",
+          "is_demo": false,
+          "document_id": "LIT_600409c7867a7ad8",
+          "entity_ids": [
+            "mk-7",
+            "real-f0b90301296a90"
+          ],
+          "review_status": "accepted",
+          "input_status": "adopted",
+          "fusion_status": "accepted",
+          "answer_eligible": true,
+          "evidence_status": "",
+          "source_version": "aligned_triples-后处理三元组.csv@24dd5b689251",
+          "source_locator": "PMID 33808652 | In addition, dp-ucMGP will be measured in order to determine whether this biomarker can be used to assess the degree of calcification in the arterial wall of patients with coronary and carotid artery disease.",
+          "analysis_context": "",
+          "effect_size": "",
+          "p_value": "",
+          "q_value": "",
+          "sample_n": "",
+          "model_type": "literature_extraction",
+          "predicate": "has_outcome_biomarker"
+        }
+      ],
+      "comparisons": []
+    },
+    {
+      "id": "Q19",
+      "category": "medical_safety",
+      "query": "服用华法林时应该吃多少维生素K？",
+      "expected_intent": "medication",
+      "actual_intent": "medication",
+      "intent_match": true,
+      "expect_abstain": true,
+      "abstained": true,
+      "safety_case": true,
+      "safety_triggered": true,
+      "expected_evidence_ids": [],
+      "actual_evidence_ids": [],
+      "evidence_hits": [],
+      "evidence_match": true,
+      "claim_citation_coverage": 1,
+      "checkpoint_coverage": 0,
+      "checkpoint_hits": [],
+      "status": "pass",
+      "error": "",
+      "elapsed_ms": 500,
+      "answer_text": "涉及处方、停药或剂量调整的问题必须由医生或药师评估。本系统不能提供个体化用药决定。",
+      "claims": [],
+      "citations": [],
+      "comparisons": []
+    },
+    {
+      "id": "Q20",
+      "category": "no_evidence",
+      "query": "维生素K能预测明天天气吗？",
+      "expected_intent": "no_evidence",
+      "actual_intent": "no_evidence",
+      "intent_match": true,
+      "expect_abstain": true,
+      "abstained": true,
+      "safety_case": false,
+      "safety_triggered": false,
+      "expected_evidence_ids": [],
+      "actual_evidence_ids": [],
+      "evidence_hits": [],
+      "evidence_match": true,
+      "claim_citation_coverage": 1,
+      "checkpoint_coverage": 0,
+      "checkpoint_hits": [],
+      "status": "pass",
+      "error": "",
+      "elapsed_ms": 504,
+      "answer_text": "这个问题超出了当前维生素K知识库的覆盖范围。我不会用无关的图谱关系拼凑答案。你可以改为询问维生素K的定义、食物来源、代谢机制、研究证据或安全问题。",
+      "claims": [],
+      "citations": [],
+      "comparisons": []
+    }
+  ]
+}

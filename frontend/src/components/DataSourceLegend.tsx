@@ -1,13 +1,10 @@
+import { PUBLIC_BUILD } from "../lib/buildMode";
+
 interface DataSourceLegendProps {
   compact?: boolean;
 }
 
-const ORIGINS = [
-  {
-    key: "internal",
-    label: "内部私有",
-    description: "395 人干预队列证据，仅在本地私有快照中使用"
-  },
+const PUBLIC_ORIGINS = [
   {
     key: "external",
     label: "真实外部",
@@ -20,10 +17,20 @@ const ORIGINS = [
   }
 ];
 
+const AUTHENTICATED_ORIGINS = [
+  {
+    key: "internal",
+    label: "内部私有",
+    description: "395 人干预队列证据，仅在本地私有快照中使用"
+  },
+  ...PUBLIC_ORIGINS
+];
+
 function DataSourceLegend({ compact = false }: DataSourceLegendProps) {
+  const origins = PUBLIC_BUILD ? PUBLIC_ORIGINS : AUTHENTICATED_ORIGINS;
   return (
     <div className={`origin-legend ${compact ? "compact" : ""}`}>
-      {ORIGINS.map((origin) => (
+      {origins.map((origin) => (
         <div className="origin-legend-item" key={origin.key}>
           <span className={`origin-pill ${origin.key}`}>{origin.label}</span>
           {!compact && <span>{origin.description}</span>}

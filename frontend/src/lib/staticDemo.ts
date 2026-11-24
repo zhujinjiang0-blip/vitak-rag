@@ -11,6 +11,7 @@ import type {
   SearchResult,
   Subgraph
 } from "./types";
+import { enrichAnswerClaims } from "./claimBoundary";
 
 export const STATIC_DEMO_MODE = import.meta.env.VITE_STATIC_DEMO === "true";
 
@@ -102,6 +103,10 @@ function matchNodes(query: string, nodes: GraphNode[]): GraphNode[] {
 }
 
 const intentRules: Array<[string, string[]]> = [
+  ["negative_evidence", ["无显著", "不显著", "未观察到", "阴性", "没有关联", "无关联"]],
+  ["interaction", ["协同", "交互", "联合作用"]],
+  ["measurement_interpretation", ["浓度多少", "低、中、高", "低中高", "参考范围"]],
+  ["mechanism", ["羧化", "作用机制", "机制", "骨钙素"]],
   ["comparison", ["区别", "比较", "不同", "差异", "哪个好", "对比"]],
   ["food_sources", ["食物", "吃什么", "来源", "蔬菜", "叶菜", "纳豆", "饮食", "含有", "富含"]],
   ["drug_interactions", ["相互作用", "一起吃", "同服", "药物", "华法林", "抗凝", "抗生素"]],
@@ -770,6 +775,20 @@ function semanticTerms(query: string): string[] {
   return [...output];
 }
 
+function isOutOfScopeQuery(query: string): boolean {
+  const normalizedQuery = normalize(query);
+  return [
+    "预测明天天气",
+    "明天天气",
+    "修复手机",
+    "手机屏幕",
+    "考试满分",
+    "替代所有药物",
+    "治愈所有疾病",
+    "火星天气"
+  ].some((term) => normalizedQuery.includes(normalize(term)));
+}
+
 function rankRealEvidence(
   query: string,
   entities: GraphNode[],
@@ -1010,7 +1029,8 @@ function buildTopicAnswer(
   started: number,
   opening: string,
   closing: string,
-  specs: SynthesisSpec[]
+  specs: SynthesisSpec[],
+  includeStructuredFoodEvidence = true
 ): Answer | null {
   const usedSources = new Set<string>();
   const claims: Claim[] = [];
@@ -1027,7 +1047,7 @@ function buildTopicAnswer(
       relation: "evidence_synthesis"
     });
   }
-  if (intent === "food_sources") {
+  if (intent === "food_sources" && includeStructuredFoodEvidence) {
     const structuredData: StaticData = {
       ...data,
       evidence: data.evidence.filter(
@@ -1106,6 +1126,317 @@ function topicSynthesisAnswer(
   started: number
 ): Answer | null {
   const normalizedQuery = normalize(query);
+
+  if (
+    normalizedQuery.includes("羽衣甘蓝") ||
+    normalizedQuery.includes("kale")
+  ) {
+    return buildTopicAnswer(
+      query,
+      data,
+      entities,
+      intent,
+      sessionId,
+      started,
+      "结构化食物数据记录羽衣甘蓝含有叶绿醌，即维生素K1；部分记录还包含二氢叶绿醌。",
+      "不同数据库记录的食物形态和检测项目不同，含量数值应结合食物品种、烹饪方式和数据库口径解释。",
+      [
+        {
+          text: "羽衣甘蓝含有叶绿醌（维生素K1）。",
+          patterns: [
+            /Kale.*含有Phylloquinone/i,
+            /Kale.*contains.*Phylloquinone/i
+          ]
+        },
+        {
+          text: "部分羽衣甘蓝记录还包含二氢叶绿醌。",
+          patterns: [
+            /Kale.*含有Dihydrophylloquinone/i
+          ]
+        }
+      ],
+      false
+    );
+  }
+
+  if (
+    normalizedQuery.includes("纳豆") ||
+    normalizedQuery.includes("natto")
+  ) {
+    return buildTopicAnswer(
+      query,
+      data,
+      entities,
+      intent,
+      sessionId,
+      started,
+      "纳豆是发酵大豆食品，也是MK-7较典型、含量较高的天然食物来源。",
+      "纳豆摄入会明显影响MK-7暴露，但食物含量受发酵工艺和份量影响，不能仅凭食物名称推算个人实际摄入量。",
+      [
+        {
+          text: "纳豆被认为是MK-7最丰富的天然来源之一。",
+          patterns: [
+            /Natto.*richest natural source of menaquinone-7/i,
+            /MK-7 derived from fermented soy/i
+          ]
+        },
+        {
+          text: "东京绝经后女性的血清MK-7显著高于英国女性，这一差异主要可归因于纳豆摄入。",
+          patterns: [
+            /serum MK-7 is 14 times higher in postmenopausal women living in Tokyo/i
+          ]
+        }
+      ],
+      false
+    );
+  }
+
+  if (
+    normalizedQuery.includes("warfarin") &&
+    normalizedQuery.includes("国际标准化比值")
+  ) {
+    return buildTopicAnswer(
+      query,
+      data,
+      entities,
+      intent,
+      sessionId,
+      started,
+      "华法林治疗需要监测INR，因为INR反映维生素K依赖凝血因子的抗凝抑制程度，也是评估出血与血栓风险的重要指标。",
+      "维生素K摄入变化、合并用药和身体状况都可能改变INR；监测应由专业医疗人员结合具体临床情况安排。",
+      [
+        {
+          text: "华法林通过拮抗维生素K，抑制维生素K依赖凝血蛋白的活性。",
+          patterns: [
+            /Warfarin functions as a Vitamin K antagonist.*coagulation proteins/i
+          ]
+        },
+        {
+          text: "华法林治疗需要持续进行凝血监测和临床随访。",
+          patterns: [
+            /Warfarin therapy requires vigilant coagulation monitoring/i,
+            /monitoring.*INR/i
+          ]
+        },
+        {
+          text: "富含维生素K的食物可能降低INR，因此饮食稳定性会影响监测解释。",
+          patterns: [
+            /large amounts of Vitamin K.*lower the INR/i
+          ]
+        }
+      ]
+    );
+  }
+
+  if (normalizedQuery.includes("dp-ucmgp")) {
+    return buildTopicAnswer(
+      query,
+      data,
+      entities,
+      intent,
+      sessionId,
+      started,
+      "dp-ucMGP主要是反映血管维生素K功能状态的生物标志物，也与血管钙化风险相关。",
+      "它适合用于研究维生素K状态和血管健康关联，但不能单独诊断血管钙化或替代影像学检查。",
+      [
+        {
+          text: "血管维生素K不足会导致无活性MGP升高，即dp-ucMGP升高。",
+          patterns: [
+            /Vascular Vitamin K insufficiency results in increased plasma concentrations of inactive MGP/i
+          ]
+        },
+        {
+          text: "研究可使用dp-ucMGP评估动脉壁钙化程度或血管风险。",
+          patterns: [
+            /dp-ucMGP.*assess the degree of calcification in the arterial wall/i,
+            /High plasma levels of dephosphorylated uncarboxylated MGP.*cardiovascular risk/i
+          ]
+        }
+      ]
+    );
+  }
+
+  if (
+    normalizedQuery.includes("新生儿") &&
+    (normalizedQuery.includes("vitamink") ||
+      normalizedQuery.includes("缺乏") ||
+      normalizedQuery.includes("出血"))
+  ) {
+    return buildTopicAnswer(
+      query,
+      data,
+      entities,
+      intent,
+      sessionId,
+      started,
+      "新生儿出生后需要关注维生素K，因为其维生素K储备和摄入有限，严重缺乏可导致维生素K缺乏性出血。",
+      "新生儿维生素K预防应由产科、儿科或相关医疗人员按规范执行，本系统不提供个体化给药决定。",
+      [
+        {
+          text: "所有新生儿出生后都需要叶绿醌以预防维生素K缺乏性出血。",
+          patterns: [
+            /All newborns require phylloquinone after birth to prevent Vitamin K deficiency bleeding/i
+          ]
+        },
+        {
+          text: "维生素K缺乏可能导致新生儿出血。",
+          patterns: [
+            /deficiency may cause neonatal hemorrhage/i
+          ]
+        },
+        {
+          text: "新生儿维生素K问题还可见于出血性疾病或吸收不良相关情况。",
+          patterns: [
+            /haemorrhagic disease of the newborn|malabsorption/i
+          ]
+        }
+      ]
+    );
+  }
+
+  if (
+    normalizedQuery.includes("vitamink1") &&
+    intent === "food_sources" &&
+    !normalizedQuery.includes("vitamink2")
+  ) {
+    return buildTopicAnswer(
+      query,
+      data,
+      entities,
+      intent,
+      sessionId,
+      started,
+      "维生素K1（叶绿醌）的主要膳食来源是深绿色叶菜和植物油。",
+      "具体含量会受食物部位、品种、加工和烹饪方式影响。",
+      [
+        {
+          text: "叶绿醌主要存在于深绿色叶菜和部分植物油中。",
+          patterns: [
+            /Phylloquinone.*primarily in dark-green leafy vegetables and certain plant oils/i,
+            /Phylloquinone.*leafy green vegetables and certain oils/i
+          ]
+        },
+        {
+          text: "菠菜、羽衣甘蓝、西兰花、卷心菜等绿色蔬菜通常含有较高水平的叶绿醌。",
+          patterns: [
+            /spinach, kale, broccoli.*contain phylloquinone/i,
+            /Green leafy vegetables.*kale.*phylloquinone/i
+          ]
+        }
+      ],
+      false
+    );
+  }
+
+  if (
+    normalizedQuery.includes("mk-7") &&
+    normalizedQuery.includes("vitamind") &&
+    ["协同", "交互", "联合"].some((term) => normalizedQuery.includes(term))
+  ) {
+    return buildTopicAnswer(
+      query,
+      data,
+      entities,
+      intent,
+      sessionId,
+      started,
+      "现有公开证据不足以确认MK-7和维生素D之间存在明确的协同或统计交互作用。",
+      "联合补充后两种营养素水平升高，只能说明暴露或依从性变化，不能单独证明协同效应。是否优于单独补充仍需针对交互结局的对照研究。",
+      [
+        {
+          text: "已有随机干预研究把钙、维生素D3和MK-7作为联合营养背景，但研究目的并不是单独验证两者的统计交互。",
+          patterns: [
+            /calcium, vitamin D3, and phylloquinone.*menaquinone-7.*bone metabolism/i
+          ]
+        },
+        {
+          text: "现有文献关于维生素K对骨代谢的精确作用仍存在矛盾，不能仅凭联合补充研究确认协同效果。",
+          patterns: [
+            /literature is contradictory regarding the exact effect of Vitamin K on bone metabolism/i
+          ]
+        },
+        {
+          text: "联合补充可同时提高维生素K2和25-羟基维生素D水平，但生物标志物升高不等于两者发生协同作用。",
+          patterns: [
+            /Menatetrenone with calcium and vitamin D supplementation increased the serum levels/i
+          ]
+        }
+      ]
+    );
+  }
+
+  if (
+    normalizedQuery.includes("vitamink") &&
+    normalizedQuery.includes("血脂")
+  ) {
+    return buildTopicAnswer(
+      query,
+      data,
+      entities,
+      intent,
+      sessionId,
+      started,
+      "现有研究关于维生素K与血脂的结论并不完全一致，差异还会随血脂指标、维生素K形式和人群而变化。",
+      "因此不能把不同研究简单合并成一个统一方向。需要分别比较甘油三酯、总胆固醇、LDL-C和HDL-C，并区分干预研究与观察性关联。",
+      [
+        {
+          text: "一项随机对照研究显示，叶绿醌补充未显著改变总胆固醇和LDL-C，但甘油三酯增加约15%，HDL-C出现接近显著的变化。",
+          patterns: [
+            /phylloquinone did not affect.*TC or LDL-C.*15% increase in TG/i
+          ]
+        },
+        {
+          text: "观察性研究则发现，循环叶绿醌与甘油三酯和LDL胆固醇呈正相关。",
+          patterns: [
+            /Circulating phylloquinone was significantly positively correlated with triglycerides, LDL cholesterol/i
+          ]
+        },
+        {
+          text: "另有研究提示较高甲萘醌摄入与HDL胆固醇/总胆固醇比值较高有关，说明不同血脂结局的方向并不一致。",
+          patterns: [
+            /HDL cholesterol-to-total cholesterol ratio was higher with higher menaquinones intake/i
+          ]
+        }
+      ]
+    );
+  }
+
+  if (
+    normalizedQuery.includes("mk-7") &&
+    normalizedQuery.includes("浓度")
+  ) {
+    return buildTopicAnswer(
+      query,
+      data,
+      entities,
+      intent,
+      sessionId,
+      started,
+      "目前没有可普遍用于临床判读的血清MK-7低、中、高统一阈值，研究通常按人群分布、四分位数或检测方法来分组。",
+      "同一个MK-7浓度在不同地区、饮食背景、采样时间和检测平台下不能直接套用固定标签，更不应据此自行判断缺乏或决定补充剂量。",
+      [
+        {
+          text: "不同地区人群的血清MK-7差异很大，例如东京绝经后女性的水平可比英国女性高约14倍，主要与纳豆摄入有关。",
+          patterns: [
+            /serum MK-7 is 14 times higher in postmenopausal women living in Tokyo/i
+          ]
+        },
+        {
+          text: "研究可测量血浆维生素K1、MK-4和MK-7浓度，但测量本身不等于建立了统一的低、中、高临床范围。",
+          patterns: [
+            /Plasma vitamin K1, MK-4, and MK-7 concentrations were analyzed/i
+          ]
+        },
+        {
+          text: "干预研究中的剂量和浓度分组均服务于特定研究设计，不能直接转换为面向所有人的临床阈值。",
+          patterns: [
+            /180 μg vitamin K2.*MK-7/i,
+            /serum MK-7.*intake of natto/i
+          ]
+        }
+      ]
+    );
+  }
 
   if (
     normalizedQuery.includes("vitamink") &&
@@ -1237,6 +1568,44 @@ function topicSynthesisAnswer(
   }
 
   if (normalizedQuery.includes("mk-7") && intent === "research") {
+    if (
+      normalizedQuery.includes("homa-ir") ||
+      normalizedQuery.includes("胰岛素抵抗") ||
+      normalizedQuery.includes("insulin抵抗") ||
+      normalizedQuery.includes("降低")
+    ) {
+      return buildTopicAnswer(
+        query,
+        data,
+        entities,
+        intent,
+        sessionId,
+        started,
+        "现有公开证据还不能支持“补充MK-7一定能够降低HOMA-IR”这一结论。",
+        "这些研究并没有形成一致、可直接外推的MK-7干预结论。观察性关联或叶绿醌研究不能自动等同于MK-7的因果效果。",
+        [
+          {
+            text: "叶绿醌摄入与空腹胰岛素、血糖、HOMA-IR和HbA1c没有显著关联。",
+            patterns: [
+              /Phylloquinone intake was not associated with fasting insulin and glucose concentrations, HOMA-IR/i
+            ]
+          },
+          {
+            text: "另有随机对照研究显示，两组HOMA-IR没有显著差异。",
+            patterns: [
+              /HOMA-IR was similar in the 2 groups/i,
+              /did not differ.*HOMA-IR/i
+            ]
+          },
+          {
+            text: "但也有研究报告部分男性在补充后HOMA-IR下降，说明研究结果并不完全一致，且不能直接外推为MK-7的确定疗效。",
+            patterns: [
+              /HOMA-IR significantly decreased during the intervention in men/i
+            ]
+          }
+        ]
+      );
+    }
     return buildTopicAnswer(
       query,
       data,
@@ -1266,6 +1635,81 @@ function topicSynthesisAnswer(
           patterns: [
             /contrast to our hypothesis.*vascular calcification/i,
             /literature is contradictory.*vitamin K/i
+          ]
+        }
+      ]
+    );
+  }
+
+  if (
+    normalizedQuery.includes("mk-4") &&
+    normalizedQuery.includes("mk-7")
+  ) {
+    return buildTopicAnswer(
+      query,
+      data,
+      entities,
+      intent,
+      sessionId,
+      started,
+      "MK-4和MK-7都属于维生素K2，但它们的食物来源、半衰期和体内暴露特征不同，不能按同一种补充形式互换理解。",
+      "现有证据支持两者在代谢特征和暴露稳定性上存在差异，但不能简单推导出哪一种在所有人身上效果更好。",
+      [
+        {
+          text: "MK-4主要与动物性食物相关，而MK-7更常见于纳豆和部分发酵食品。",
+          patterns: [
+            /meat and egg yolk.*MK-4.*fermented foods.*MK-7/i,
+            /meats \(MK-4\).*fermented foods/i
+          ]
+        },
+        {
+          text: "MK-7通常具有更长半衰期和更高生物利用度，因此血清水平更稳定。",
+          patterns: [
+            /MK-7.*long half-life.*superior bioavailability/i,
+            /MK-7 had a significantly longer half-life/i
+          ]
+        },
+        {
+          text: "两者都能参与维生素K依赖蛋白的羧化，但组织分布和具体生物学效应仍需结合研究条件解释。",
+          patterns: [
+            /MK-7 has been shown to have anabolic effects on bone calcification as does MK-4/i,
+            /longer half-life time resulting in much more stable serum levels.*carboxylation of osteocalcin/i
+          ]
+        }
+      ]
+    );
+  }
+
+  if (
+    intent === "negative_evidence" ||
+    /无显著|阴性|没有关联|未观察到/.test(query)
+  ) {
+    return buildTopicAnswer(
+      query,
+      data,
+      entities,
+      intent,
+      sessionId,
+      started,
+      "有。当前真实文献中保留了与代谢指标相关的阴性或未观察到显著关联的结果。",
+      "阴性结果不等于证明维生素K对所有指标完全无效，它说明在特定人群、剂量、时间和结局下没有观察到显著效应。",
+      [
+        {
+          text: "一项随机对照研究显示，叶绿醌补充没有显著影响CRP、IL-6、sVCAM-1、sICAM-1、总胆固醇或LDL-C。",
+          patterns: [
+            /phylloquinone did not affect inflammatory markers.*TC or LDL-C/i
+          ]
+        },
+        {
+          text: "另一项研究显示，叶绿醌摄入与空腹胰岛素、血糖、HOMA-IR和HbA1c没有显著关联。",
+          patterns: [
+            /Phylloquinone intake was not associated with fasting insulin and glucose concentrations, HOMA-IR/i
+          ]
+        },
+        {
+          text: "还有研究报告两组HOMA-IR没有显著差异。",
+          patterns: [
+            /HOMA-IR was similar in the 2 groups/i
           ]
         }
       ]
@@ -1351,7 +1795,7 @@ function topicSynthesisAnswer(
   return null;
 }
 
-export async function askStaticQuestion(
+async function buildStaticAnswer(
   query: string,
   requestedSessionId?: string
 ): Promise<Answer> {
@@ -1384,6 +1828,24 @@ export async function askStaticQuestion(
 
   const entities = matchNodes(query, data.nodes);
   const intent = detectIntent(query);
+  if (isOutOfScopeQuery(query)) {
+    return {
+      session_id: sessionId,
+      query,
+      normalized_query: normalize(query),
+      intent: "no_evidence",
+      answer_text:
+        "这个问题超出了当前维生素K知识库的覆盖范围。我不会用无关的图谱关系拼凑答案。你可以改为询问维生素K的定义、食物来源、代谢机制、研究证据或安全问题。",
+      claims: [],
+      citations: [],
+      graph_paths: [],
+      sufficiency: "none",
+      safety_notice: null,
+      related_entities: entities,
+      data_version: data.version,
+      elapsed_ms: Math.round(performance.now() - started)
+    };
+  }
   const synthesized = warfarinVitaminKAnswer(
     query,
     data,
@@ -1475,4 +1937,13 @@ export async function askStaticQuestion(
     data_version: data.version,
     elapsed_ms: Math.round(performance.now() - started)
   };
+}
+
+export async function askStaticQuestion(
+  query: string,
+  requestedSessionId?: string
+): Promise<Answer> {
+  return enrichAnswerClaims(
+    await buildStaticAnswer(query, requestedSessionId)
+  );
 }

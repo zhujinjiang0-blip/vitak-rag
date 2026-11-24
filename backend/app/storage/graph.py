@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections import deque
 from pathlib import Path
 from typing import Any
@@ -8,6 +9,10 @@ from typing import Any
 import kuzu
 
 from app.schemas import GraphEdge, GraphNode, GraphPath
+
+
+def _search_key(value: str) -> str:
+    return re.sub(r"[\s_-]+", "", value.casefold())
 
 
 class KuzuGraphStore:
@@ -165,7 +170,7 @@ class KuzuGraphStore:
         return self._row_to_node(result.get_next())
 
     def search_nodes(self, query: str, limit: int = 20) -> list[GraphNode]:
-        needle = query.strip().lower()
+        needle = _search_key(query.strip())
         if not needle:
             return self.all_nodes()[:limit]
 
@@ -174,7 +179,7 @@ class KuzuGraphStore:
         contains: list[GraphNode] = []
         for node in self.all_nodes():
             haystacks = [node.id, node.name, *node.aliases]
-            lowered = [item.lower() for item in haystacks]
+            lowered = [_search_key(item) for item in haystacks]
             if needle in lowered:
                 exact.append(node)
             elif any(item.startswith(needle) for item in lowered):
@@ -238,6 +243,23 @@ class KuzuGraphStore:
                    r.confidence, r.is_demo
             ORDER BY r.id
             """
+        )
+        edges = []
+        while result.has_next():
+            edges.append(self._row_to_edge(result.get_next()))
+        return edges
+
+    def get_edges_by_ids(self, edge_ids: set[str]) -> list[GraphEdge]:
+        if not edge_ids:
+            return []
+        result = self.connection.execute(
+            """
+            MATCH (a:Entity)-[r:RELATES]->(b:Entity)
+            WHERE r.id IN $ids
+            RETURN r.id, a.id, b.id, r.evidence_ids, r.predicate,
+                   r.evidence_level, r.confidence, r.is_demo
+            """,
+            {"ids": sorted(edge_ids)},
         )
         edges = []
         while result.has_next():

@@ -2,16 +2,21 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shlex
 import sys
 from pathlib import Path
 
 import uvicorn
 
 from app.config import PROJECT_ROOT, get_settings
+from app.schemas import UserRole
+from app.services.auth import AuthStore
 from app.services.evaluation import EvaluationService
-from app.services.evidence_tables import EvidenceTableImporter
+from app.services.evidence_tables import EvidenceTableImporter, file_sha256
 from app.services.external_triples import ExternalTripleImporter
 from app.services.ingest import IngestionService
+from app.services.runtime_llm import RuntimeLLMClient, RuntimeLLMError
 from app.services.snapshot import DEMO_VERSION, SnapshotManager
 from app.services.static_export import StaticExportService
 
@@ -43,6 +48,80 @@ def _parser() -> argparse.ArgumentParser:
     )
     snapshot_activate.add_argument("version")
     snapshot_activate.set_defaults(handler=_snapshot_activate)
+
+    snapshot_clone = subparsers.add_parser(
+        "snapshot-clone",
+        help="copy an existing snapshot to a new immutable version",
+    )
+    snapshot_clone.add_argument("base_version")
+    snapshot_clone.add_argument("version")
+    snapshot_clone.add_argument("--activate", action="store_true")
+    snapshot_clone.set_defaults(handler=_snapshot_clone)
+
+    auth_admin = subparsers.add_parser(
+        "auth-init-admin",
+        help="create the first research administrator",
+    )
+    auth_admin.add_argument("username")
+    auth_admin.add_argument("password")
+    auth_admin.add_argument("--display-name", default="")
+    auth_admin.set_defaults(handler=_auth_init_admin)
+
+    auth_user = subparsers.add_parser(
+        "auth-create-user",
+        help="create a researcher account",
+    )
+    auth_user.add_argument("username")
+    auth_user.add_argument("password")
+    auth_user.add_argument("--display-name", default="")
+    auth_user.add_argument(
+        "--role",
+        choices=[UserRole.RESEARCHER.value, UserRole.ADMIN.value],
+        default=UserRole.RESEARCHER.value,
+    )
+    auth_user.set_defaults(handler=_auth_create_user)
+
+    for command, help_text in (
+        ("auth-disable", "disable a research account"),
+        ("auth-enable", "enable a research account"),
+    ):
+        status = subparsers.add_parser(command, help=help_text)
+        status.add_argument("user")
+        status.set_defaults(handler=_auth_change_status)
+
+    auth_reset = subparsers.add_parser(
+        "auth-reset-password",
+        help="reset a password and revoke active sessions",
+    )
+    auth_reset.add_argument("user")
+    auth_reset.add_argument("password")
+    auth_reset.set_defaults(handler=_auth_reset_password)
+
+    auth_revoke = subparsers.add_parser(
+        "auth-revoke",
+        help="revoke all sessions for an account",
+    )
+    auth_revoke.add_argument("user")
+    auth_revoke.set_defaults(handler=_auth_revoke)
+
+    subparsers.add_parser(
+        "auth-list",
+        help="list research accounts",
+    ).set_defaults(handler=_auth_list)
+
+    auth_audit = subparsers.add_parser(
+        "auth-audit",
+        help="show recent authentication and access audit records",
+    )
+    auth_audit.add_argument("--limit", type=int, default=100)
+    auth_audit.set_defaults(handler=_auth_audit)
+
+    llm_status = subparsers.add_parser(
+        "runtime-llm-status",
+        help="show runtime model configuration and optionally probe the endpoint",
+    )
+    llm_status.add_argument("--probe", action="store_true")
+    llm_status.set_defaults(handler=_runtime_llm_status)
 
     ingest = subparsers.add_parser("ingest", help="import a document into a new snapshot")
     ingest.add_argument("path")
@@ -129,8 +208,13 @@ def _parser() -> argparse.ArgumentParser:
     rebuild.set_defaults(handler=_rebuild_index)
 
     evaluate = subparsers.add_parser("evaluate", help="run the 80-question evaluation set")
-    evaluate.add_argument("--output", default=str(PROJECT_ROOT / "data/eval/report.json"))
+    evaluate.add_argument(
+        "--output",
+        default=str(PROJECT_ROOT / "data/eval/report-two-group.json"),
+    )
     evaluate.add_argument("--questions", default=None)
+    evaluate.add_argument("--snapshot", default=None)
+    evaluate.add_argument("--manifest-output", default=None)
     evaluate.set_defaults(handler=_evaluate)
 
     generate_eval = subparsers.add_parser(
@@ -141,6 +225,7 @@ def _parser() -> argparse.ArgumentParser:
         "--output",
         default=str(PROJECT_ROOT / "data/eval/questions.jsonl"),
     )
+    generate_eval.add_argument("--snapshot", default=None)
     generate_eval.set_defaults(handler=_generate_eval)
 
     export_static = subparsers.add_parser(
@@ -157,6 +242,37 @@ def _parser() -> argparse.ArgumentParser:
 
 def _print(value: object) -> None:
     print(json.dumps(value, ensure_ascii=False, indent=2, default=str))
+
+
+def _write_evaluation_artifacts(
+    report: dict,
+    output: Path,
+    artifact_manifest: Path,
+) -> str:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    report_sha256 = file_sha256(output)
+    artifact_manifest.parent.mkdir(parents=True, exist_ok=True)
+    artifact_manifest.write_text(
+        json.dumps(
+            {
+                "generated_at": report["generated_at"],
+                "report": {
+                    "path": str(output.resolve()),
+                    "sha256": report_sha256,
+                },
+                "inputs": report["inputs"],
+                "reproducibility": report["reproducibility"],
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    return report_sha256
 
 
 def _snapshot_list(args: argparse.Namespace) -> int:
@@ -180,6 +296,111 @@ def _snapshot_activate(args: argparse.Namespace) -> int:
     manager.bootstrap()
     _print(manager.activate(args.version))
     return 0
+
+
+def _snapshot_clone(args: argparse.Namespace) -> int:
+    settings = get_settings()
+    context = SnapshotManager(settings).clone_snapshot(
+        args.base_version,
+        args.version,
+        activate=args.activate,
+    )
+    try:
+        _print(
+            {
+                "version": context.version,
+                "path": str(context.root),
+                "activated": args.activate,
+                "manifest": context.manifest,
+            }
+        )
+    finally:
+        context.close()
+    return 0
+
+
+def _auth_store() -> AuthStore:
+    settings = get_settings()
+    return AuthStore(settings.resolved_auth_db_path, settings.session_ttl_hours)
+
+
+def _auth_init_admin(args: argparse.Namespace) -> int:
+    user = _auth_store().create_user(
+        args.username,
+        args.password,
+        display_name=args.display_name,
+        role=UserRole.ADMIN,
+    )
+    _print({"created": user.model_dump(mode="json"), "role": "admin"})
+    return 0
+
+
+def _auth_create_user(args: argparse.Namespace) -> int:
+    user = _auth_store().create_user(
+        args.username,
+        args.password,
+        display_name=args.display_name,
+        role=UserRole(args.role),
+    )
+    _print({"created": user.model_dump(mode="json")})
+    return 0
+
+
+def _auth_change_status(args: argparse.Namespace) -> int:
+    active = args.command == "auth-enable"
+    changed = _auth_store().set_active(args.user, active)
+    _print({"user": args.user, "active": active, "updated": changed})
+    return 0 if changed else 1
+
+
+def _auth_reset_password(args: argparse.Namespace) -> int:
+    changed = _auth_store().reset_password(args.user, args.password)
+    _print({"user": args.user, "password_reset": changed, "sessions_revoked": changed})
+    return 0 if changed else 1
+
+
+def _auth_revoke(args: argparse.Namespace) -> int:
+    count = _auth_store().revoke_sessions(args.user)
+    _print({"user": args.user, "sessions_revoked": count})
+    return 0
+
+
+def _auth_list(args: argparse.Namespace) -> int:
+    _print([user.model_dump(mode="json") for user in _auth_store().list_users()])
+    return 0
+
+
+def _auth_audit(args: argparse.Namespace) -> int:
+    _print(_auth_store().audit_log(args.limit))
+    return 0
+
+
+def _runtime_llm_status(args: argparse.Namespace) -> int:
+    settings = get_settings()
+    client = RuntimeLLMClient(settings)
+    result = {
+        "enabled": settings.runtime_llm_enabled,
+        "configured": client.configured,
+        "provider": client.provider,
+        "model": client.model,
+        "base_url_set": bool(settings.runtime_llm_base_url.strip()),
+        "api_key_set": bool(settings.runtime_llm_api_key.strip()),
+        "probe": "not_requested",
+    }
+    if args.probe and client.configured:
+        try:
+            client.parse_question(
+                "维生素K是什么？",
+                mode="domain",
+                candidate_entities=[],
+                filters={},
+            )
+            result["probe"] = "passed"
+        except RuntimeLLMError as error:
+            result["probe"] = "failed"
+            result["error"] = str(error)
+    _print(result)
+    return 0 if result["probe"] != "failed" else 1
 
 
 def _ingest(args: argparse.Namespace) -> int:
@@ -303,9 +524,15 @@ def _rebuild_index(args: argparse.Namespace) -> int:
 
 
 def _generate_eval(args: argparse.Namespace) -> int:
-    snapshot = SnapshotManager(get_settings()).bootstrap()
+    settings = get_settings()
+    manager = SnapshotManager(settings)
+    snapshot = (
+        manager.open(args.snapshot)
+        if args.snapshot
+        else manager.bootstrap()
+    )
     try:
-        count = EvaluationService(get_settings(), snapshot).write_questions(
+        count = EvaluationService(settings, snapshot).write_questions(
             Path(args.output)
         )
         _print({"output": args.output, "questions": count})
@@ -315,28 +542,96 @@ def _generate_eval(args: argparse.Namespace) -> int:
 
 
 def _evaluate(args: argparse.Namespace) -> int:
-    snapshot = SnapshotManager(get_settings()).bootstrap()
+    settings = get_settings()
+    manager = SnapshotManager(settings)
+    snapshot = (
+        manager.open(args.snapshot)
+        if args.snapshot
+        else manager.bootstrap()
+    )
     try:
-        service = EvaluationService(get_settings(), snapshot)
+        service = EvaluationService(settings, snapshot)
         questions = None
-        if args.questions:
+        question_path = Path(args.questions) if args.questions else None
+        if question_path:
             from app.services.evaluation import EvaluationQuestion
 
             questions = [
                 EvaluationQuestion(**json.loads(line))
-                for line in Path(args.questions).read_text(encoding="utf-8").splitlines()
+                for line in question_path.read_text(encoding="utf-8").splitlines()
                 if line.strip()
             ]
         report = service.run(questions)
+        snapshot_manifest_path = snapshot.root / "manifest.json"
+        code_root = Path(__file__).resolve().parent
+        code_inputs = {
+            path.relative_to(code_root).as_posix(): {
+                "path": str(path),
+                "sha256": file_sha256(path),
+            }
+            for path in (
+                Path(__file__).resolve(),
+                code_root / "services" / "evaluation.py",
+                code_root / "services" / "qa.py",
+                code_root / "services" / "qa_orchestrator.py",
+            )
+        }
+        report["inputs"] = {
+            "snapshot_manifest": {
+                "path": str(snapshot_manifest_path),
+                "sha256": file_sha256(snapshot_manifest_path),
+            },
+            "question_set": (
+                {
+                    "path": str(question_path.resolve()),
+                    "sha256": file_sha256(question_path),
+                }
+                if question_path
+                else {
+                    "path": "generated_in_memory",
+                    "sha256": "",
+                }
+            ),
+            "code_files": code_inputs,
+        }
         output = Path(args.output)
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(
-            json.dumps(report, ensure_ascii=False, indent=2),
-            encoding="utf-8",
+        artifact_manifest = (
+            Path(args.manifest_output)
+            if args.manifest_output
+            else output.with_suffix(".manifest.json")
+        )
+        report["reproducibility"] = {
+            "generation_command": shlex.join([sys.executable, *sys.argv]),
+            "stable_ordering": {
+                "question_order": "JSONL input order",
+                "keyword": "bm25, evidence_id",
+                "semantic": "vector score descending, evidence_id",
+                "fusion": "reciprocal rank descending, evidence_id",
+                "kg_keyword": "bm25, evidence_id during evaluation",
+                "kg_phrase": "evidence_id during evaluation",
+                "path_expectation_field": "expected_path_evidence_ids",
+            },
+            "python_hash_seed": os.environ.get("PYTHONHASHSEED", "unset"),
+            "equivalence_exclusions": [
+                "generated_at",
+                "elapsed_ms",
+                "summary.*.p95_ms",
+            ],
+            "self_hash": {
+                "algorithm": "sha256",
+                "location": str(artifact_manifest.resolve()),
+            },
+        }
+        report_sha256 = _write_evaluation_artifacts(
+            report,
+            output,
+            artifact_manifest,
         )
         _print(
             {
                 "output": str(output),
+                "manifest": str(artifact_manifest),
+                "report_sha256": report_sha256,
                 "question_count": report["question_count"],
                 "summary": report["summary"],
             }

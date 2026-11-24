@@ -577,7 +577,6 @@ def build_payload(
             "eligible_literature_records": eligible_count,
             "eligible_structured_records": eligible_structured_records,
             "research_only_literature_records": research_only_count,
-            "internal_records": 0,
             "review_statuses": dict(statuses),
             "source_types": dict(registry_codes),
             "top_predicates": predicates.most_common(40),
@@ -585,6 +584,76 @@ def build_payload(
         "nodes": list(nodes.values()),
         "edges": edges,
         "evidence": evidence,
+    }
+
+
+def build_public_overview(payload: dict[str, Any]) -> dict[str, Any]:
+    evidence = payload["evidence"]
+    export_metadata = payload["export_metadata"]
+    source_types = Counter(item["source_type"] for item in evidence)
+    answer_eligible = sum(
+        1 for item in evidence if item.get("answer_eligible") is True
+    )
+    review_only = len(evidence) - answer_eligible
+    dataset_names = {
+        "structured": "外部结构化／半结构化",
+        "literature": "外部文献证据",
+    }
+    dataset_descriptions = {
+        "structured": (
+            "FDC、USDA、PubChem、FooDB、KEGG、ClinicalTrials "
+            "等来源实例化后的公开关系"
+        ),
+        "literature": (
+            "已审核外部文献及仅用于研究检索的待审或暂定记录，"
+            "保留 PMID 和来源定位"
+        ),
+    }
+    return {
+        "audit_date": datetime.now(UTC).date().isoformat(),
+        "total_records": len(evidence),
+        "graph_edges": payload["version"]["relation_count"],
+        "merged_duplicate_records": 0,
+        "answer_eligible_records": answer_eligible,
+        "review_only_records": review_only,
+        "unique_entities": payload["version"]["entity_count"],
+        "sources": payload["version"]["source_count"],
+        "public_evidence_pack": {
+            "version": payload["version"]["version"],
+            "eligible_literature_records": export_metadata[
+                "eligible_literature_records"
+            ],
+            "eligible_structured_records": export_metadata[
+                "eligible_structured_records"
+            ],
+            "research_only_literature_records": export_metadata[
+                "research_only_literature_records"
+            ],
+            "nodes": payload["version"]["entity_count"],
+            "edges": payload["version"]["relation_count"],
+        },
+        "datasets": [
+            {
+                "id": source_type,
+                "name": dataset_names[source_type],
+                "records": count,
+                "origin": "external",
+                "description": dataset_descriptions[source_type],
+            }
+            for source_type, count in sorted(source_types.items())
+            if source_type in dataset_names
+        ],
+        "review_statuses": export_metadata["review_statuses"],
+        "mvp_pages": ["项目概览", "知识图谱", "证据检索", "智能问答"],
+        "limits": [
+            "在线问答只读取已审核外部文献和公开结构化证据",
+            "正式回答不引用候选、暂定或重复合并证据",
+            (
+                "系统用于知识检索和科普演示，"
+                "不能替代医生诊断、处方或个体化用药建议"
+            ),
+            "当前公开问答采用确定性图谱检索和模板回答",
+        ],
     }
 
 
@@ -606,6 +675,11 @@ def main() -> int:
         "--output",
         type=Path,
         default=Path("frontend/public/real-evidence.json"),
+    )
+    parser.add_argument(
+        "--overview-output",
+        type=Path,
+        default=Path("frontend/public/project-overview.json"),
     )
     parser.add_argument("--research-only-limit", type=int, default=1200)
     args = parser.parse_args()
@@ -634,6 +708,12 @@ def main() -> int:
         json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
         encoding="utf-8",
     )
+    public_overview = build_public_overview(payload)
+    args.overview_output.parent.mkdir(parents=True, exist_ok=True)
+    args.overview_output.write_text(
+        json.dumps(public_overview, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
     print(
         json.dumps(
             {
@@ -647,6 +727,7 @@ def main() -> int:
                 "nodes": payload["version"]["entity_count"],
                 "edges": payload["version"]["relation_count"],
                 "size_bytes": args.output.stat().st_size,
+                "overview_output": str(args.overview_output),
             },
             ensure_ascii=False,
             indent=2,

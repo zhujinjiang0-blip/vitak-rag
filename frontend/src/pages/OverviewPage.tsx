@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import DataSourceLegend from "../components/DataSourceLegend";
+import { getResearchOverview } from "../lib/api";
+import { useAuth } from "../lib/auth";
 
 interface OverviewData {
   audit_date: string;
@@ -45,6 +47,7 @@ interface OverviewData {
 }
 
 function OverviewPage() {
+  const { user } = useAuth();
   const overview = useQuery({
     queryKey: ["project-overview"],
     queryFn: async () => {
@@ -55,7 +58,15 @@ function OverviewPage() {
       return response.json() as Promise<OverviewData>;
     }
   });
+  const research = useQuery({
+    queryKey: ["research-overview"],
+    queryFn: getResearchOverview,
+    enabled: Boolean(user)
+  });
   const data = overview.data;
+  const visibleDatasets = (data?.datasets ?? []).filter(
+    (dataset) => user || dataset.origin !== "internal"
+  );
 
   return (
     <div className="overview-page">
@@ -64,8 +75,9 @@ function OverviewPage() {
           <span className="eyebrow">预答辩 MVP · 研究人员工作台</span>
           <h1>维生素 K 知识图谱检索与证据追溯</h1>
           <p>
-            整合外部文献、外部结构化数据和内部 395 人队列证据，
-            从图谱关系定位到原文与统计证据。
+            {user
+              ? "整合外部文献、外部结构化数据和内部 395 人队列证据，从图谱关系定位到原文与统计证据。"
+              : "整合外部文献和权威结构化数据，从图谱关系定位到原文证据。"}
           </p>
           <div className="overview-actions">
             <Link className="primary-link" to="/chat">
@@ -90,7 +102,9 @@ function OverviewPage() {
           在线问答读取 1,012 条已审核外部文献关系、
           {formatNumber(data?.public_evidence_pack?.eligible_structured_records ?? 3123)}
           条公开结构化关系和 1,200 条仅研究检索记录；
-          内部 248 条队列证据只保留在本地私有快照，不上传原始 CSV、内部证据或全量图谱。
+          {user
+            ? `当前授权会话可查看 ${research.data?.total_internal_records ?? 248} 条内部队列证据。`
+            : "内部队列证据不向匿名会话展示。"}
         </p>
       </div>
 
@@ -101,7 +115,7 @@ function OverviewPage() {
           icon={<Database size={20} />}
           label="总三元组"
           value={formatNumber(data?.total_records ?? 73396)}
-          note="外部 73,148 条 · 内部 248 条"
+          note={user ? "外部 73,148 条 · 内部 248 条" : "公开外部证据包"}
         />
         <MetricCard
           icon={<Network size={20} />}
@@ -123,6 +137,25 @@ function OverviewPage() {
         />
       </section>
 
+      {user && research.data && (
+        <section className="overview-research-band">
+          <div>
+            <span className="eyebrow">授权研究数据</span>
+            <h2>内部队列集合</h2>
+            <p>{research.data.cohort_description}</p>
+          </div>
+          <div className="overview-research-counts">
+            <span><small>全量</small><strong>{research.data.total_internal_records}</strong></span>
+            <span><small>核心</small><strong>{research.data.core_records}</strong></span>
+            <span><small>情境化</small><strong>{research.data.contextual_records}</strong></span>
+            <span><small>交集</small><strong>{research.data.core_contextual_overlap}</strong></span>
+          </div>
+          <Link className="secondary-link" to="/research">
+            进入内部研究 <ArrowRight size={15} />
+          </Link>
+        </section>
+      )}
+
       <section className="overview-section">
         <div className="section-heading">
           <div>
@@ -131,7 +164,7 @@ function OverviewPage() {
           </div>
         </div>
         <div className="dataset-grid">
-          {(data?.datasets ?? []).map((dataset) => (
+          {visibleDatasets.map((dataset) => (
             <article className="dataset-card" key={dataset.id}>
               <span className={`origin-pill ${dataset.origin}`}>
                 {dataset.origin === "internal" ? "内部数据" : "外部数据"}

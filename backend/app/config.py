@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import ipaddress
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
+from urllib.parse import urlsplit
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -21,7 +23,6 @@ class Settings(BaseSettings):
     host: str = "127.0.0.1"
     port: int = 8000
     data_dir: Path = PROJECT_ROOT / "data"
-    internal_token: str = "change-me-in-local-development"
     cors_origins: Annotated[list[str], NoDecode] = [
         "http://127.0.0.1:5173",
         "http://localhost:5173",
@@ -31,8 +32,24 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     llm_model: str = "qwen-plus"
     embedding_model: str = "text-embedding-v4"
+    runtime_llm_enabled: bool = False
+    runtime_llm_base_url: str = "https://api.deepseek.com/v1"
+    runtime_llm_api_key: str = ""
+    runtime_llm_model: str = "deepseek-chat"
+    runtime_llm_timeout_seconds: float = 30.0
+    runtime_llm_temperature: float = 0.2
+    runtime_llm_max_context_chars: int = 18000
+    runtime_llm_json_mode: bool = True
+    runtime_llm_endpoint_class: Literal[
+        "cloud_public",
+        "private_network",
+    ] = "cloud_public"
+    runtime_llm_allow_protected_evidence: bool = False
     session_ttl_hours: int = 24
     max_graph_hops: int = 2
+    research_snapshot_version: str = "vitak-research-2026.11-t02"
+    auth_db_path: Path | None = None
+    session_cookie_name: str = "vitak_research_session"
 
     @field_validator("data_dir", mode="before")
     @classmethod
@@ -64,6 +81,52 @@ class Settings(BaseSettings):
     @property
     def review_dir(self) -> Path:
         return self.data_dir / "review"
+
+    @property
+    def resolved_auth_db_path(self) -> Path:
+        if self.auth_db_path:
+            path = Path(self.auth_db_path)
+            return path if path.is_absolute() else (PROJECT_ROOT / path).resolve()
+        return self.runtime_dir / "research_auth.sqlite3"
+
+    @property
+    def runtime_llm_configured(self) -> bool:
+        return bool(
+            self.runtime_llm_enabled
+            and self.runtime_llm_api_key.strip()
+            and self.runtime_llm_base_url.strip()
+            and self.runtime_llm_model.strip()
+        )
+
+    @property
+    def runtime_llm_provider(self) -> str:
+        lowered = self.runtime_llm_base_url.lower()
+        if "deepseek" in lowered:
+            return "deepseek"
+        return "openai-compatible"
+
+    @property
+    def runtime_llm_private_endpoint(self) -> bool:
+        hostname = urlsplit(self.runtime_llm_base_url).hostname
+        if not hostname:
+            return False
+        if hostname in {"localhost", "127.0.0.1", "::1"}:
+            return True
+        if hostname.endswith((".local", ".internal")):
+            return True
+        try:
+            address = ipaddress.ip_address(hostname)
+        except ValueError:
+            return False
+        return address.is_private or address.is_loopback
+
+    @property
+    def runtime_llm_protected_evidence_allowed(self) -> bool:
+        return bool(
+            self.runtime_llm_allow_protected_evidence
+            and self.runtime_llm_endpoint_class == "private_network"
+            and self.runtime_llm_private_endpoint
+        )
 
     def ensure_dirs(self) -> None:
         for path in (

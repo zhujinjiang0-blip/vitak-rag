@@ -1,0 +1,824 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>中国高代谢风险人群生活方式干预试验｜项目主视觉</title>
+  <style>
+    :root {
+      --paper: #f4efe4;
+      --ink: #183230;
+      --muted: #60706d;
+      --teal: #0b746a;
+      --teal-dark: #074f4a;
+      --mint: #dceee8;
+      --amber: #d6812e;
+      --amber-soft: #f4e2c8;
+      --blue: #315f7d;
+      --blue-soft: #dfeaf0;
+      --coral: #c65d4d;
+      --cream: #fbf7ed;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 1920px;
+      height: 1080px;
+      margin: 0;
+      overflow: hidden;
+      background: var(--paper);
+    }
+
+    body {
+      color: var(--ink);
+      font-family: "PingFang SC", "Hiragino Sans GB", "STHeiti", "Arial Unicode MS", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: geometricPrecision;
+    }
+
+    .poster {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      background: var(--paper);
+    }
+
+    .poster::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-image: radial-gradient(rgba(24, 50, 48, 0.14) 0.7px, transparent 0.8px);
+      background-size: 18px 18px;
+      opacity: 0.13;
+    }
+
+    .header {
+      position: relative;
+      z-index: 4;
+      height: 190px;
+      padding: 28px 66px 20px;
+    }
+
+    .kicker {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      margin-bottom: 7px;
+      color: var(--teal);
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 2.1px;
+      text-transform: uppercase;
+    }
+
+    .kicker::before {
+      content: "";
+      width: 34px;
+      height: 4px;
+      background: var(--coral);
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--ink);
+      font-size: 47px;
+      font-weight: 800;
+      line-height: 1.18;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .cohort-summary {
+      position: absolute;
+      top: 28px;
+      right: 66px;
+      display: grid;
+      grid-template-columns: 192px 1fr;
+      gap: 18px;
+      align-items: center;
+      width: 590px;
+    }
+
+    .cohort-total {
+      text-align: right;
+    }
+
+    .cohort-total strong {
+      display: block;
+      color: var(--teal-dark);
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 82px;
+      font-weight: 900;
+      line-height: 0.88;
+      letter-spacing: -2px;
+    }
+
+    .cohort-total span {
+      display: block;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+    }
+
+    .arm-summary {
+      display: grid;
+      gap: 7px;
+    }
+
+    .arm-line {
+      display: grid;
+      grid-template-columns: 58px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      min-height: 37px;
+      padding: 6px 12px;
+      border-left: 4px solid var(--teal);
+      background: rgba(255, 255, 255, 0.56);
+    }
+
+    .arm-line.sada {
+      border-left-color: var(--amber);
+    }
+
+    .arm-line b {
+      color: var(--teal-dark);
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 17px;
+      font-weight: 900;
+    }
+
+    .arm-line.sada b {
+      color: #7b481d;
+    }
+
+    .arm-line span {
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    .arm-line em {
+      color: var(--ink);
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 16px;
+      font-style: normal;
+      font-weight: 900;
+    }
+
+    .scene {
+      position: relative;
+      z-index: 1;
+      width: 1920px;
+      height: 610px;
+      overflow: hidden;
+    }
+
+    .scene svg {
+      width: 1920px;
+      height: 610px;
+    }
+
+    .scene-label {
+      position: absolute;
+      z-index: 5;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 9px;
+      background: rgba(251, 247, 237, 0.93);
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      box-shadow: 0 2px 0 rgba(24, 50, 48, 0.08);
+    }
+
+    .scene-label::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--teal);
+    }
+
+    .label-app {
+      left: 538px;
+      top: 76px;
+    }
+
+    .label-dietitian {
+      right: 640px;
+      top: 62px;
+    }
+
+    .label-watch {
+      left: 684px;
+      top: 358px;
+    }
+
+    .label-plasma {
+      right: 120px;
+      top: 308px;
+    }
+
+    .label-dietitian::before {
+      background: var(--amber);
+    }
+
+    .label-plasma::before {
+      background: var(--coral);
+    }
+
+    .research-band {
+      position: relative;
+      z-index: 4;
+      display: grid;
+      grid-template-columns: 216px repeat(4, 1fr);
+      height: 60px;
+      margin: 0 66px;
+      border-top: 1px solid #cbd5d0;
+      border-bottom: 1px solid #cbd5d0;
+      background: rgba(244, 239, 228, 0.96);
+    }
+
+    .research-title {
+      display: flex;
+      align-items: center;
+      color: var(--teal);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+    }
+
+    .research-item {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 0 16px;
+      border-left: 1px solid #cbd5d0;
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .research-item b {
+      color: var(--coral);
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.4px;
+    }
+
+    .bottom-band {
+      position: relative;
+      z-index: 3;
+      display: grid;
+      grid-template-columns: 340px 570px 1fr;
+      height: 220px;
+      padding: 26px 66px 20px;
+      background: var(--teal-dark);
+      color: #fffdf7;
+    }
+
+    .bottom-band::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 66px;
+      right: 66px;
+      height: 3px;
+      background: var(--amber);
+    }
+
+    .timepoint-block {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding-right: 28px;
+      border-right: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .micro-title {
+      color: #bfe3db;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+    }
+
+    .timepoint-title {
+      margin-top: 7px;
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .timepoint-flow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 17px;
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .timepoint-flow .circle {
+      display: inline-grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border: 1px solid rgba(255, 255, 255, 0.38);
+      border-radius: 50%;
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .timepoint-flow .arrow {
+      color: #f0b77a;
+      font-size: 25px;
+      font-weight: 400;
+    }
+
+    .sample-block {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0 30px;
+      border-right: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .sample-title {
+      margin-top: 7px;
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .sample-steps {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .sample-steps::before {
+      content: "";
+      position: absolute;
+      top: 19px;
+      left: 8%;
+      right: 8%;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.28);
+    }
+
+    .sample-step {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      justify-items: center;
+      gap: 6px;
+      text-align: center;
+    }
+
+    .sample-icon {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border: 1px solid rgba(255, 255, 255, 0.42);
+      border-radius: 50%;
+      background: var(--teal-dark);
+      color: #fff;
+    }
+
+    .sample-step:nth-child(2) .sample-icon {
+      background: var(--amber);
+      border-color: var(--amber);
+    }
+
+    .sample-step:nth-child(4) .sample-icon {
+      background: var(--coral);
+      border-color: var(--coral);
+    }
+
+    .sample-icon svg {
+      width: 19px;
+      height: 19px;
+    }
+
+    .sample-step strong {
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .sample-step span {
+      color: #bfe3db;
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    .marker-block {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding-left: 32px;
+    }
+
+    .marker-title {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-top: 5px;
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .marker-title b {
+      color: #f0b77a;
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.8px;
+    }
+
+    .marker-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px 9px;
+      margin-top: 11px;
+      color: #ecf7f3;
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .marker-row span {
+      white-space: nowrap;
+    }
+
+    .marker-row span::after {
+      content: "·";
+      margin-left: 9px;
+      color: #77afa5;
+    }
+
+    .marker-row span:last-child::after {
+      content: none;
+    }
+
+    .marker-note {
+      margin-top: 8px;
+      color: #9ecbc2;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+
+    .art-caption {
+      position: absolute;
+      z-index: 5;
+      right: 72px;
+      top: 166px;
+      color: rgba(24, 50, 48, 0.55);
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1.2px;
+    }
+  </style>
+</head>
+<body>
+  <main class="poster" aria-label="中国高代谢风险人群生活方式干预试验项目主视觉">
+    <header class="header">
+      <div class="kicker">6-month randomized controlled intervention</div>
+      <h1>中国高代谢风险人群生活方式干预试验</h1>
+      <div class="subtitle">聚焦395名完成完整随访及维生素K检测的超重肥胖参与者 · 6个月随机对照干预</div>
+
+      <div class="cohort-summary" aria-label="队列和分组">
+        <div class="cohort-total">
+          <strong>395</strong>
+          <span>完成完整随访及维生素K检测</span>
+        </div>
+        <div class="arm-summary">
+          <div class="arm-line">
+            <b>SAA</b>
+            <span>智能应用组</span>
+            <em>n=197</em>
+          </div>
+          <div class="arm-line sada">
+            <b>SADA</b>
+            <span>智能应用联合营养师支持组</span>
+            <em>n=198</em>
+          </div>
+        </div>
+      </div>
+      <div class="art-caption">LIFESTYLE × BEHAVIOR × PLASMA PHENOTYPE</div>
+    </header>
+
+    <section class="scene" aria-label="生活方式干预与血浆检测主视觉">
+      <svg viewBox="0 0 1920 610" role="img" aria-labelledby="scene-title scene-desc">
+        <title id="scene-title">智能应用生活方式干预与血浆检测场景</title>
+        <desc id="scene-desc">参与者使用手机应用、智能体重秤、血压计和运动手环，营养师在线支持，血浆样本进入实验室检测。</desc>
+        <defs>
+          <clipPath id="sceneClip">
+            <rect x="0" y="0" width="1920" height="610"></rect>
+          </clipPath>
+          <pattern id="labGrid" width="30" height="30" patternUnits="userSpaceOnUse">
+            <path d="M30 0H0V30" fill="none" stroke="#c5d9e2" stroke-width="1"></path>
+          </pattern>
+        </defs>
+
+        <g clip-path="url(#sceneClip)">
+          <rect width="1920" height="610" fill="#e3f0eb"></rect>
+          <path d="M1110 0H1920V610H1080C1062 470 1075 260 1110 0Z" fill="#dfeaf0"></path>
+          <path d="M0 470C220 441 400 466 655 456C930 445 1085 424 1226 470C1450 542 1664 494 1920 454V610H0Z" fill="#f0e5d2"></path>
+          <path d="M0 487C258 456 451 486 685 470C945 452 1080 445 1230 487C1491 556 1694 506 1920 473V610H0Z" fill="#e8d9c2"></path>
+
+          <rect x="66" y="66" width="340" height="265" fill="#faf6e9" stroke="#b9cec5" stroke-width="5"></rect>
+          <path d="M236 66V331M66 194H406" fill="none" stroke="#c9d9d1" stroke-width="4"></path>
+          <circle cx="350" cy="115" r="35" fill="#f0b95d"></circle>
+          <path d="M66 273C112 233 156 267 194 232C226 202 275 224 306 189C341 150 377 174 406 155V331H66Z" fill="#b9d6c5"></path>
+          <path d="M67 284C124 248 163 281 218 247C268 216 316 248 406 199V331H67Z" fill="#83af9e"></path>
+
+          <path d="M36 372H230" stroke="#244845" stroke-width="7"></path>
+          <path d="M70 372V450M195 372V450" stroke="#7e9e93" stroke-width="4"></path>
+          <path d="M97 371C99 325 113 298 132 298C151 298 166 325 169 371Z" fill="#d5a66b"></path>
+          <path d="M108 329C119 308 142 311 151 329" fill="none" stroke="#f0d7ab" stroke-width="6"></path>
+          <path d="M112 278C100 254 119 226 145 226C174 226 188 250 177 278" fill="#4b8262"></path>
+          <path d="M125 285C133 280 141 278 150 280M165 288C170 284 176 283 181 284" fill="none" stroke="#4b8262" stroke-width="5" stroke-linecap="round"></path>
+
+          <g transform="translate(476 66)">
+            <path d="M102 386H365L393 518H75Z" fill="#f6f2e8"></path>
+            <rect x="53" y="-33" width="357" height="492" rx="42" fill="#203b3a"></rect>
+            <rect x="67" y="-18" width="329" height="454" rx="28" fill="#fffdf7"></rect>
+            <rect x="120" y="4" width="223" height="17" rx="8" fill="#e3ebe7"></rect>
+            <rect x="120" y="47" width="112" height="9" rx="4" fill="#8ca39d"></rect>
+            <rect x="120" y="64" width="64" height="7" rx="3" fill="#c2d0cb"></rect>
+            <circle cx="320" cy="57" r="24" fill="#dceee8"></circle>
+            <path d="M308 57L317 66L333 47" fill="none" stroke="#0b746a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
+            <circle cx="152" cy="126" r="47" fill="none" stroke="#e1ebe7" stroke-width="11"></circle>
+            <circle cx="152" cy="126" r="47" fill="none" stroke="#0b746a" stroke-width="11" stroke-dasharray="216 80" stroke-linecap="round" transform="rotate(-90 152 126)"></circle>
+            <path d="M137 129L149 141L170 114" fill="none" stroke="#0b746a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"></path>
+            <rect x="220" y="98" width="130" height="9" rx="4" fill="#58746f"></rect>
+            <rect x="220" y="118" width="92" height="7" rx="3" fill="#c3d1cc"></rect>
+            <rect x="220" y="142" width="130" height="24" rx="12" fill="#e2f1ec"></rect>
+            <rect x="120" y="199" width="230" height="1" fill="#e1e8e4"></rect>
+            <g transform="translate(121 217)">
+              <rect width="97" height="75" rx="12" fill="#e4f2ed"></rect>
+              <path d="M20 48C32 34 40 43 50 29C59 18 68 34 78 23" fill="none" stroke="#0b746a" stroke-width="4" stroke-linecap="round"></path>
+              <path d="M18 22H79" stroke="#9fc8be" stroke-width="3"></path>
+            </g>
+            <g transform="translate(230 217)">
+              <rect width="120" height="75" rx="12" fill="#f7e6d1"></rect>
+              <circle cx="36" cy="37" r="18" fill="#e0a050"></circle>
+              <path d="M63 22H102M63 37H94M63 52H84" stroke="#b67938" stroke-width="4" stroke-linecap="round"></path>
+            </g>
+            <g transform="translate(121 309)">
+              <rect width="229" height="99" rx="14" fill="#edf3f1"></rect>
+              <path d="M22 72H53L65 42L83 62L101 30L118 57L139 46L157 66H207" fill="none" stroke="#315f7d" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
+              <circle cx="83" cy="62" r="4" fill="#c65d4d"></circle>
+            </g>
+          </g>
+
+          <g transform="translate(155 126)">
+            <path d="M47 270C29 212 42 181 82 164C118 149 170 171 184 220L214 377L128 414L40 392Z" fill="#0b746a"></path>
+            <path d="M81 166C84 149 99 139 119 139C142 139 158 153 162 176V212C151 239 91 240 79 213Z" fill="#e6aa82"></path>
+            <path d="M70 167C67 129 90 102 122 101C155 100 176 127 170 166C149 150 124 143 97 155Z" fill="#273b39"></path>
+            <path d="M79 176C87 165 102 164 112 172" fill="none" stroke="#273b39" stroke-width="4" stroke-linecap="round"></path>
+            <path d="M138 177C145 170 154 171 160 177" fill="none" stroke="#273b39" stroke-width="4" stroke-linecap="round"></path>
+            <path d="M111 184C115 190 121 191 126 186" fill="none" stroke="#a9674c" stroke-width="3" stroke-linecap="round"></path>
+            <path d="M105 204C120 212 137 210 147 201" fill="none" stroke="#9b5e45" stroke-width="4" stroke-linecap="round"></path>
+            <path d="M169 233C222 232 264 250 292 292" fill="none" stroke="#0b746a" stroke-width="32" stroke-linecap="round"></path>
+            <path d="M258 275C284 294 292 321 286 347" fill="none" stroke="#e6aa82" stroke-width="24" stroke-linecap="round"></path>
+            <rect x="270" y="309" width="31" height="52" rx="12" fill="#274a48"></rect>
+            <rect x="276" y="316" width="19" height="36" rx="4" fill="#6aa89e"></rect>
+            <path d="M44 270C17 298 15 333 27 368" fill="none" stroke="#0b746a" stroke-width="29" stroke-linecap="round"></path>
+            <path d="M26 356C13 382 11 407 22 431" fill="none" stroke="#e6aa82" stroke-width="22" stroke-linecap="round"></path>
+            <circle cx="25" cy="433" r="14" fill="#e6aa82"></circle>
+          </g>
+
+          <g transform="translate(704 128)">
+            <path d="M32 272C26 221 37 184 77 166C115 148 166 169 182 220L201 369H104L39 338Z" fill="#d68532"></path>
+            <path d="M73 161C79 145 96 135 117 136C139 137 152 151 155 174V207C143 231 88 232 74 207Z" fill="#d99b72"></path>
+            <path d="M66 161C67 128 88 107 115 108C143 108 161 128 158 162C137 151 107 145 82 154Z" fill="#263634"></path>
+            <path d="M140 237C192 239 228 263 244 301" fill="none" stroke="#d68532" stroke-width="31" stroke-linecap="round"></path>
+            <path d="M233 288C247 307 249 322 244 344" fill="none" stroke="#d99b72" stroke-width="23" stroke-linecap="round"></path>
+            <rect x="221" y="334" width="54" height="13" rx="6" fill="#284e4a"></rect>
+            <rect x="239" y="325" width="14" height="31" rx="5" fill="#284e4a"></rect>
+            <rect x="221" y="347" width="11" height="25" rx="5" fill="#284e4a"></rect>
+            <rect x="264" y="347" width="11" height="25" rx="5" fill="#284e4a"></rect>
+            <path d="M82 173C88 165 97 165 103 172M128 174C135 168 142 169 149 176" fill="none" stroke="#273b39" stroke-width="4" stroke-linecap="round"></path>
+            <path d="M110 207C121 215 134 213 142 205" fill="none" stroke="#975937" stroke-width="4" stroke-linecap="round"></path>
+            <circle cx="29" cy="244" r="16" fill="#d99b72"></circle>
+            <path d="M37 236C9 251 -6 282 1 315" fill="none" stroke="#d68532" stroke-width="29" stroke-linecap="round"></path>
+          </g>
+
+          <g transform="translate(914 48)">
+            <path d="M8 20H211V193H86L54 224L55 193H8Z" fill="#fff8e9" stroke="#d1b98e" stroke-width="3"></path>
+            <rect x="20" y="20" width="193" height="151" fill="#f0d8b4"></rect>
+            <circle cx="112" cy="78" r="39" fill="#c7845f"></circle>
+            <path d="M75 78C77 47 91 30 115 30C144 30 158 51 152 83C132 67 107 62 75 78Z" fill="#303331"></path>
+            <path d="M76 151C81 119 98 105 117 105C138 105 157 121 163 151" fill="#ffffff"></path>
+            <path d="M113 105V151M91 112L78 145M142 112L158 145" fill="none" stroke="#93a8a3" stroke-width="3"></path>
+            <path d="M86 83C94 77 100 78 105 83M127 84C133 78 139 78 145 84" fill="none" stroke="#303331" stroke-width="3" stroke-linecap="round"></path>
+            <path d="M103 100C112 105 123 104 130 98" fill="none" stroke="#8f4e37" stroke-width="3" stroke-linecap="round"></path>
+            <circle cx="172" cy="177" r="17" fill="#0b746a"></circle>
+            <path d="M164 177L170 183L181 169" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+          </g>
+
+          <g transform="translate(111 432)">
+            <rect x="0" y="0" width="198" height="92" rx="25" fill="#fdfbf5" stroke="#bdcfc8" stroke-width="4"></rect>
+            <rect x="22" y="2" width="154" height="87" rx="20" fill="#dbe8e3"></rect>
+            <rect x="62" y="21" width="75" height="31" rx="8" fill="#274a48"></rect>
+            <text x="100" y="44" fill="#a9ddd1" font-family="Arial, sans-serif" font-size="18" font-weight="700" text-anchor="middle">68.4</text>
+            <path d="M62 72H136" stroke="#86a39b" stroke-width="4" stroke-linecap="round"></path>
+          </g>
+
+          <g transform="translate(371 424)">
+            <rect x="0" y="22" width="106" height="61" rx="16" fill="#f8f5ed" stroke="#b8cbc3" stroke-width="4"></rect>
+            <rect x="20" y="39" width="65" height="18" rx="9" fill="#dce8e3"></rect>
+            <path d="M104 38C130 34 143 45 143 64" fill="none" stroke="#b8cbc3" stroke-width="6" stroke-linecap="round"></path>
+          </g>
+
+          <g transform="translate(1118 392)">
+            <rect width="756" height="14" rx="7" fill="#88a7b4"></rect>
+            <rect x="35" y="14" width="686" height="177" fill="#edf3f3"></rect>
+            <rect x="35" y="14" width="686" height="8" fill="#c7dadf"></rect>
+          </g>
+
+          <g transform="translate(1176 155)">
+            <path d="M25 301C14 242 41 190 98 176C154 162 206 203 212 263L225 408H28Z" fill="#fbfbf6" stroke="#bccbc7" stroke-width="4"></path>
+            <path d="M89 174C91 155 107 145 129 146C152 147 169 160 172 182V216C158 245 98 245 84 217Z" fill="#d49a77"></path>
+            <path d="M80 176C78 139 98 117 130 117C162 117 183 143 176 181C151 163 124 157 94 164Z" fill="#2c3837"></path>
+            <path d="M91 189C98 181 108 181 114 187M140 189C146 182 154 183 159 189" fill="none" stroke="#303331" stroke-width="4" stroke-linecap="round"></path>
+            <path d="M115 216C126 222 139 220 147 213" fill="none" stroke="#955d45" stroke-width="4" stroke-linecap="round"></path>
+            <path d="M162 255C207 261 239 290 246 334" fill="none" stroke="#fbfbf6" stroke-width="34" stroke-linecap="round"></path>
+            <path d="M235 321C252 345 256 366 247 390" fill="none" stroke="#d49a77" stroke-width="24" stroke-linecap="round"></path>
+            <path d="M50 260C20 287 11 319 18 349" fill="none" stroke="#fbfbf6" stroke-width="33" stroke-linecap="round"></path>
+            <path d="M18 340C4 364 5 388 19 407" fill="none" stroke="#d49a77" stroke-width="22" stroke-linecap="round"></path>
+            <path d="M101 221L128 255M154 220L128 255M72 332H191M78 332V407M186 332V407" fill="none" stroke="#b5c7c3" stroke-width="3"></path>
+          </g>
+
+          <g transform="translate(1512 178)">
+            <circle cx="146" cy="92" r="73" fill="none" stroke="#adc8d1" stroke-width="2"></circle>
+            <circle cx="146" cy="92" r="49" fill="none" stroke="#adc8d1" stroke-width="2"></circle>
+            <path d="M73 92H219M146 19V165" stroke="#c0d4dc" stroke-width="2"></path>
+            <circle cx="96" cy="49" r="10" fill="#7da6b7"></circle>
+            <circle cx="198" cy="135" r="14" fill="#d6812e"></circle>
+            <circle cx="219" cy="28" r="7" fill="#c65d4d"></circle>
+          </g>
+
+          <g transform="translate(1454 273)">
+            <rect x="0" y="0" width="345" height="226" rx="18" fill="#f7f7f2" stroke="#b8cdd5" stroke-width="4"></rect>
+            <rect x="20" y="20" width="305" height="186" fill="#e9f0f2"></rect>
+            <rect x="89" y="46" width="40" height="127" rx="20" fill="#d7e4e7" stroke="#7697a5" stroke-width="3"></rect>
+            <rect x="96" y="78" width="26" height="89" rx="13" fill="#e7bd69"></rect>
+            <rect x="157" y="28" width="40" height="145" rx="20" fill="#d7e4e7" stroke="#7697a5" stroke-width="3"></rect>
+            <rect x="164" y="66" width="26" height="100" rx="13" fill="#d8b45f"></rect>
+            <rect x="225" y="55" width="40" height="118" rx="20" fill="#d7e4e7" stroke="#7697a5" stroke-width="3"></rect>
+            <rect x="232" y="85" width="26" height="81" rx="13" fill="#e8bd67"></rect>
+            <path d="M78 46H268M78 173H268" stroke="#b7ccd3" stroke-width="4" stroke-linecap="round"></path>
+            <circle cx="283" cy="41" r="13" fill="#c65d4d"></circle>
+          </g>
+
+          <g transform="translate(1270 425)">
+            <rect x="0" y="0" width="104" height="129" rx="10" fill="#fbfbf5" stroke="#adc5cc" stroke-width="3"></rect>
+            <rect x="17" y="17" width="70" height="95" rx="6" fill="#ebe1c9"></rect>
+            <path d="M35 17V112M52 17V112M69 17V112" stroke="#c9b996" stroke-width="2"></path>
+            <rect x="29" y="52" width="49" height="10" rx="5" fill="#d6812e"></rect>
+          </g>
+
+          <g transform="translate(1621 202)">
+            <path d="M0 0C36 20 59 46 69 83" fill="none" stroke="#8eafbb" stroke-width="2" stroke-dasharray="7 8"></path>
+            <circle cx="0" cy="0" r="8" fill="#0b746a"></circle>
+            <circle cx="69" cy="83" r="8" fill="#c65d4d"></circle>
+          </g>
+
+          <g transform="translate(994 456)">
+            <path d="M0 48C82 26 152 29 219 5" fill="none" stroke="#98b8c2" stroke-width="3" stroke-dasharray="7 9"></path>
+            <path d="M206 0L225 4L211 17" fill="none" stroke="#98b8c2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+          </g>
+
+          <path d="M600 495C812 471 945 480 1088 453" fill="none" stroke="#0b746a" stroke-width="3" stroke-dasharray="8 9" opacity="0.5"></path>
+          <path d="M1080 442L1100 453L1077 462" fill="none" stroke="#0b746a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.65"></path>
+        </g>
+      </svg>
+
+      <span class="scene-label label-app">智能应用干预</span>
+      <span class="scene-label label-dietitian">营养师在线支持</span>
+      <span class="scene-label label-watch">运动手环</span>
+      <span class="scene-label label-plasma">血浆样本</span>
+    </section>
+
+    <section class="research-band" aria-label="主要研究内容">
+      <div class="research-title">项目主要研究内容</div>
+      <div class="research-item"><b>01</b>减重与代谢改善</div>
+      <div class="research-item"><b>02</b>行为依从性评估</div>
+      <div class="research-item"><b>03</b>VK/D动态变化</div>
+      <div class="research-item"><b>04</b>多维指标关联</div>
+    </section>
+
+    <section class="bottom-band" aria-label="评估时点、采血流程和检测指标">
+      <div class="timepoint-block">
+        <div class="micro-title">Two assessment points</div>
+        <div class="timepoint-title">两个评估时点</div>
+        <div class="timepoint-flow">
+          <span>基线</span>
+          <span class="circle">0月</span>
+          <span class="arrow">→</span>
+          <span>6个月后</span>
+        </div>
+      </div>
+
+      <div class="sample-block">
+        <div class="micro-title">Plasma sampling</div>
+        <div class="sample-title">每次访视采集3个血浆时点</div>
+        <div class="sample-steps">
+          <div class="sample-step">
+            <span class="sample-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 3h6v5.3a7 7 0 1 1-6 0V3Z"></path>
+                <path d="M9 8h6"></path>
+              </svg>
+            </span>
+            <strong>空腹 0h</strong>
+            <span>FASTING</span>
+          </div>
+          <div class="sample-step">
+            <span class="sample-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M7 3v8M4 3v5a3 3 0 0 0 6 0V3M7 11v10"></path>
+                <path d="M17 3v18M17 3c-2 2-3 5-3 8h3"></path>
+              </svg>
+            </span>
+            <strong>标准餐</strong>
+            <span>MIXED MEAL</span>
+          </div>
+          <div class="sample-step">
+            <span class="sample-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="8"></circle>
+                <path d="M12 8v4l3 2"></path>
+              </svg>
+            </span>
+            <strong>餐后 1h</strong>
+            <span>POSTPRANDIAL</span>
+          </div>
+          <div class="sample-step">
+            <span class="sample-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="8"></circle>
+                <path d="M12 8v4l3 2"></path>
+              </svg>
+            </span>
+            <strong>餐后 3h</strong>
+            <span>POSTPRANDIAL</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="marker-block">
+        <div class="micro-title">Plasma biomarker panel</div>
+        <div class="marker-title">16项血浆检测指标 <b>VITAMIN K/D + METABOLIC</b></div>
+        <div class="marker-row">
+          <span>VK1</span>
+          <span>MK-4</span>
+          <span>MK-7</span>
+          <span>VD2-25OH</span>
+          <span>VD3-25OH</span>
+          <span>GLU</span>
+          <span>Insulin</span>
+          <span>TG</span>
+          <span>TCH</span>
+          <span>HDL-C</span>
+          <span>LDL-C</span>
+        </div>
+        <div class="marker-row">
+          <span>UA</span>
+          <span>ALT</span>
+          <span>GGT</span>
+          <span>hsCRP</span>
+          <span>FFA</span>
+        </div>
+        <div class="marker-note">组内干预前后变化 · SAA / SADA组间差异 · 指标间关联分析</div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

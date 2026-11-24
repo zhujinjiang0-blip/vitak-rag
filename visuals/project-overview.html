@@ -1,0 +1,1255 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>中国高代谢风险人群生活方式干预研究｜项目总览</title>
+  <style>
+    :root {
+      --paper: #f7f6f1;
+      --surface: #fffefa;
+      --ink: #18302f;
+      --ink-soft: #5b6f6d;
+      --line: #d6ddd8;
+      --teal: #087b70;
+      --teal-dark: #07534e;
+      --teal-soft: #e3f2ed;
+      --amber: #b96c20;
+      --amber-dark: #794117;
+      --amber-soft: #f8ead7;
+      --blue: #315d7c;
+      --blue-dark: #244658;
+      --blue-soft: #e7eff4;
+      --coral: #bd5948;
+      --coral-soft: #f8e7e2;
+      --white: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 1920px;
+      height: 1080px;
+      margin: 0;
+      overflow: hidden;
+      background: var(--paper);
+    }
+
+    body {
+      color: var(--ink);
+      font-family: "PingFang SC", "Hiragino Sans GB", "STHeiti", "Arial Unicode MS", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: geometricPrecision;
+    }
+
+    svg {
+      display: block;
+    }
+
+    .poster {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      padding: 38px 58px 24px;
+      overflow: hidden;
+      background: var(--paper);
+    }
+
+    .poster::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-image: radial-gradient(rgba(24, 48, 47, 0.12) 0.8px, transparent 0.8px);
+      background-size: 22px 22px;
+      opacity: 0.22;
+      mask-image: linear-gradient(to bottom, black, transparent 27%);
+    }
+
+    .poster::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 12px;
+      height: 100%;
+      background: var(--teal);
+    }
+
+    .hero {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 586px;
+      gap: 54px;
+      align-items: center;
+      height: 174px;
+      padding: 0 4px 2px;
+    }
+
+    .kicker {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 9px;
+      color: var(--teal);
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .kicker::before {
+      content: "";
+      width: 34px;
+      height: 4px;
+      background: var(--coral);
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--ink);
+      font-size: 42px;
+      font-weight: 800;
+      line-height: 1.45;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      max-width: 1160px;
+      margin: 7px 0 0;
+      color: var(--ink-soft);
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 1.45;
+      white-space: nowrap;
+    }
+
+    .hero-facts {
+      display: grid;
+      grid-template-columns: 178px 1fr;
+      min-height: 108px;
+      border: 1px solid var(--line);
+      border-left: 6px solid var(--teal-dark);
+      background: rgba(255, 254, 250, 0.9);
+    }
+
+    .fact-duration {
+      display: grid;
+      place-content: center;
+      padding: 12px;
+      border-right: 1px solid var(--line);
+      text-align: center;
+    }
+
+    .fact-duration strong {
+      color: var(--teal-dark);
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 50px;
+      font-weight: 900;
+      line-height: 0.95;
+    }
+
+    .fact-duration span {
+      margin-top: 8px;
+      color: var(--ink-soft);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .fact-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .fact {
+      display: grid;
+      align-content: center;
+      padding: 12px 15px;
+      border-right: 1px solid var(--line);
+    }
+
+    .fact:last-child {
+      border-right: 0;
+    }
+
+    .fact strong {
+      color: var(--ink);
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 24px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .fact span {
+      margin-top: 8px;
+      color: var(--ink-soft);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .band {
+      position: relative;
+      z-index: 1;
+      margin-top: 12px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: rgba(255, 254, 250, 0.9);
+    }
+
+    .band-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 38px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(237, 241, 237, 0.65);
+    }
+
+    .band-title {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .band-index {
+      display: inline-grid;
+      place-items: center;
+      width: 28px;
+      height: 22px;
+      background: var(--teal-dark);
+      color: var(--white);
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+    }
+
+    .band-en {
+      color: var(--ink-soft);
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1.2px;
+    }
+
+    .band-note {
+      color: var(--ink-soft);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+    }
+
+    .cohort-band {
+      height: 224px;
+    }
+
+    .cohort-body {
+      display: grid;
+      grid-template-columns: 178px 118px minmax(0, 1fr);
+      grid-template-rows: 124px 30px;
+      gap: 7px 18px;
+      padding: 12px 18px;
+    }
+
+    .cohort-total {
+      display: grid;
+      grid-template-columns: 54px 1fr;
+      align-items: center;
+      gap: 14px;
+      padding: 16px;
+      background: var(--teal-dark);
+      color: var(--white);
+    }
+
+    .cohort-icon {
+      display: grid;
+      place-items: center;
+      width: 50px;
+      height: 50px;
+      border: 1px solid rgba(255, 255, 255, 0.34);
+      border-radius: 50%;
+    }
+
+    .cohort-icon svg {
+      width: 26px;
+      height: 26px;
+    }
+
+    .cohort-total strong {
+      display: block;
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 48px;
+      font-weight: 900;
+      line-height: 0.9;
+    }
+
+    .cohort-total small {
+      display: block;
+      margin-top: 7px;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .randomizer {
+      position: relative;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 8px;
+      color: var(--teal);
+      font-size: 12px;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .randomizer::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: -18px;
+      right: -18px;
+      height: 2px;
+      background: var(--line);
+      transform: translateY(-50%);
+    }
+
+    .randomizer::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -8px;
+      width: 0;
+      height: 0;
+      border-top: 7px solid transparent;
+      border-bottom: 7px solid transparent;
+      border-left: 11px solid var(--teal);
+      transform: translateY(-50%);
+    }
+
+    .randomizer span {
+      position: relative;
+      z-index: 2;
+      padding: 7px 9px;
+      border: 1px solid #9bc9c0;
+      border-radius: 20px;
+      background: var(--teal-soft);
+    }
+
+    .arm-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .arm {
+      position: relative;
+      display: grid;
+      grid-template-columns: 102px 1fr auto;
+      align-items: center;
+      gap: 16px;
+      min-width: 0;
+      padding: 16px 18px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-top: 5px solid var(--teal);
+      background: var(--surface);
+    }
+
+    .arm.sada {
+      border-top-color: var(--amber);
+    }
+
+    .arm-code {
+      color: var(--teal-dark);
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 31px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .arm.sada .arm-code {
+      color: var(--amber-dark);
+    }
+
+    .arm-n {
+      margin-top: 8px;
+      color: var(--ink-soft);
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .arm-copy h3 {
+      margin: 0;
+      color: var(--ink);
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .arm-copy p {
+      margin: 6px 0 0;
+      color: var(--ink-soft);
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.45;
+    }
+
+    .arm-icon {
+      display: grid;
+      place-items: center;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: var(--teal-soft);
+      color: var(--teal-dark);
+    }
+
+    .sada .arm-icon {
+      background: var(--amber-soft);
+      color: var(--amber-dark);
+    }
+
+    .arm-icon svg {
+      width: 23px;
+      height: 23px;
+    }
+
+    .common-intervention {
+      grid-column: 3;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 22px;
+      background: var(--blue);
+      color: var(--white);
+    }
+
+    .common-intervention strong {
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .common-intervention span {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      opacity: 0.9;
+    }
+
+    .process-band {
+      height: 318px;
+    }
+
+    .process-grid {
+      display: grid;
+      grid-template-columns: 570px minmax(0, 1fr);
+      gap: 16px;
+      height: 280px;
+      padding: 10px 16px 12px;
+    }
+
+    .research-panel,
+    .sampling-panel {
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .subhead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 34px;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .subhead strong {
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .subhead span {
+      color: var(--ink-soft);
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+
+    .research-list {
+      display: grid;
+      grid-template-rows: repeat(4, 1fr);
+      height: 234px;
+      padding: 5px 13px 8px;
+    }
+
+    .research-item {
+      display: grid;
+      grid-template-columns: 35px 1fr;
+      align-items: center;
+      gap: 11px;
+      min-height: 0;
+      border-bottom: 1px dashed #d9dfdc;
+    }
+
+    .research-item:last-child {
+      border-bottom: 0;
+    }
+
+    .research-no {
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border: 1px solid #98c7bd;
+      border-radius: 50%;
+      color: var(--teal-dark);
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .research-item h4 {
+      margin: 0;
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .research-item p {
+      margin: 2px 0 0;
+      color: var(--ink-soft);
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+
+    .sampling-panel {
+      position: relative;
+    }
+
+    .sampling-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--blue-dark);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+    }
+
+    .sampling-tag::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--coral);
+    }
+
+    .visit-rows {
+      display: grid;
+      grid-template-rows: 1fr 1fr;
+      height: 234px;
+      padding: 7px 14px 8px;
+    }
+
+    .visit-row {
+      display: grid;
+      grid-template-columns: 148px 1fr;
+      align-items: center;
+      gap: 10px;
+      min-height: 0;
+      border-bottom: 1px dashed #d9dfdc;
+    }
+
+    .visit-row:last-child {
+      border-bottom: 0;
+    }
+
+    .visit-card {
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      grid-template-rows: auto auto;
+      align-items: center;
+      column-gap: 10px;
+      min-height: 68px;
+      padding: 10px 12px;
+      background: var(--blue-soft);
+      color: var(--blue-dark);
+    }
+
+    .visit-card svg {
+      grid-row: 1 / span 2;
+      width: 25px;
+      height: 25px;
+    }
+
+    .visit-card strong {
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
+    .visit-card span {
+      color: var(--ink-soft);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .sample-flow {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1.12fr 0.93fr 0.93fr 0.93fr 1.05fr;
+      align-items: center;
+      gap: 0;
+      min-width: 0;
+    }
+
+    .sample-flow::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 6%;
+      right: 6%;
+      height: 2px;
+      background: #c2d2dc;
+      transform: translateY(-50%);
+    }
+
+    .flow-node {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      justify-items: center;
+      align-content: center;
+      min-width: 0;
+      text-align: center;
+    }
+
+    .flow-node::after {
+      content: "›";
+      position: absolute;
+      top: 50%;
+      right: -5px;
+      color: var(--blue);
+      font-family: "Arial", sans-serif;
+      font-size: 25px;
+      font-weight: 700;
+      line-height: 1;
+      transform: translateY(-55%);
+    }
+
+    .flow-node:last-child::after {
+      content: none;
+    }
+
+    .flow-dot {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      margin-bottom: 5px;
+      border: 5px solid var(--surface);
+      border-radius: 50%;
+      background: var(--blue);
+      box-shadow: 0 0 0 1px #afc6d3;
+      color: var(--white);
+    }
+
+    .flow-node.meal .flow-dot {
+      background: var(--amber);
+      box-shadow: 0 0 0 1px #e1c19c;
+    }
+
+    .flow-node.plasma .flow-dot {
+      background: var(--coral);
+      box-shadow: 0 0 0 1px #e3b7ae;
+    }
+
+    .flow-dot svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .flow-node strong {
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
+    .flow-node span {
+      margin-top: 2px;
+      color: var(--ink-soft);
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+    }
+
+    .analytes-band {
+      height: 220px;
+    }
+
+    .analyte-grid {
+      display: grid;
+      grid-template-columns: 522px minmax(0, 1fr);
+      grid-template-rows: 126px 32px;
+      gap: 6px 12px;
+      padding: 8px 16px;
+    }
+
+    .analyte-panel {
+      display: grid;
+      grid-template-columns: 130px 1fr;
+      gap: 12px;
+      min-width: 0;
+      padding: 10px 12px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .analyte-label {
+      display: grid;
+      align-content: center;
+      padding-right: 12px;
+      border-right: 1px solid var(--line);
+    }
+
+    .analyte-label .icon {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      margin-bottom: 7px;
+      border-radius: 50%;
+      background: var(--teal-soft);
+      color: var(--teal-dark);
+    }
+
+    .metabolic-panel .icon {
+      background: var(--coral-soft);
+      color: var(--coral);
+    }
+
+    .analyte-label svg {
+      width: 17px;
+      height: 17px;
+    }
+
+    .analyte-label strong {
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.3;
+    }
+
+    .analyte-label span {
+      margin-top: 2px;
+      color: var(--ink-soft);
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: 0.7px;
+    }
+
+    .markers {
+      display: grid;
+      align-content: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .vitamin-markers {
+      grid-template-columns: repeat(5, 1fr);
+    }
+
+    .metabolic-markers {
+      grid-template-columns: repeat(6, 1fr);
+    }
+
+    .marker {
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      min-width: 0;
+      min-height: 44px;
+      padding: 5px 4px;
+      border: 1px solid #bcd9d2;
+      background: #f6fbf9;
+      text-align: center;
+    }
+
+    .marker strong {
+      color: var(--teal-dark);
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 15px;
+      font-weight: 900;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .marker span {
+      margin-top: 4px;
+      color: var(--ink-soft);
+      font-size: 9px;
+      font-weight: 700;
+      line-height: 1.1;
+      white-space: nowrap;
+    }
+
+    .metabolic-panel .marker {
+      border-color: #e4c5bc;
+      background: #fdf8f6;
+    }
+
+    .metabolic-panel .marker strong {
+      color: #873f32;
+    }
+
+    .analysis-strip {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 108px 1fr 1fr 1fr;
+      align-items: stretch;
+      overflow: hidden;
+      background: var(--teal-dark);
+      color: var(--white);
+    }
+
+    .analysis-strip .axis-label {
+      display: grid;
+      place-items: center;
+      background: var(--coral);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.7px;
+    }
+
+    .axis-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-right: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .axis-item:last-child {
+      border-right: 0;
+    }
+
+    .axis-item b {
+      color: #f4c4a7;
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.4px;
+    }
+
+    .footer {
+      position: absolute;
+      z-index: 1;
+      left: 58px;
+      right: 58px;
+      bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--ink-soft);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.45px;
+    }
+
+    .footer::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: -8px;
+      height: 1px;
+      background: var(--line);
+    }
+
+    .footer strong {
+      color: var(--teal-dark);
+      font-weight: 800;
+    }
+  </style>
+</head>
+<body>
+  <main class="poster" aria-label="中国高代谢风险人群生活方式干预研究项目总览">
+    <header class="hero">
+      <div>
+        <div class="kicker">Randomized controlled lifestyle intervention</div>
+        <h1>中国高代谢风险人群<br>生活方式干预研究</h1>
+        <p class="subtitle">
+          基于6个月随机对照生活方式干预，聚焦395名完成完整随访及维生素K检测的超重肥胖参与者。
+        </p>
+      </div>
+      <div class="hero-facts" aria-label="项目关键信息">
+        <div class="fact-duration">
+          <strong>6</strong>
+          <span>个月 RCT</span>
+        </div>
+        <div class="fact-grid">
+          <div class="fact">
+            <strong>395</strong>
+            <span>完整随访<br>分析队列</span>
+          </div>
+          <div class="fact">
+            <strong>2</strong>
+            <span>干预分组<br>SAA / SADA</span>
+          </div>
+          <div class="fact">
+            <strong>3</strong>
+            <span>每次访视<br>血浆时点</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="band cohort-band">
+      <div class="band-head">
+        <div class="band-title">
+          <span class="band-index">01</span>
+          队列与随机分组
+          <span class="band-en">COHORT &amp; RANDOMIZATION</span>
+        </div>
+        <div class="band-note">395名参与者 · 1 : 1 随机分组</div>
+      </div>
+
+      <div class="cohort-body">
+        <div class="cohort-total">
+          <div class="cohort-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <div>
+            <strong>395</strong>
+            <small>超重 / 肥胖<br>高代谢风险参与者</small>
+          </div>
+        </div>
+
+        <div class="randomizer">
+          <span>随机分组</span>
+        </div>
+
+        <div class="arm-grid">
+          <article class="arm">
+            <div>
+              <div class="arm-code">SAA</div>
+              <div class="arm-n">n = 197</div>
+            </div>
+            <div class="arm-copy">
+              <h3>智能应用组</h3>
+              <p>智能手机应用健康课程、个性化饮食建议，并联接体重秤、血压计与运动手环。</p>
+            </div>
+            <div class="arm-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="6" y="2" width="12" height="20" rx="2"></rect>
+                <path d="M10 18h4"></path>
+              </svg>
+            </div>
+          </article>
+
+          <article class="arm sada">
+            <div>
+              <div class="arm-code">SADA</div>
+              <div class="arm-n">n = 198</div>
+            </div>
+            <div class="arm-copy">
+              <h3>智能应用联合营养师支持组</h3>
+              <p>在SAA干预基础上增加营养师在线互动、进度反馈与行为督促。</p>
+            </div>
+            <div class="arm-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
+                <path d="M8 9h8M8 13h5"></path>
+              </svg>
+            </div>
+          </article>
+        </div>
+
+        <div class="common-intervention">
+          <strong>共同进入 6 个月生活方式干预</strong>
+          <span>均衡饮食指导 · 健康课程 · 家庭监测 · 行为支持</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="band process-band">
+      <div class="band-head">
+        <div class="band-title">
+          <span class="band-index">02</span>
+          研究内容与动态采血
+          <span class="band-en">RESEARCH AIMS &amp; SAMPLING</span>
+        </div>
+        <div class="band-note">基线 + 干预6个月后 · 每时点采集3次血浆</div>
+      </div>
+
+      <div class="process-grid">
+        <section class="research-panel">
+          <div class="subhead">
+            <strong>主要研究内容</strong>
+            <span>PROJECT AIMS</span>
+          </div>
+          <div class="research-list">
+            <div class="research-item">
+              <span class="research-no">01</span>
+              <div>
+                <h4>比较两种干预模式的减重及代谢改善效果</h4>
+                <p>SAA与SADA的组间差异及6个月前后变化</p>
+              </div>
+            </div>
+            <div class="research-item">
+              <span class="research-no">02</span>
+              <div>
+                <h4>评估数字化生活方式干预的行为依从性</h4>
+                <p>课程学习、饮食记录、自我称重、血压监测与手环使用</p>
+              </div>
+            </div>
+            <div class="research-item">
+              <span class="research-no">03</span>
+              <div>
+                <h4>观察维生素K/D与代谢谱的动态变化</h4>
+                <p>空腹、餐后1小时与餐后3小时血浆样本</p>
+              </div>
+            </div>
+            <div class="research-item">
+              <span class="research-no">04</span>
+              <div>
+                <h4>分析维生素状态与代谢健康的关联</h4>
+                <p>糖脂代谢、肝功能与炎症指标的多维关联</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="sampling-panel">
+          <div class="subhead">
+            <strong>两个评估时点 · 相同血浆采集流程</strong>
+            <span class="sampling-tag">PLASMA SAMPLING</span>
+          </div>
+          <div class="visit-rows">
+            <div class="visit-row">
+              <div class="visit-card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="17" rx="2"></rect>
+                  <path d="M16 2v4M8 2v4M3 10h18"></path>
+                </svg>
+                <strong>基线</strong>
+                <span>干预前 · 0个月</span>
+              </div>
+              <div class="sample-flow" aria-label="基线血浆采集流程">
+                <div class="flow-node">
+                  <span class="flow-dot">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <path d="M5 12h14"></path>
+                    </svg>
+                  </span>
+                  <strong>空腹 0 h</strong>
+                  <span>FASTING</span>
+                </div>
+                <div class="flow-node meal">
+                  <span class="flow-dot">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M7 3v8M4 3v5a3 3 0 0 0 6 0V3M7 11v10"></path>
+                      <path d="M17 3v18M17 3c-2 2-3 5-3 8h3"></path>
+                    </svg>
+                  </span>
+                  <strong>标准混合餐</strong>
+                  <span>STANDARD MEAL</span>
+                </div>
+                <div class="flow-node">
+                  <span class="flow-dot">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M12 3v18M3 12h18"></path>
+                      <circle cx="12" cy="12" r="7"></circle>
+                    </svg>
+                  </span>
+                  <strong>餐后 1 h</strong>
+                  <span>POSTPRANDIAL</span>
+                </div>
+                <div class="flow-node">
+                  <span class="flow-dot">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M12 3v18M3 12h18"></path>
+                      <circle cx="12" cy="12" r="7"></circle>
+                    </svg>
+                  </span>
+                  <strong>餐后 3 h</strong>
+                  <span>POSTPRANDIAL</span>
+                </div>
+                <div class="flow-node plasma">
+                  <span class="flow-dot">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+                      <path d="M9 3h6v5.3a7 7 0 1 1-6 0V3Z"></path>
+                      <path d="M9 8h6"></path>
+                    </svg>
+                  </span>
+                  <strong>血浆样本</strong>
+                  <span>PLASMA</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="visit-row">
+              <div class="visit-card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                  <path d="M3 3v5h5"></path>
+                  <path d="M3.05 13A9 9 0 1 0 6 5.7L3 8"></path>
+                  <path d="M12 7v5l4 2"></path>
+                </svg>
+                <strong>干预后</strong>
+                <span>6个月 · 完整随访</span>
+              </div>
+              <div class="sample-flow" aria-label="干预6个月后血浆采集流程">
+                <div class="flow-node">
+                  <span class="flow-dot">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <path d="M5 12h14"></path>
+                    </svg>
+                  </span>
+                  <strong>空腹 0 h</strong>
+                  <span>FASTING</span>
+                </div>
+                <div class="flow-node meal">
+                  <span class="flow-dot">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M7 3v8M4 3v5a3 3 0 0 0 6 0V3M7 11v10"></path>
+                      <path d="M17 3v18M17 3c-2 2-3 5-3 8h3"></path>
+                    </svg>
+                  </span>
+                  <strong>标准混合餐</strong>
+                  <span>STANDARD MEAL</span>
+                </div>
+                <div class="flow-node">
+                  <span class="flow-dot">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M12 3v18M3 12h18"></path>
+                      <circle cx="12" cy="12" r="7"></circle>
+                    </svg>
+                  </span>
+                  <strong>餐后 1 h</strong>
+                  <span>POSTPRANDIAL</span>
+                </div>
+                <div class="flow-node">
+                  <span class="flow-dot">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M12 3v18M3 12h18"></path>
+                      <circle cx="12" cy="12" r="7"></circle>
+                    </svg>
+                  </span>
+                  <strong>餐后 3 h</strong>
+                  <span>POSTPRANDIAL</span>
+                </div>
+                <div class="flow-node plasma">
+                  <span class="flow-dot">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+                      <path d="M9 3h6v5.3a7 7 0 1 1-6 0V3Z"></path>
+                      <path d="M9 8h6"></path>
+                    </svg>
+                  </span>
+                  <strong>血浆样本</strong>
+                  <span>PLASMA</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="band analytes-band">
+      <div class="band-head">
+        <div class="band-title">
+          <span class="band-index">03</span>
+          血浆检测数据
+          <span class="band-en">PLASMA BIOMARKER PANEL</span>
+        </div>
+        <div class="band-note">两个评估时点 × 三个采血时点 · 共16项指标</div>
+      </div>
+
+      <div class="analyte-grid">
+        <section class="analyte-panel vitamin-panel">
+          <div class="analyte-label">
+            <span class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M9 3h6v5.3a7 7 0 1 1-6 0V3Z"></path>
+                <path d="M9 8h6"></path>
+              </svg>
+            </span>
+            <strong>维生素K / D</strong>
+            <span>VITAMIN PANEL</span>
+          </div>
+          <div class="markers vitamin-markers">
+            <div class="marker"><strong>VK1</strong><span>维生素K1</span></div>
+            <div class="marker"><strong>MK-4</strong><span>甲萘醌-4</span></div>
+            <div class="marker"><strong>MK-7</strong><span>甲萘醌-7</span></div>
+            <div class="marker"><strong>VD2-25OH</strong><span>25-羟维生素D2</span></div>
+            <div class="marker"><strong>VD3-25OH</strong><span>25-羟维生素D3</span></div>
+          </div>
+        </section>
+
+        <section class="analyte-panel metabolic-panel">
+          <div class="analyte-label">
+            <span class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M3 12h4l2.1-6 4.2 12 2.1-6H21"></path>
+              </svg>
+            </span>
+            <strong>代谢 / 肝功能 / 炎症</strong>
+            <span>METABOLIC PANEL</span>
+          </div>
+          <div class="markers metabolic-markers">
+            <div class="marker"><strong>GLU</strong><span>血糖</span></div>
+            <div class="marker"><strong>Insulin</strong><span>胰岛素</span></div>
+            <div class="marker"><strong>TG</strong><span>甘油三酯</span></div>
+            <div class="marker"><strong>TCH</strong><span>总胆固醇</span></div>
+            <div class="marker"><strong>HDL-C</strong><span>高密度脂蛋白胆固醇</span></div>
+            <div class="marker"><strong>LDL-C</strong><span>低密度脂蛋白胆固醇</span></div>
+            <div class="marker"><strong>UA</strong><span>尿酸</span></div>
+            <div class="marker"><strong>ALT</strong><span>丙氨酸氨基转移酶</span></div>
+            <div class="marker"><strong>GGT</strong><span>γ-谷氨酰转移酶</span></div>
+            <div class="marker"><strong>hsCRP</strong><span>高敏C反应蛋白</span></div>
+            <div class="marker"><strong>FFA</strong><span>游离脂肪酸</span></div>
+          </div>
+        </section>
+
+        <div class="analysis-strip">
+          <div class="axis-label">分析路径</div>
+          <div class="axis-item"><b>WITHIN</b> 组内干预前后变化</div>
+          <div class="axis-item"><b>BETWEEN</b> SAA vs SADA 组间差异</div>
+          <div class="axis-item"><b>ASSOCIATION</b> 指标间关联分析</div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div><strong>研究设计总览</strong> · 395名参与者 · SAA 197 / SADA 198 · 6个月随机对照干预</div>
+      <div>PLASMA · VITAMIN K/D · METABOLIC PROFILE</div>
+    </footer>
+  </main>
+</body>
+</html>

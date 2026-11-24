@@ -1,0 +1,95 @@
+{
+  "freeze_id": "vitak-rag-t02-internal-research-2026-11-24",
+  "stage": "development_internal_research_frozen",
+  "generated_at": "2026-11-24T16:03:15Z",
+  "branch": "main",
+  "base_commit": "b46470edbbeeffb5f73ecf95ef792138b44e3c42",
+  "deployment": {
+    "github_pages_deployed_for_this_freeze": false,
+    "note": "This freeze validates the local full-stack research environment. The anonymous public bundle remains external-only."
+  },
+  "research_snapshot": {
+    "version": "vitak-research-2026.11-t02",
+    "derived_from": "vitak-real-2026.11",
+    "manifest_sha256": "b4957ba932cdb97caa7572ed0f677af031989ecfbec15b2c34f9f49de5cb7bbe",
+    "total_internal_records": 248,
+    "core_records": 48,
+    "contextual_records": 160,
+    "core_contextual_overlap": 9,
+    "grade_distribution": {
+      "A": 31,
+      "B": 10,
+      "C": 28,
+      "Negative": 179
+    }
+  },
+  "permissions": {
+    "session_cookie": "HttpOnly; SameSite=Strict",
+    "password_storage": "scrypt with per-user salt",
+    "roles": [
+      "researcher",
+      "admin"
+    ],
+    "anonymous_internal_access": "blocked",
+    "admin_localhost_only": true,
+    "session_revocation": "enabled",
+    "audit_log": "enabled"
+  },
+  "research_acceptance": {
+    "question_count": 10,
+    "passed": 10,
+    "failed": 0,
+    "errors": 0,
+    "average_latency_ms": 521,
+    "question_file": "data/eval/research-questions-v1.jsonl",
+    "question_file_sha256": "7602e44875a99ac19dfda4dc256a41ec5183dd5ddc289cbf2b423fbb7f87bd91",
+    "run_file": "data/eval/research-run-2026.11.json",
+    "run_file_sha256": "bd9f3cbc34e2a4221920beacf5544659149b43b164356673001ad252309050c5",
+    "covered_families": [
+      "cross_sectional",
+      "longitudinal",
+      "postprandial",
+      "vk_vd_interaction",
+      "sex_interaction",
+      "obesity_interaction",
+      "reverse_causality",
+      "dose_response",
+      "mediation"
+    ]
+  },
+  "verification": {
+    "backend_lint": "passed",
+    "backend_tests": "37 passed",
+    "backend_real_snapshot_tests": "included and passed",
+    "frontend_production_build": "passed",
+    "frontend_build_mode": "VITE_STATIC_DEMO=false",
+    "browser_regression": "passed on the isolated full-stack build",
+    "browser_viewports": [
+      "1440x1000 desktop",
+      "390x844 mobile"
+    ],
+    "browser_checks": [
+      "anonymous public overview",
+      "research login",
+      "internal research overview and filters",
+      "data governance",
+      "domain chat citations",
+      "claim-to-evidence highlighting",
+      "internal research chat",
+      "evidence comparison",
+      "structured evidence",
+      "medical safety refusal",
+      "domain and research graph scopes",
+      "answer-to-graph handoff",
+      "evidence JSON",
+      "admin import page",
+      "independent chat scrolling",
+      "mobile horizontal overflow"
+    ],
+    "mobile_horizontal_overflow": false
+  },
+  "scientific_review": {
+    "status": "pending_scientific_owner",
+    "note": "Automated checks verify access isolation, evidence binding, statistical field display, set accounting and UI regressions. They do not replace scientific review of model interpretation, causal wording or clinical boundaries."
+  }
+}

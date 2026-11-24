@@ -12,6 +12,11 @@
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@api": ["./src/lib/api.ts"],
+      "@auth": ["./src/lib/auth.tsx"]
+    },
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,

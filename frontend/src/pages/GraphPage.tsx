@@ -24,7 +24,9 @@ import {
   X
 } from "lucide-react";
 import Graph3DView from "../components/Graph3DView";
-import { getFullGraph, getGraphMeta, getSubgraph, searchGraph } from "../lib/api";
+import { getGraphMeta, getSubgraph, searchGraph } from "@api";
+import { useAuth } from "@auth";
+import { PUBLIC_BUILD } from "../lib/buildMode";
 import {
   downloadPng,
   exportFlowGraphPng,
@@ -46,6 +48,7 @@ import {
 import type { GraphNode } from "../lib/types";
 
 function GraphPage() {
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const sourceIsAnswer = searchParams.get("source") === "answer";
   const [answerHandoff, setAnswerHandoff] = useState<GraphPathHandoff | null>(
@@ -60,6 +63,13 @@ function GraphPage() {
   const [answerPathUnavailable] = useState(
     sourceIsAnswer && !answerHandoff
   );
+  const [dataScope, setDataScope] = useState<"domain" | "research" | "comparison">(
+    answerHandoff?.qaMode === "research"
+      ? "research"
+      : answerHandoff?.qaMode === "comparison"
+        ? "comparison"
+        : "domain"
+  );
   const [query, setQuery] = useState("维生素K");
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [selected, setSelected] = useState<GraphNode | null>(null);
@@ -70,35 +80,52 @@ function GraphPage() {
     "idle" | "working" | "done" | "error"
   >("idle");
 
-  const meta = useQuery({ queryKey: ["graph-meta"], queryFn: getGraphMeta });
+  const meta = useQuery({
+    queryKey: ["graph-meta", dataScope],
+    queryFn: () => getGraphMeta(dataScope)
+  });
   const search = useQuery({
-    queryKey: ["graph-search", submittedQuery],
-    queryFn: () => searchGraph(submittedQuery),
+    queryKey: ["graph-search", submittedQuery, dataScope],
+    queryFn: () => searchGraph(submittedQuery, dataScope),
     enabled: Boolean(submittedQuery)
   });
-  const subgraph = useQuery({
-    queryKey: ["subgraph", selectedIds, enabledDomains],
-    queryFn: () => getSubgraph(selectedIds, 1, enabledDomains),
-    enabled: selectedIds.length > 0 && !answerHandoff
+  const defaultFocus = useQuery({
+    queryKey: ["graph-default-focus", dataScope],
+    queryFn: () => searchGraph("维生素K", dataScope),
+    enabled: !answerHandoff && dataScope !== "research"
   });
-  const fullGraph = useQuery({
-    queryKey: ["full-graph", enabledDomains],
-    queryFn: () => getFullGraph(enabledDomains),
-    enabled: !answerHandoff
+  const focusIds = useMemo(() => {
+    if (selectedIds.length > 0) return selectedIds;
+    const first = defaultFocus.data?.items[0];
+    return first ? [first.id] : [];
+  }, [defaultFocus.data?.items, selectedIds]);
+  const subgraph = useQuery({
+    queryKey: ["subgraph", focusIds, enabledDomains, dataScope],
+    queryFn: () => getSubgraph(focusIds, 1, enabledDomains, dataScope),
+    enabled: focusIds.length > 0 && !answerHandoff
   });
   const answerSubgraph = useMemo(
     () => (answerHandoff ? buildGraphPathSubgraph(answerHandoff) : null),
     [answerHandoff]
   );
-  const visibleGraph =
-    answerSubgraph ??
-    (selectedIds.length > 0 ? subgraph.data : fullGraph.data);
+  const visibleGraph = answerSubgraph ?? subgraph.data;
   const graphLoading =
     !answerHandoff &&
-    (selectedIds.length > 0 ? subgraph.isFetching : fullGraph.isFetching);
+    (defaultFocus.isFetching || subgraph.isFetching);
   const isAnswerMode = Boolean(answerHandoff);
-  const isOverview = !isAnswerMode && selectedIds.length === 0;
-  const graphScope = isAnswerMode ? "answer" : isOverview ? "all" : "focus";
+  const needsResearchFocus =
+    !PUBLIC_BUILD &&
+    !isAnswerMode &&
+    dataScope === "research" &&
+    selectedIds.length === 0;
+  const isOverview = false;
+  const graphScope = isAnswerMode
+    ? "answer"
+    : needsResearchFocus
+      ? "research-focus"
+      : isOverview
+        ? "all"
+        : "focus";
   const versionMismatch =
     isAnswerMode &&
     Boolean(meta.data?.data_version.version) &&
@@ -113,7 +140,7 @@ function GraphPage() {
 
     const overview =
       !isAnswerMode && selectedIds.length === 0 && items.nodes.length > 200;
-    const centerId = selectedIds[0] ?? items.nodes[0]?.id;
+    const centerId = focusIds[0] ?? items.nodes[0]?.id;
     const others = items.nodes.filter((node) => node.id !== centerId);
     const radius = Math.max(210, Math.min(320, others.length * 18));
     const orderedNodes = overview
@@ -196,7 +223,7 @@ function GraphPage() {
           })
     }));
     return { nodes, edges };
-  }, [isAnswerMode, selectedIds, visibleGraph]);
+  }, [focusIds, isAnswerMode, visibleGraph]);
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState<FlowNode>([]);
   const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
   const relationCounts = useMemo(() => {
@@ -252,6 +279,19 @@ function GraphPage() {
     );
   }
 
+  function changeScope(scope: "domain" | "research" | "comparison") {
+    if (answerHandoff) {
+      clearGraphPathHandoff();
+      setAnswerHandoff(null);
+      setSearchParams({}, { replace: true });
+    }
+    setDataScope(scope);
+    setSelected(null);
+    setSelectedIds([]);
+    setEnabledDomains([]);
+    setSubmittedQuery("");
+  }
+
   function showAllGraph() {
     if (answerHandoff) {
       clearGraphPathHandoff();
@@ -260,6 +300,7 @@ function GraphPage() {
     }
     setSelected(null);
     setSelectedIds([]);
+    setEnabledDomains([]);
   }
 
   function resetLayout() {
@@ -280,7 +321,7 @@ function GraphPage() {
         entityCount: visibleGraph.nodes.length,
         relationCount: visibleGraph.edges.length,
         dataVersion: visibleGraph.data_version.version,
-        focusName: selected?.name
+        focusName: selected?.name ?? defaultFocus.data?.items[0]?.name
       };
       let blob: Blob;
       if (viewMode === "3d") {
@@ -319,6 +360,33 @@ function GraphPage() {
           <p>搜索实体、查看领域关系和证据覆盖情况。节点和边均来自当前数据版本。</p>
         </div>
         <div className="graph-heading-side">
+          {!PUBLIC_BUILD && (
+            <div className="graph-scope-switch" role="group" aria-label="图谱证据范围">
+              <button
+                type="button"
+                className={dataScope === "domain" ? "active" : ""}
+                onClick={() => changeScope("domain")}
+              >
+                领域
+              </button>
+              <button
+                type="button"
+                className={dataScope === "research" ? "active" : ""}
+                onClick={() => changeScope("research")}
+                disabled={!user}
+              >
+                内部局部
+              </button>
+              <button
+                type="button"
+                className={dataScope === "comparison" ? "active" : ""}
+                onClick={() => changeScope("comparison")}
+                disabled={!user}
+              >
+                内外对照
+              </button>
+            </div>
+          )}
           <div className="graph-view-switch" role="group" aria-label="图谱展示模式">
             <button
               type="button"
@@ -383,10 +451,10 @@ function GraphPage() {
               type="button"
               className="graph-show-all"
               onClick={showAllGraph}
-              disabled={isOverview}
+              disabled={!selectedIds.length && !enabledDomains.length}
             >
               <Network size={13} />
-              全部
+              默认视图
             </button>
           </div>
           {search.isFetching && <p className="muted">正在搜索...</p>}
@@ -418,6 +486,11 @@ function GraphPage() {
               {isOverview ? "正在加载全部图谱..." : "正在查询邻居关系..."}
             </div>
           )}
+          {needsResearchFocus && (
+            <div className="canvas-status graph-focus-prompt">
+              内部研究图谱按问题加载局部子图。请先搜索并选择一个实体。
+            </div>
+          )}
           {isAnswerMode && answerHandoff && (
             <div className="graph-answer-context">
               <div className="graph-answer-context-icon">
@@ -440,10 +513,10 @@ function GraphPage() {
               <button
                 type="button"
                 onClick={showAllGraph}
-                aria-label="退出回答路径并显示全部图谱"
+                aria-label="退出回答路径并显示局部图谱"
               >
                 <X size={14} />
-                全部图谱
+                局部图谱
               </button>
             </div>
           )}
@@ -454,7 +527,7 @@ function GraphPage() {
               </div>
               <div className="graph-answer-context-copy">
                 <strong>回答图谱路径已过期</strong>
-                <small>已恢复当前完整知识图谱。</small>
+                <small>已恢复当前默认局部图谱。</small>
               </div>
             </div>
           )}

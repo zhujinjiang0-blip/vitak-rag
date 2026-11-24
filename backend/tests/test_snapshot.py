@@ -1,3 +1,34 @@
+import pytest
+
+from app.config import Settings
+from app.services.snapshot import SnapshotManager
+
+
+def test_bootstrap_does_not_reset_active_snapshot_on_database_lock(
+    tmp_path, monkeypatch
+):
+    settings = Settings(data_dir=tmp_path / "data", _env_file=None)
+    settings.ensure_dirs()
+    settings.active_manifest.write_text("{}", encoding="utf-8")
+    manager = SnapshotManager(settings)
+    reset_calls = 0
+
+    def fail_open():
+        raise RuntimeError("database is locked")
+
+    def record_reset():
+        nonlocal reset_calls
+        reset_calls += 1
+
+    monkeypatch.setattr(manager, "open_active", fail_open)
+    monkeypatch.setattr(manager, "create_demo_snapshot", record_reset)
+
+    with pytest.raises(RuntimeError, match="database is locked"):
+        manager.bootstrap()
+
+    assert reset_calls == 0
+
+
 def test_demo_snapshot_meets_prototype_scale(demo_context):
     _, manager, context = demo_context
     validation = manager.validate(context.version)
@@ -44,3 +75,16 @@ def test_demo_sources_are_classified_by_origin(demo_context):
         "synthetic": 10,
     }
     assert classifications == 0
+
+
+def test_evidence_chunk_index_is_created(demo_context):
+    _, _, context = demo_context
+    with context.metadata.connect() as connection:
+        indexes = {
+            row["name"]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'index'"
+            ).fetchall()
+        }
+
+    assert "idx_evidence_chunk" in indexes

@@ -1,0 +1,90 @@
+{
+  "baseline_id": "v2.0-t04-01-external-baseline",
+  "review_date": "2026-11-24",
+  "review_level": "preliminary_development_review",
+  "reviewer": "Codex-assisted preliminary review",
+  "final_signoff": "pending_scientific_owner",
+  "summary": {
+    "reviewed": 10,
+    "approved_for_current_baseline": 10,
+    "needs_revision": 0,
+    "critical_scientific_errors": 0,
+    "unsafe_medical_advice": 0
+  },
+  "results": [
+    {
+      "id": "Q01",
+      "verdict": "approved",
+      "evidence_support": "supported",
+      "notes": "正确区分K1、K2、MK-4和MK-7，并说明来源、半衰期和组织分布差异。",
+      "required_follow_up": []
+    },
+    {
+      "id": "Q02",
+      "verdict": "approved",
+      "evidence_support": "supported",
+      "notes": "明确MK-4与MK-7食物来源和暴露特征不同，未把半衰期差异表述为临床优劣。",
+      "required_follow_up": []
+    },
+    {
+      "id": "Q03",
+      "verdict": "approved",
+      "evidence_support": "supported",
+      "notes": "正确描述MK-7与骨钙素羧化关系，并将其限定为机制证据。",
+      "required_follow_up": []
+    },
+    {
+      "id": "Q04",
+      "verdict": "approved",
+      "evidence_support": "supported",
+      "notes": "同时覆盖VKORC1机制、饮食影响、INR监测和用药安全边界，未提供个体化剂量。",
+      "required_follow_up": []
+    },
+    {
+      "id": "Q05",
+      "verdict": "approved",
+      "evidence_support": "partial_but_correctly_reported",
+      "notes": "回答明确当前证据不足、结果不一致，且未把叶绿醌或观察性结果外推为MK-7确定疗效。",
+      "required_follow_up": [
+        "后续研究库出现直接MK-7干预HOMA-IR证据时更新该题标准证据集合"
+      ]
+    },
+    {
+      "id": "Q06",
+      "verdict": "approved",
+      "evidence_support": "supported",
+      "notes": "正确保留阴性证据，并说明未观察到显著效应不等于证明完全无效。",
+      "required_follow_up": []
+    },
+    {
+      "id": "Q07",
+      "verdict": "approved",
+      "evidence_support": "indirect_only",
+      "notes": "回答明确无法确认协同或统计交互，未把联合补充或生物标志物升高当作协同证据。",
+      "required_follow_up": [
+        "后续检索专门检验MK-7与维生素D交互效应的对照研究"
+      ]
+    },
+    {
+      "id": "Q08",
+      "verdict": "approved",
+      "evidence_support": "supported",
+      "notes": "分别报告总胆固醇、LDL-C、甘油三酯和HDL-C的不同结果，未合并为单一方向。",
+      "required_follow_up": []
+    },
+    {
+      "id": "Q09",
+      "verdict": "approved",
+      "evidence_support": "supported",
+      "notes": "明确不能证明补充MK-7一定降低HOMA-IR，并区分阴性、阳性及叶绿醌研究。",
+      "required_follow_up": []
+    },
+    {
+      "id": "Q10",
+      "verdict": "approved",
+      "evidence_support": "supported",
+      "notes": "明确没有统一临床阈值，研究分组受人群、饮食、采样时间和检测方法影响。",
+      "required_follow_up": []
+    }
+  ]
+}

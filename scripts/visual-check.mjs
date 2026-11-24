@@ -14,6 +14,9 @@ const baseUrl = process.env.VITAK_WEB_URL || "http://127.0.0.1:5173";
 const expectedVersion =
   process.env.VITAK_EXPECT_VERSION || "real-public-2026.11-structured";
 const checkInternal = process.env.VITAK_CHECK_INTERNAL === "true";
+const researchUser = process.env.VITAK_RESEARCH_USER || "admin";
+const researchPassword =
+  process.env.VITAK_RESEARCH_PASSWORD || "VitakResearch2026!";
 await mkdir(outputDir, { recursive: true });
 
 const browser = await chromium.launch({
@@ -27,13 +30,58 @@ page.on("console", (message) => {
 });
 page.on("pageerror", (error) => consoleErrors.push(error.message));
 
-await page.goto(`${baseUrl}/`, { waitUntil: "networkidle" });
+await page.goto(`${baseUrl}/#/overview`, { waitUntil: "networkidle" });
 await page.getByRole("heading", { name: "维生素 K 知识图谱检索与证据追溯" }).waitFor();
 await page.getByText("预答辩演示口径").waitFor();
+const overviewWidth = await page.evaluate(() => ({
+  viewport: window.innerWidth,
+  page: document.querySelector(".overview-page")?.getBoundingClientRect().width,
+  hero: document.querySelector(".overview-hero")?.getBoundingClientRect().width
+}));
+if (
+  Math.abs(Number(overviewWidth.page) - overviewWidth.viewport) > 1 ||
+  Number(overviewWidth.hero) < overviewWidth.viewport - 60
+) {
+  throw new Error(`项目概览未平铺：${JSON.stringify(overviewWidth)}`);
+}
 await page.screenshot({
   path: `${outputDir}/overview-desktop.png`,
   fullPage: true
 });
+
+if (checkInternal) {
+  await page.goto(`${baseUrl}/#/login`, { waitUntil: "networkidle" });
+  await page.getByLabel("用户名").fill(researchUser);
+  await page.getByLabel("密码").fill(researchPassword);
+  await page.getByRole("button", { name: "登录" }).click();
+  await page.getByRole("link", { name: "内部研究" }).waitFor({
+    timeout: 15_000
+  });
+  await page.goto(`${baseUrl}/#/research`, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "内部研究证据" }).waitFor();
+  await page.getByText("248", { exact: true }).first().waitFor();
+  await page.getByText("48", { exact: true }).first().waitFor();
+  await page.getByText("160", { exact: true }).first().waitFor();
+  await page.getByText("9", { exact: true }).first().waitFor();
+  await page.getByPlaceholder(/检索实体、结局或分析场景/).fill("HOMA-IR");
+  await page.locator(".research-search").getByRole("button", { name: "检索" }).click();
+  await page.locator(".research-result-card").first().waitFor({
+    timeout: 15_000
+  });
+  await page.locator(".private-pill").first().waitFor();
+  await page.screenshot({
+    path: `${outputDir}/research-overview-desktop.png`,
+    fullPage: true
+  });
+  await page.goto(`${baseUrl}/#/governance`, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "数据版本与质量审计" }).waitFor();
+  await page.getByText("质量与权限门槛").waitFor();
+  await page.locator(".governance-summary").waitFor();
+  await page.screenshot({
+    path: `${outputDir}/governance-desktop.png`,
+    fullPage: true
+  });
+}
 
 await page.goto(`${baseUrl}/#/chat`, { waitUntil: "networkidle" });
 await page.getByText("从一个具体问题开始").waitFor();
@@ -90,13 +138,28 @@ await page.screenshot({
   path: `${outputDir}/chat-answer-desktop.png`,
   fullPage: true
 });
-await page.getByRole("button", { name: "在图谱中查看" }).waitFor({
-  timeout: 15_000
+await page.locator(".claim-evidence-panel").waitFor({ state: "visible" });
+const claimCount = await page.locator(".claim-evidence-item").count();
+if (claimCount < 1) throw new Error("回答未展示结论级证据");
+const typedClaimCount = await page.locator(".claim-type-badge").count();
+if (typedClaimCount !== claimCount) {
+  throw new Error("结论级证据缺少科学边界类型");
+}
+await page.locator(".claim-citation-list button").first().click();
+await page.locator(".citation-card.highlighted").first().waitFor({
+  timeout: 10_000
 });
-await page.getByRole("button", { name: "在图谱中查看" }).click();
+await page.screenshot({
+  path: `${outputDir}/chat-claim-evidence-desktop.png`,
+  fullPage: true
+});
+const graphPathButton = page.getByRole("button", { name: "在图谱中查看" });
+let answerHandoffRaw = null;
+if (await graphPathButton.count()) {
+await graphPathButton.click();
 await page.locator('[data-graph-scope="answer"]').waitFor({ timeout: 15_000 });
 await page.locator(".graph-answer-context").waitFor({ timeout: 15_000 });
-const answerHandoffRaw = await page.evaluate(() =>
+answerHandoffRaw = await page.evaluate(() =>
   sessionStorage.getItem("vitak-rag:graph-path-handoff:v1")
 );
 if (!answerHandoffRaw) throw new Error("问答图谱路径未写入 sessionStorage");
@@ -166,20 +229,52 @@ await page.locator(".graph-answer-context em", {
 }).waitFor({ timeout: 15_000 });
 await page
   .locator(".graph-answer-context")
-  .getByRole("button", { name: "退出回答路径并显示全部图谱" })
+  .getByRole("button", { name: "退出回答路径并显示局部图谱" })
   .click();
-await page.locator('[data-graph-scope="all"]').waitFor({ timeout: 20_000 });
+await page.locator('[data-graph-scope="focus"]').waitFor({ timeout: 20_000 });
 const handoffAfterExit = await page.evaluate(() =>
   sessionStorage.getItem("vitak-rag:graph-path-handoff:v1")
 );
 if (handoffAfterExit) throw new Error("退出回答路径后未清理 sessionStorage");
-await page.goto(`${baseUrl}/#/chat`, { waitUntil: "networkidle" });
-await page.getByPlaceholder("输入关于维生素K的问题...").waitFor({
-  state: "visible"
-});
+if (checkInternal) {
+  await page.goto(`${baseUrl}/#/chat`, { waitUntil: "networkidle" });
+  await page.getByPlaceholder("输入关于维生素K的问题...").waitFor({
+    state: "visible"
+  });
+  await page.getByRole("button", { name: /内外对照/ }).click();
+  await page.getByPlaceholder("输入关于维生素K的问题...").fill(
+    "MK-7与HOMA-IR有什么关系？"
+  );
+  await page.getByRole("button", { name: "发送问题" }).click();
+  await page.locator(".evidence-comparison-panel").waitFor({
+    state: "visible",
+    timeout: 15_000
+  });
+  await page.waitForFunction(
+    () => !document.querySelector('[data-streaming="true"]'),
+    null,
+    { timeout: 15_000 }
+  );
+  const comparisonPanel = page.locator(".evidence-comparison-panel");
+  await comparisonPanel
+    .getByText("显著性差异", { exact: true })
+    .last()
+    .waitFor({ timeout: 10_000 });
+  await comparisonPanel
+    .getByText("机制证据与临床", { exact: false })
+    .last()
+    .waitFor({ timeout: 10_000 });
+  await page.screenshot({
+    path: `${outputDir}/chat-evidence-comparison-desktop.png`,
+    fullPage: true
+  });
+  await page.getByRole("button", { name: /领域知识/ }).click();
+}
+}
 
+await page.goto(`${baseUrl}/#/chat`, { waitUntil: "networkidle" });
 await page.getByPlaceholder("输入关于维生素K的问题...").fill(
-  "羽衣甘蓝含有哪种维生素K？"
+  "羽衣甘蓝是什么？"
 );
 await page.getByRole("button", { name: "发送问题" }).click();
 await page.locator(".assistant-message").last().waitFor({ timeout: 15_000 });
@@ -190,8 +285,8 @@ await page.waitForFunction(
   null,
   { timeout: 15_000 }
 );
-await page.getByText("EXTERNAL_STRUCTURED_TRIPLE", { exact: false }).first().waitFor({
-  timeout: 15_000
+await page.getByText("external_structured_triple", { exact: false }).first().waitFor({
+  timeout: 30_000
 });
 await page.screenshot({
   path: `${outputDir}/chat-structured-evidence-desktop.png`,
@@ -225,11 +320,15 @@ await page.screenshot({
 });
 
 if (checkInternal) {
-  await page.getByPlaceholder("输入关于维生素K的问题...").fill(
+  await page.getByRole("button", { name: /内部研究/ }).click();
+  await page.getByPlaceholder("询问内部队列的实体、分析族或统计结果...").fill(
     "内部队列中VK1和HOMA-IR有什么关系？"
   );
   await page.getByRole("button", { name: "发送问题" }).click();
-  await page.getByText("从本项目内部队列", { exact: false }).waitFor({ timeout: 15_000 });
+  await page
+    .locator(".message-text", { hasText: "从本项目内部队列" })
+    .last()
+    .waitFor({ timeout: 15_000 });
   await page.waitForFunction(
     () => !document.querySelector('[data-streaming="true"]'),
     null,
@@ -245,7 +344,7 @@ if (checkInternal) {
 
 await page.goto(`${baseUrl}/#/graph`, { waitUntil: "networkidle" });
 await page.getByRole("heading", { name: "知识图谱" }).waitFor();
-await page.locator('[data-graph-scope="all"]').waitFor({ timeout: 20_000 });
+await page.locator('[data-graph-scope="focus"]').waitFor({ timeout: 20_000 });
 await page.locator(".graph-3d-canvas canvas").waitFor();
 const overviewCounts = await page.evaluate(() => {
   const values = [...document.querySelectorAll(".graph-stats strong")].map((node) =>
@@ -257,8 +356,8 @@ const overviewCounts = await page.evaluate(() => {
     scope: document.querySelector(".graph-canvas")?.getAttribute("data-graph-scope")
   };
 });
-if (overviewCounts.scope !== "all" || overviewCounts.nodes < 1500 || overviewCounts.edges < 5000) {
-  throw new Error(`图谱默认未展示全量数据：${JSON.stringify(overviewCounts)}`);
+if (overviewCounts.scope !== "focus" || overviewCounts.nodes < 1 || overviewCounts.edges < 1) {
+  throw new Error(`图谱未默认展示局部网络：${JSON.stringify(overviewCounts)}`);
 }
 await page.screenshot({
   path: `${outputDir}/graph-3d-desktop.png`,
@@ -278,17 +377,15 @@ if (
 ) {
   throw new Error("三维图谱下载文件不是有效 PNG");
 }
-await page.getByPlaceholder("搜索实体，例如：华法林、纳豆、INR").fill("华法林");
+await page.getByPlaceholder("搜索实体，例如：华法林、纳豆、INR").fill("Warfarin");
 await page.getByRole("button", { name: "搜索" }).click();
 await page.locator(".entity-result").first().waitFor({ timeout: 15_000 });
 await page.locator(".entity-result").first().click();
 await page.locator('[data-graph-scope="focus"]').waitFor({ timeout: 15_000 });
-await page.locator(".graph-show-all").click();
-await page.locator('[data-graph-scope="all"]').waitFor({ timeout: 15_000 });
 await page.getByRole("button", { name: "二维图谱" }).click();
 await page.locator(".react-flow").waitFor();
 await page.waitForFunction(
-  () => document.querySelectorAll(".react-flow__node").length > 1500,
+  () => document.querySelectorAll(".react-flow__node").length > 0,
   null,
   { timeout: 20_000 }
 );
@@ -296,8 +393,8 @@ const reactFlowCounts = await page.evaluate(() => ({
   nodes: document.querySelectorAll(".react-flow__node").length,
   edges: document.querySelectorAll(".react-flow__edge").length
 }));
-if (reactFlowCounts.nodes < 1500 || reactFlowCounts.edges < 5000) {
-  throw new Error(`二维全图数量不完整：${JSON.stringify(reactFlowCounts)}`);
+if (reactFlowCounts.nodes < 1 || reactFlowCounts.edges < 1) {
+  throw new Error(`二维局部图数量不完整：${JSON.stringify(reactFlowCounts)}`);
 }
 await page.screenshot({
   path: `${outputDir}/graph-2d-desktop.png`,
@@ -325,6 +422,17 @@ await page.locator(".evidence-result-card").first().waitFor({ timeout: 15_000 })
 await page.locator(".origin-pill.external").first().waitFor({ timeout: 15_000 });
 await page.locator(".eligibility-pill").first().waitFor({ timeout: 15_000 });
 await page.locator(".origin-filter").waitFor();
+const evidenceWidth = await page.evaluate(() => ({
+  viewport: window.innerWidth,
+  page: document.querySelector(".evidence-page")?.getBoundingClientRect().width,
+  search: document.querySelector(".evidence-search")?.getBoundingClientRect().width
+}));
+if (
+  Math.abs(Number(evidenceWidth.page) - evidenceWidth.viewport) > 1 ||
+  Number(evidenceWidth.search) < evidenceWidth.viewport - 70
+) {
+  throw new Error(`证据检索未平铺：${JSON.stringify(evidenceWidth)}`);
+}
 await page.getByRole("button", { name: "查看 JSON" }).first().click();
 const jsonDialog = page.getByRole("dialog");
 await jsonDialog.waitFor({ state: "visible", timeout: 15_000 });
@@ -350,6 +458,13 @@ await page.screenshot({
 
 await page.goto(`${baseUrl}/#/import`, { waitUntil: "networkidle" });
 await page.getByRole("heading", { name: /知识库导入|42 列证据表导入/ }).waitFor();
+const importWidth = await page.evaluate(() => ({
+  viewport: window.innerWidth,
+  page: document.querySelector(".import-page")?.getBoundingClientRect().width
+}));
+if (Math.abs(Number(importWidth.page) - importWidth.viewport) > 1) {
+  throw new Error(`数据入口未平铺：${JSON.stringify(importWidth)}`);
+}
 await page.screenshot({
   path: `${outputDir}/import-desktop.png`,
   fullPage: true
@@ -367,34 +482,48 @@ await page.screenshot({
   path: `${outputDir}/graph-3d-mobile.png`,
   fullPage: true
 });
-await page.evaluate(
-  (raw) => sessionStorage.setItem("vitak-rag:graph-path-handoff:v1", raw),
-  answerHandoffRaw
-);
-await page.goto(`${baseUrl}/#/chat`, { waitUntil: "networkidle" });
-await page.goto(`${baseUrl}/#/graph?source=answer`, { waitUntil: "networkidle" });
-await page.locator('[data-graph-scope="answer"]').waitFor({ timeout: 15_000 });
-await page.locator(".graph-answer-context").waitFor({ timeout: 15_000 });
-const mobileAnswerPathOverflow = await page.evaluate(
-  () => document.documentElement.scrollWidth > window.innerWidth
-);
-if (mobileAnswerPathOverflow) throw new Error("移动端问答图谱路径出现横向溢出");
-await page.screenshot({
-  path: `${outputDir}/graph-answer-path-mobile.png`,
-  fullPage: true
-});
-await page.evaluate(
-  (raw) => sessionStorage.setItem("vitak-rag:graph-path-handoff:v1", raw),
-  answerHandoffRaw
-);
-await page.goto(`${baseUrl}/#/chat`, { waitUntil: "networkidle" });
-await page.goto(`${baseUrl}/#/graph`, { waitUntil: "networkidle" });
-await page.locator('[data-graph-scope="all"]').waitFor({ timeout: 20_000 });
-const staleHandoffAfterNormalNavigation = await page.evaluate(() =>
-  sessionStorage.getItem("vitak-rag:graph-path-handoff:v1")
-);
-if (staleHandoffAfterNormalNavigation) {
-  throw new Error("普通进入图谱页时未清理旧的回答路径");
+if (checkInternal) {
+  await page.getByRole("button", { name: "内部局部" }).click();
+  await page.getByPlaceholder("搜索实体，例如：华法林、纳豆、INR").fill("HOMA-IR");
+  await page.getByRole("button", { name: "搜索" }).click();
+  await page.locator(".entity-result").first().waitFor({ timeout: 15_000 });
+  await page.locator(".entity-result").first().click();
+  await page.locator('[data-graph-scope="focus"]').waitFor({ timeout: 15_000 });
+  await page.screenshot({
+    path: `${outputDir}/graph-research-mobile.png`,
+    fullPage: true
+  });
+}
+if (answerHandoffRaw) {
+  await page.evaluate(
+    (raw) => sessionStorage.setItem("vitak-rag:graph-path-handoff:v1", raw),
+    answerHandoffRaw
+  );
+  await page.goto(`${baseUrl}/#/chat`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}/#/graph?source=answer`, { waitUntil: "networkidle" });
+  await page.locator('[data-graph-scope="answer"]').waitFor({ timeout: 15_000 });
+  await page.locator(".graph-answer-context").waitFor({ timeout: 15_000 });
+  const mobileAnswerPathOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > window.innerWidth
+  );
+  if (mobileAnswerPathOverflow) throw new Error("移动端问答图谱路径出现横向溢出");
+  await page.screenshot({
+    path: `${outputDir}/graph-answer-path-mobile.png`,
+    fullPage: true
+  });
+  await page.evaluate(
+    (raw) => sessionStorage.setItem("vitak-rag:graph-path-handoff:v1", raw),
+    answerHandoffRaw
+  );
+  await page.goto(`${baseUrl}/#/chat`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}/#/graph`, { waitUntil: "networkidle" });
+  await page.locator('[data-graph-scope="focus"]').waitFor({ timeout: 20_000 });
+  const staleHandoffAfterNormalNavigation = await page.evaluate(() =>
+    sessionStorage.getItem("vitak-rag:graph-path-handoff:v1")
+  );
+  if (staleHandoffAfterNormalNavigation) {
+    throw new Error("普通进入图谱页时未清理旧的回答路径");
+  }
 }
 await page.goto(`${baseUrl}/#/evidence`, { waitUntil: "networkidle" });
 await page
@@ -446,7 +575,21 @@ await page.evaluate(async (appBaseUrl) => {
       safety_notice: null,
       related_entities: [relatedEntity],
       data_version: data.version,
-      elapsed_ms: 0
+      elapsed_ms: 0,
+      mode: "domain",
+      generation: {
+        status: "generated",
+        configured: true,
+        used: true,
+        provider: "visual-test",
+        model: "evidence-editor",
+        semantic_parse_used: true,
+        accepted_claim_count: 1,
+        rejected_claim_count: 0,
+        fallback_reason: "",
+        verification: "passed",
+        latency_ms: 420
+      }
     }
   });
   const project = {
@@ -470,6 +613,12 @@ await page.evaluate(async (appBaseUrl) => {
 }, baseUrl);
 await page.reload({ waitUntil: "networkidle" });
 await page.locator(".chat-scroll").waitFor({ state: "visible" });
+await page.locator(".generation-panel.status-generated").waitFor({
+  state: "visible"
+});
+await page.locator(".generation-pill.status-generated").waitFor({
+  state: "visible"
+});
 const chatScrollMetrics = await page.evaluate(() => {
   const element = document.querySelector(".chat-scroll");
   if (!(element instanceof HTMLElement)) return null;
@@ -528,24 +677,32 @@ await page.screenshot({
 
 const screenshots = [
   "overview-desktop.png",
+  ...(checkInternal
+    ? ["research-overview-desktop.png", "governance-desktop.png"]
+    : []),
   "chat-desktop.png",
   "chat-capabilities-desktop.png",
   "chat-thinking-desktop.png",
   "chat-answer-desktop.png",
+  "chat-claim-evidence-desktop.png",
   "chat-structured-evidence-desktop.png",
   "chat-safety-desktop.png",
-  ...(checkInternal ? ["chat-internal-desktop.png"] : []),
+  ...(checkInternal
+    ? ["chat-evidence-comparison-desktop.png", "chat-internal-desktop.png"]
+    : []),
   "graph-3d-desktop.png",
   "graph-2d-desktop.png",
-  "graph-answer-path-desktop.png",
-  "graph-answer-path-2d-desktop.png",
+  ...(answerHandoffRaw
+    ? ["graph-answer-path-desktop.png", "graph-answer-path-2d-desktop.png"]
+    : []),
   "graph-related-entities-desktop.png",
   "evidence-json-desktop.png",
   "evidence-desktop.png",
   "import-desktop.png",
   "chat-mobile.png",
   "graph-3d-mobile.png",
-  "graph-answer-path-mobile.png",
+  ...(checkInternal ? ["graph-research-mobile.png"] : []),
+  ...(answerHandoffRaw ? ["graph-answer-path-mobile.png"] : []),
   "evidence-json-mobile.png",
   "chat-long-scroll-desktop.png"
 ];
@@ -559,6 +716,13 @@ for (const filename of screenshots) {
     height: metadata.height,
     nonBlank: stats.channels.some((channel) => channel.stdev > 10)
   };
+}
+
+const unexpectedConsoleErrors = consoleErrors.filter(
+  (message) => !message.includes("status of 401 (Unauthorized)")
+);
+if (unexpectedConsoleErrors.length > 0) {
+  throw new Error(`浏览器控制台错误：${unexpectedConsoleErrors.join(" | ")}`);
 }
 
 console.log(

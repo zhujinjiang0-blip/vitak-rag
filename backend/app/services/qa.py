@@ -4,6 +4,7 @@ import json
 import re
 import time
 import uuid
+from contextvars import ContextVar
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from typing import Any
@@ -13,6 +14,8 @@ from app.schemas import (
     Answer,
     Citation,
     Claim,
+    ClaimType,
+    EvidenceComparison,
     EvidenceSufficiency,
     GraphEdge,
     GraphNode,
@@ -22,6 +25,8 @@ from app.services.snapshot import SnapshotContext
 from app.storage.database import MetadataStore
 from app.storage.graph import KuzuGraphStore
 from app.storage.vector import ChromaVectorStore
+
+_PERSIST_ANSWERS: ContextVar[bool] = ContextVar("persist_answers", default=True)
 
 SAFETY_RULES = [
     (
@@ -55,6 +60,35 @@ MEDICATION_SAFETY_PATTERNS = [
         r"(怎么|可以|能|需要|想).{0,8}(停药|停用|换药|加量|减量)",
         re.IGNORECASE,
     ),
+    re.compile(
+        r"(我|本人|家人|患者).{0,12}(停掉|停用|停药|停止)"
+        r".{0,12}(抗凝|华法林|药物|药)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(该不该|要不要|能不能|可不可以).{0,12}"
+        r"(停药|停用|停掉|换药|加量|减量)",
+        re.IGNORECASE,
+    ),
+]
+
+DIAGNOSIS_SAFETY_PATTERNS = [
+    re.compile(
+        r"(我|本人|孩子|家人|患者).{0,10}(是不是|是否|会不会|可能)"
+        r".{0,8}(得了|患了|有).{0,12}(病|出血|症状)",
+        re.IGNORECASE,
+    ),
+]
+
+PRESCRIPTION_SAFETY_PATTERNS = [
+    re.compile(
+        r"(给我|帮我|请|直接).{0,10}(开|开具).{0,12}(处方|药)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(开|开具).{0,16}(维生素k|华法林).{0,8}(处方|药)",
+        re.IGNORECASE,
+    ),
 ]
 
 CAPABILITY_PHRASES = {
@@ -70,12 +104,43 @@ CAPABILITY_PHRASES = {
     "使用说明",
 }
 
+OUT_OF_SCOPE_MARKERS = {
+    "天气",
+    "火星",
+    "手机",
+    "考试",
+    "满分",
+    "治愈所有",
+    "替代所有",
+}
+
+METADATA_ONLY_ANSWER_PREDICATES = {
+    "Name",
+    "Description",
+    "skos:altLabel",
+    "URI",
+    "Category",
+    "Source",
+}
+
+FOOD_SPECIFIC_QUERY_TERMS = {
+    "菠菜",
+    "纳豆",
+    "羽衣甘蓝",
+    "西兰花",
+    "植物油",
+    "绿叶蔬菜",
+    "深绿色叶菜",
+}
+
 
 INTENT_RULES: list[tuple[str, set[str]]] = [
+    ("negative_evidence", {"无显著", "不显著", "未观察到", "阴性", "没有关联", "无关联"}),
     ("comparison", {"区别", "比较", "不同", "差异", "哪个好", "对比"}),
     ("food_sources", {"食物", "吃什么", "来源", "蔬菜", "叶菜", "纳豆", "饮食", "含有", "富含"}),
     ("drug_interactions", {"相互作用", "一起吃", "同服", "药物", "华法林", "抗凝", "抗生素"}),
     ("deficiency", {"缺乏", "不足", "缺什么", "风险人群", "谁会", "症状"}),
+    ("mechanism", {"羧化", "作用机制", "机制", "骨钙素"}),
     ("functions", {"作用", "功能", "参与", "有什么好处", "影响什么", "机制", "凝血"}),
     ("lab_tests", {"检测", "检查", "化验", "指标", "INR", "PT", "PIVKA", "评估", "测量", "反映"}),
     ("recommendations", {"建议", "推荐", "摄入量", "每天", "孕妇", "新生儿", "老人", "适用", "人群"}),
@@ -182,6 +247,86 @@ ENTITY_LABELS = {
     "homa-ir": "HOMA-IR",
 }
 
+NEGATIVE_CLAIM_RELATIONS = {
+    "does_not_affect",
+    "does_not_cause",
+    "has_no_effect_on",
+    "no_significant_association_observed_with",
+    "no_significant_interaction_observed_with",
+    "no_supported_mediation_via",
+}
+ASSOCIATION_CLAIM_RELATIONS = {
+    "associated_with",
+    "cross_sectionally_associated_with",
+    "deficiency_causes",
+    "excess_causes",
+    "has_outcome_biomarker",
+    "indicates_risk_of",
+    "relateddisease",
+}
+INTERVENTION_CLAIM_RELATIONS = {
+    "decreases",
+    "has_longitudinal_effect_on",
+    "improves",
+    "increases",
+    "is_effective_for",
+    "prevents",
+    "reduces",
+    "supports",
+    "treats",
+}
+MECHANISM_CLAIM_RELATIONS = {
+    "activates",
+    "activates_protein",
+    "can_alter",
+    "inhibits",
+    "is_absorbed_in",
+    "is_carboxylated_by",
+    "is_cofactor_of",
+    "is_converted_to",
+    "is_metabolized_in",
+    "is_synthesized_by",
+    "participates_in_cycle",
+    "regulates_expression_of",
+    "targets_tissue",
+    "warfarin_vitamin_k_synthesis",
+}
+INTERACTION_CLAIM_RELATIONS = {
+    "interacts_with",
+    "is_antagonized_by",
+    "moderates_effect_on",
+    "shows_dose_response_with",
+}
+EXPLORATORY_CLAIM_RELATIONS = {
+    "metabolic_status_affects",
+    "modulates_postprandial_kinetics_of",
+}
+
+CLAIM_BOUNDARY_NOTES = {
+    ClaimType.ASSOCIATION: "这是观察性关联或风险提示，不等同于干预会产生相同效果。",
+    ClaimType.INTERVENTION: "方向性结果需结合研究设计、人群、剂量和对照解释，不等同于普遍治疗结论。",
+    ClaimType.MECHANISM: "机制证据说明潜在生物学路径，不能直接推导出临床疗效。",
+    ClaimType.NEGATIVE: "未观察到显著关系不等于证明该关系不存在或证明干预无效。",
+    ClaimType.EXPLORATORY: "该结果为探索性分析，仍需独立研究和外部验证。",
+    ClaimType.INTERACTION: "交互或剂量反应结果需结合暴露水平及研究条件解释。",
+    ClaimType.CONFLICT: "不同研究或分析存在结论差异，应按研究条件和证据层级分别解释。",
+}
+
+CLAIM_DIRECTION_UP = {
+    "activates",
+    "activates_protein",
+    "improves",
+    "increases",
+    "promotes",
+    "supports",
+}
+CLAIM_DIRECTION_DOWN = {
+    "decreases",
+    "inhibits",
+    "no_supported_mediation_via",
+    "reduces",
+}
+
 
 def display_entity(value: str) -> str:
     key = re.sub(r"\s+", " ", value or "").strip().lower()
@@ -205,6 +350,195 @@ def equivalent_entity_key(value: str) -> str:
     if key in {"vitamin k2", "menaquinone", "menaquinones"}:
         return "vitamin-k2"
     return key
+
+
+def claim_science_profile(
+    relation: str | None,
+    text: str,
+) -> tuple[ClaimType, str | None]:
+    normalized_relation = (relation or "").strip().lower()
+    if (
+        normalized_relation in NEGATIVE_CLAIM_RELATIONS
+        or re.search(r"未观察到|无显著|没有显著|未发现|无影响|不表示", text)
+    ):
+        claim_type = ClaimType.NEGATIVE
+    elif re.search(
+        r"不一致|并不完全一致|不完全一致|相反|互相矛盾|contradictory|结论冲突",
+        text,
+    ):
+        claim_type = ClaimType.CONFLICT
+    elif (
+        normalized_relation in EXPLORATORY_CLAIM_RELATIONS
+        or re.search(r"探索性|中介|反向|模型不一致", text)
+    ):
+        claim_type = ClaimType.EXPLORATORY
+    elif normalized_relation in INTERACTION_CLAIM_RELATIONS:
+        claim_type = ClaimType.INTERACTION
+    elif normalized_relation in MECHANISM_CLAIM_RELATIONS:
+        claim_type = ClaimType.MECHANISM
+    elif normalized_relation in ASSOCIATION_CLAIM_RELATIONS:
+        claim_type = ClaimType.ASSOCIATION
+    elif normalized_relation in INTERVENTION_CLAIM_RELATIONS:
+        claim_type = ClaimType.INTERVENTION
+    elif re.search(r"降低|改善|减少|增加|预防|疗效|有效", text):
+        claim_type = ClaimType.INTERVENTION
+    elif re.search(r"机制|参与|调节|活化|羧化|通路|代谢", text):
+        claim_type = ClaimType.MECHANISM
+    else:
+        claim_type = ClaimType.GENERAL
+    return claim_type, CLAIM_BOUNDARY_NOTES.get(claim_type)
+
+
+def build_evidence_comparisons(
+    claims: list[Claim],
+    citations: list[Citation],
+) -> list[EvidenceComparison]:
+    comparisons: list[EvidenceComparison] = []
+    conflict_claims = [
+        claim for claim in claims if claim.claim_type == ClaimType.CONFLICT
+    ]
+    if conflict_claims:
+        comparisons.append(
+            EvidenceComparison(
+                id="comparison-reported-conflict",
+                status="reported_difference",
+                summary=(
+                    "现有研究报告了不一致或相反的结果，"
+                    "应结合研究设计、暴露、人群和结局分别解释，不能强行合并成单一结论。"
+                ),
+                claim_ids=[claim.id for claim in conflict_claims],
+                evidence_ids=list(
+                    dict.fromkeys(
+                        evidence_id
+                        for claim in conflict_claims
+                        for evidence_id in claim.evidence_ids
+                    )
+                ),
+            )
+        )
+    negative_claims = [
+        claim for claim in claims if claim.claim_type == ClaimType.NEGATIVE
+    ]
+    non_negative_claims = [
+        claim for claim in claims if claim.claim_type != ClaimType.NEGATIVE
+    ]
+    if negative_claims and non_negative_claims:
+        selected = negative_claims + non_negative_claims
+        comparisons.append(
+            EvidenceComparison(
+                id="comparison-significance",
+                status="significance_difference",
+                summary=(
+                    "回答同时保留了阳性或方向性证据与阴性证据。"
+                    "未观察到显著关系不等于证明该关系不存在或证明干预无效。"
+                ),
+                claim_ids=[claim.id for claim in selected],
+                evidence_ids=list(
+                    dict.fromkeys(
+                        evidence_id
+                        for claim in selected
+                        for evidence_id in claim.evidence_ids
+                    )
+                ),
+            )
+        )
+
+    up_claims = [
+        claim
+        for claim in claims
+        if (claim.relation or "").strip().lower() in CLAIM_DIRECTION_UP
+    ]
+    down_claims = [
+        claim
+        for claim in claims
+        if (claim.relation or "").strip().lower() in CLAIM_DIRECTION_DOWN
+    ]
+    if up_claims and down_claims:
+        selected = up_claims + down_claims
+        comparisons.append(
+            EvidenceComparison(
+                id="comparison-direction",
+                status="direction_difference",
+                summary=(
+                    "当前证据包含不同方向的关联或效应。"
+                    "需结合暴露亚型、研究设计、人群和结局分别解释。"
+                ),
+                claim_ids=[claim.id for claim in selected],
+                evidence_ids=list(
+                    dict.fromkeys(
+                        evidence_id
+                        for claim in selected
+                        for evidence_id in claim.evidence_ids
+                    )
+                ),
+            )
+        )
+
+    mechanism_claims = [
+        claim for claim in claims if claim.claim_type == ClaimType.MECHANISM
+    ]
+    clinical_claims = [
+        claim
+        for claim in claims
+        if claim.claim_type
+        in {
+            ClaimType.ASSOCIATION,
+            ClaimType.INTERVENTION,
+            ClaimType.INTERACTION,
+        }
+    ]
+    if mechanism_claims and clinical_claims:
+        selected = mechanism_claims + clinical_claims
+        comparisons.append(
+            EvidenceComparison(
+                id="comparison-layer",
+                status="evidence_layer_difference",
+                summary=(
+                    "机制证据与临床关联或干预证据属于不同证据层级，"
+                    "机制发现不能直接等同于临床效果。"
+                ),
+                claim_ids=[claim.id for claim in selected],
+                evidence_ids=list(
+                    dict.fromkeys(
+                        evidence_id
+                        for claim in selected
+                        for evidence_id in claim.evidence_ids
+                    )
+                ),
+            )
+        )
+
+    contexts = {
+        (
+            citation.analysis_context.strip(),
+            citation.model_type.strip(),
+            citation.sample_n.strip(),
+        )
+        for citation in citations
+        if citation.analysis_context.strip()
+        or citation.model_type.strip()
+        or citation.sample_n.strip()
+    }
+    if len(contexts) > 1:
+        comparisons.append(
+            EvidenceComparison(
+                id="comparison-context",
+                status="context_difference",
+                summary=(
+                    "这些证据来自不同分析场景、模型或样本条件，"
+                    "应并列查看，不能直接合并为单一效应。"
+                ),
+                claim_ids=[claim.id for claim in claims],
+                evidence_ids=list(
+                    dict.fromkeys(
+                        evidence_id
+                        for claim in claims
+                        for evidence_id in claim.evidence_ids
+                    )
+                ),
+            )
+        )
+    return comparisons[:3]
 
 
 def natural_evidence_sentence(subject: str, predicate: str, target: str) -> str:
@@ -305,6 +639,13 @@ QUERY_EXPANSIONS = [
     ("内部", ("VK1", "MK-7", "MK-4", "GLU")),
     ("队列", ("VK1", "MK-7", "MK-4", "GLU")),
     ("绿叶蔬菜", ("green leafy vegetables", "vegetable", "leafy")),
+    ("菠菜", ("spinach",)),
+    ("纳豆", ("natto",)),
+    ("胆汁淤积", ("cholestasis", "biliary stasis")),
+    ("新生儿出血病", ("neonatal bleeding disease", "hemorrhagic disease")),
+    ("骨代谢", ("bone metabolism", "bone")),
+    ("凝血评估", ("coagulation", "coagulation assessment")),
+    ("pt", ("Prothrombin time", "PT")),
     ("mk-7", ("MK-7", "menaquinone-7")),
     ("pivka", ("PIVKA-II", "proteins induced by vitamin K absence")),
 ]
@@ -400,14 +741,48 @@ class GraphAnswerEngine:
             normalized = normalized.replace(old, new)
         return normalized
 
-    def answer(self, query: str, session_id: str | None = None) -> Answer:
+    def answer(
+        self,
+        query: str,
+        session_id: str | None = None,
+        *,
+        source_types: set[str] | None = None,
+        parsed_entities: list[GraphNode] | None = None,
+        parsed_intent: str | None = None,
+        persist: bool = True,
+    ) -> Answer:
+        token = _PERSIST_ANSWERS.set(persist)
+        try:
+            return self._answer(
+                query,
+                session_id,
+                source_types=source_types,
+                parsed_entities=parsed_entities,
+                parsed_intent=parsed_intent,
+            )
+        finally:
+            _PERSIST_ANSWERS.reset(token)
+
+    def _answer(
+        self,
+        query: str,
+        session_id: str | None = None,
+        *,
+        source_types: set[str] | None = None,
+        parsed_entities: list[GraphNode] | None = None,
+        parsed_intent: str | None = None,
+    ) -> Answer:
         started = time.perf_counter()
-        session_id = self.metadata.create_session(
-            session_id if self.metadata.session_exists(session_id or "") else None,
-            self.settings.session_ttl_hours,
+        persist = _PERSIST_ANSWERS.get()
+        existing_session = session_id if self.metadata.session_exists(session_id or "") else None
+        session_id = (
+            self.metadata.create_session(existing_session, self.settings.session_ttl_hours)
+            if persist
+            else existing_session or str(uuid.uuid4())
         )
         normalized = self.normalize(query)
-        self.metadata.add_message(session_id, "user", query)
+        if persist:
+            self.metadata.add_message(session_id, "user", query)
 
         safety = self._safety_check(query)
         if safety:
@@ -449,11 +824,15 @@ class GraphAnswerEngine:
             return answer
 
         prior_entities = self._prior_entities(session_id)
-        entities = self._link_entities(query)
+        entities = list(parsed_entities or self._link_entities(query))
         if not entities and prior_entities:
             entities = [node for node in prior_entities if self.graph.get_node(node.id)]
 
-        intent = self._detect_intent(query)
+        intent = (
+            parsed_intent
+            if parsed_intent and parsed_intent in {name for name, _ in INTENT_RULES}
+            else self._detect_intent(query)
+        )
         related = self._related_entities(query, entities)
         if not self.snapshot.data_version.is_demo:
             forms_answer = self._vitamin_k_forms_answer(
@@ -478,19 +857,26 @@ class GraphAnswerEngine:
             )
             if synthesized:
                 return synthesized
-            text_answer = self._text_evidence_answer(
-                query=query,
-                normalized=normalized,
-                session_id=session_id,
-                intent=intent,
-                entities=entities,
-                related=related,
-                started=started,
-            )
-            if text_answer:
-                return text_answer
+            if any(term in query for term in FOOD_SPECIFIC_QUERY_TERMS):
+                text_answer = self._text_evidence_answer(
+                    query=query,
+                    normalized=normalized,
+                    session_id=session_id,
+                    intent=intent,
+                    entities=entities,
+                    related=related,
+                    started=started,
+                    source_types=source_types,
+                )
+                if text_answer:
+                    return text_answer
 
-        facts, paths = self._retrieve_facts(entities, intent, query)
+        facts, paths = self._retrieve_facts(
+            entities,
+            intent,
+            query,
+            source_types=source_types,
+        )
         if facts and not paths:
             paths = self._facts_as_paths(facts)
 
@@ -503,6 +889,7 @@ class GraphAnswerEngine:
                 entities=entities,
                 related=related,
                 started=started,
+                source_types=source_types,
             )
             if text_answer:
                 return text_answer
@@ -525,7 +912,7 @@ class GraphAnswerEngine:
             self._finish_answer(answer)
             return answer
 
-        claims = self._build_claims(facts, paths)
+        claims = self._build_claims(facts, paths, source_types=source_types)
         if not claims:
             text_answer = self._text_evidence_answer(
                 query=query,
@@ -535,6 +922,7 @@ class GraphAnswerEngine:
                 entities=entities,
                 related=related,
                 started=started,
+                source_types=source_types,
             )
             if text_answer:
                 return text_answer
@@ -588,6 +976,19 @@ class GraphAnswerEngine:
         return answer
 
     def _finish_answer(self, answer: Answer) -> None:
+        for claim in answer.claims:
+            claim_type, boundary_note = claim_science_profile(
+                claim.relation,
+                claim.text,
+            )
+            claim.claim_type = claim_type
+            claim.boundary_note = boundary_note
+        answer.comparisons = build_evidence_comparisons(
+            answer.claims,
+            answer.citations,
+        )
+        if not _PERSIST_ANSWERS.get():
+            return
         self.metadata.add_message(
             answer.session_id,
             "assistant",
@@ -615,6 +1016,12 @@ class GraphAnswerEngine:
             if any(term in compact for term in terms):
                 return message, intent
         for pattern in MEDICATION_SAFETY_PATTERNS:
+            if pattern.search(compact):
+                return SAFETY_RULES[1][1], "medication"
+        for pattern in DIAGNOSIS_SAFETY_PATTERNS:
+            if pattern.search(compact):
+                return SAFETY_RULES[2][1], "diagnosis"
+        for pattern in PRESCRIPTION_SAFETY_PATTERNS:
             if pattern.search(compact):
                 return SAFETY_RULES[1][1], "medication"
         return None
@@ -675,6 +1082,8 @@ class GraphAnswerEngine:
         entities: list[GraphNode],
         intent: str,
         query: str,
+        *,
+        source_types: set[str] | None = None,
     ) -> tuple[list[RetrievedFact], list[GraphPath]]:
         predicates = INTENT_PREDICATES.get(intent)
         if intent == "food_sources" and entities and entities[0].domain == "食物营养":
@@ -697,7 +1106,7 @@ class GraphAnswerEngine:
                     item.neighbor.name,
                 )
             )
-            return facts[:8], []
+            return self._filter_facts_source_types(facts[:200], source_types)[:8], []
 
         if len(entities) >= 2:
             paths: list[GraphPath] = []
@@ -713,6 +1122,7 @@ class GraphAnswerEngine:
                             limit=2,
                         )
                     )
+            paths = self._filter_paths(paths, source_types=source_types)
             if paths:
                 return [], paths
 
@@ -735,12 +1145,12 @@ class GraphAnswerEngine:
                     facts.append(RetrievedFact(edge, neighbor, direction))
 
         facts.sort(key=lambda item: (-item.edge.confidence, item.neighbor.name))
-        return facts[:12], []
+        return self._filter_facts_source_types(facts[:200], source_types)[:12], []
 
     @staticmethod
     def _expanded_text_query(query: str) -> str:
         lowered = query.lower()
-        terms: list[str] = []
+        terms: list[str] = [query]
         for trigger, expansions in QUERY_EXPANSIONS:
             if trigger in lowered:
                 terms.extend(expansions)
@@ -757,20 +1167,26 @@ class GraphAnswerEngine:
         entities: list[GraphNode],
         related: list[GraphNode],
         started: float,
+        source_types: set[str] | None = None,
     ) -> Answer | None:
+        if any(marker in query for marker in OUT_OF_SCOPE_MARKERS):
+            return None
+        if not entities:
+            return None
         expanded_query = self._expanded_text_query(query)
         if not expanded_query:
             return None
         query_lower = query.lower()
-        source_types: set[str] | None = None
-        if "内部" in query_lower or "队列" in query_lower:
-            source_types = {"internal"}
-        elif "外部" in query_lower or "文献" in query_lower:
-            source_types = {"literature", "structured"}
+        scoped_source_types = source_types
+        if scoped_source_types is None:
+            if "内部" in query_lower or "队列" in query_lower:
+                scoped_source_types = {"internal"}
+            elif "外部" in query_lower or "文献" in query_lower:
+                scoped_source_types = {"literature", "structured"}
         rows = self.metadata.search_fts(
             expanded_query,
             limit=24,
-            source_types=source_types,
+            source_types=scoped_source_types,
         )
 
         evidence_ids = list(
@@ -790,7 +1206,6 @@ class GraphAnswerEngine:
             for value in [node.name, *node.aliases]
             if value
         }
-
         def matches_entity(label: str) -> bool:
             candidate = self.normalize(label)
             return any(
@@ -799,18 +1214,46 @@ class GraphAnswerEngine:
                 for name in entity_names
             )
 
-        prepared: list[tuple[int, str, dict[str, Any], dict[str, Any]]] = []
+        specific_terms = [
+            expansion
+            for trigger, expansions in QUERY_EXPANSIONS
+            if trigger in query.lower()
+            for expansion in expansions
+        ]
+        prepared: list[
+            tuple[int, int, str, dict[str, Any], dict[str, Any]]
+        ] = []
         for evidence in self.metadata.get_evidence_many(evidence_ids[:24]):
             try:
                 metadata = json.loads(evidence.get("metadata_json") or "{}")
             except (json.JSONDecodeError, TypeError):
                 metadata = {}
+            if (
+                str(metadata.get("predicate") or "")
+                in METADATA_ONLY_ANSWER_PREDICATES
+            ):
+                continue
             subject = str(metadata.get("subject_label") or "").strip()
             target = str(metadata.get("object_label") or "").strip()
             match_count = int(matches_entity(subject)) + int(matches_entity(target))
-            if entities and match_count == 0:
+            if match_count == 0:
                 continue
-            prepared.append((match_count, str(evidence["id"]), evidence, metadata))
+            evidence_text = (
+                f"{evidence.get('chunk_text', '')} "
+                f"{evidence.get('source_locator', '')}"
+            ).lower()
+            specific_matches = sum(
+                1 for term in specific_terms if term.lower() in evidence_text
+            )
+            prepared.append(
+                (
+                    match_count,
+                    specific_matches,
+                    str(evidence["id"]),
+                    evidence,
+                    metadata,
+                )
+            )
 
         if entities and len(entities) >= 2:
             pair_matches = [item for item in prepared if item[0] >= 2]
@@ -819,14 +1262,15 @@ class GraphAnswerEngine:
         prepared.sort(
             key=lambda item: (
                 -item[0],
-                0 if item[2].get("source_type") == "internal" and "内部" in query else 1,
+                -item[1],
+                0 if item[3].get("source_type") == "internal" and "内部" in query else 1,
             )
         )
 
         claims: list[Claim] = []
         seen_claims: set[str] = set()
         origins: set[str] = set()
-        for _match_count, evidence_id, evidence, metadata in prepared:
+        for _match_count, _specific_matches, evidence_id, evidence, metadata in prepared:
             subject = str(metadata.get("subject_label") or "").strip()
             predicate = str(metadata.get("predicate") or "").strip()
             target = str(metadata.get("object_label") or "").strip()
@@ -835,6 +1279,31 @@ class GraphAnswerEngine:
             if equivalent_entity_key(subject) == equivalent_entity_key(target):
                 continue
             text = natural_evidence_sentence(subject, predicate, target)
+            if specific_matches:
+                food_label = next(
+                    (
+                        trigger
+                        for trigger, expansions in QUERY_EXPANSIONS
+                        if trigger in FOOD_SPECIFIC_QUERY_TERMS
+                        and trigger in query.lower()
+                        and any(expansion.lower() in evidence_text for expansion in expansions)
+                    ),
+                    "",
+                )
+                form_label = next(
+                    (
+                        display_entity(node.name)
+                        for node in entities
+                        if self.normalize(node.name)
+                        in self.normalize(evidence_text)
+                    ),
+                    "",
+                )
+                if food_label and form_label:
+                    text = (
+                        f"现有文献记录了{food_label}与{form_label}"
+                        "之间的食物来源关系。"
+                    )
             origin = str(evidence.get("data_origin") or "")
             if text in seen_claims:
                 continue
@@ -868,6 +1337,7 @@ class GraphAnswerEngine:
             answer_text=answer_text,
             claims=claims,
             citations=citations,
+            graph_paths=self._paths_for_evidence(citations),
             sufficiency=(
                 EvidenceSufficiency.SUFFICIENT
                 if len(claims) >= 2
@@ -901,10 +1371,7 @@ class GraphAnswerEngine:
         return output
 
     def _is_general_followup(self, query: str, entities: list[GraphNode]) -> bool:
-        if any(
-            term in query
-            for term in {"天气", "火星", "手机", "考试", "满分", "治愈所有", "替代所有"}
-        ):
+        if any(term in query for term in OUT_OF_SCOPE_MARKERS):
             return False
         residue = self.normalize(query)
         for node in entities:
@@ -917,13 +1384,18 @@ class GraphAnswerEngine:
         self,
         facts: list[RetrievedFact],
         paths: list[GraphPath],
+        *,
+        source_types: set[str] | None = None,
     ) -> list[Claim]:
         claims: list[Claim] = []
         seen: set[str] = set()
 
         for path in paths:
             for edge in path.edges:
-                eligible_ids = self._answer_eligible_ids(edge.evidence_ids)
+                eligible_ids = self._answer_eligible_ids(
+                    edge.evidence_ids,
+                    source_types=source_types,
+                )
                 if not eligible_ids:
                     continue
                 source = self.graph.get_node(edge.source)
@@ -944,7 +1416,10 @@ class GraphAnswerEngine:
                 )
 
         for fact in facts:
-            eligible_ids = self._answer_eligible_ids(fact.edge.evidence_ids)
+            eligible_ids = self._answer_eligible_ids(
+                fact.edge.evidence_ids,
+                source_types=source_types,
+            )
             if not eligible_ids:
                 continue
             edge_source = self.graph.get_node(fact.edge.source)
@@ -967,13 +1442,109 @@ class GraphAnswerEngine:
                 break
         return claims[:8]
 
-    def _answer_eligible_ids(self, evidence_ids: list[str]) -> list[str]:
+    def _answer_eligible_ids(
+        self,
+        evidence_ids: list[str],
+        *,
+        source_types: set[str] | None = None,
+    ) -> list[str]:
         if not evidence_ids:
             return []
         return [
             evidence["id"]
             for evidence in self.metadata.get_evidence_many(evidence_ids)
-            if bool(evidence.get("answer_eligible", 1))
+            if self._evidence_is_answerable(evidence, source_types)
+        ]
+
+    @staticmethod
+    def _evidence_is_answerable(
+        evidence: dict[str, Any],
+        source_types: set[str] | None,
+    ) -> bool:
+        if not bool(evidence.get("answer_eligible", 1)):
+            return False
+        if source_types and evidence.get("source_type") not in source_types:
+            return False
+        try:
+            metadata = json.loads(evidence.get("metadata_json") or "{}")
+        except (json.JSONDecodeError, TypeError):
+            metadata = {}
+        return (
+            str(metadata.get("predicate") or "")
+            not in METADATA_ONLY_ANSWER_PREDICATES
+        )
+
+    def _filter_paths(
+        self,
+        paths: list[GraphPath],
+        *,
+        source_types: set[str] | None = None,
+    ) -> list[GraphPath]:
+        evidence_items = self.metadata.get_evidence_many(
+            list(
+                dict.fromkeys(
+                    evidence_id
+                    for path in paths
+                    for edge in path.edges
+                    for evidence_id in edge.evidence_ids
+                )
+            )
+        )
+        eligible_ids = {
+            evidence["id"]
+            for evidence in evidence_items
+            if self._evidence_is_answerable(evidence, source_types)
+        }
+        output = []
+        for path in paths:
+            edges = [
+                edge
+                for edge in path.edges
+                if any(evidence_id in eligible_ids for evidence_id in edge.evidence_ids)
+            ]
+            if len(edges) != len(path.edges):
+                continue
+            output.append(
+                path.model_copy(
+                    update={
+                        "evidence_ids": list(
+                            dict.fromkeys(
+                                evidence_id
+                                for edge in edges
+                                for evidence_id in edge.evidence_ids
+                            )
+                        )
+                    }
+                )
+            )
+        return output
+
+    def _filter_facts_source_types(
+        self,
+        facts: list[RetrievedFact],
+        source_types: set[str] | None,
+    ) -> list[RetrievedFact]:
+        evidence_items = self.metadata.get_evidence_many(
+            list(
+                dict.fromkeys(
+                    evidence_id
+                    for fact in facts
+                    for evidence_id in fact.edge.evidence_ids
+                )
+            )
+        )
+        eligible_ids = {
+            evidence["id"]
+            for evidence in evidence_items
+            if self._evidence_is_answerable(evidence, source_types)
+        }
+        return [
+            fact
+            for fact in facts
+            if any(
+                evidence_id in eligible_ids
+                for evidence_id in fact.edge.evidence_ids
+            )
         ]
 
     def _vitamin_k_forms_answer(
@@ -991,7 +1562,16 @@ class GraphAnswerEngine:
             return None
         if not any(
             term in normalized
-            for term in ("几种", "亚型", "类型", "分类", "形式")
+            for term in (
+                "几种",
+                "亚型",
+                "类型",
+                "分类",
+                "形式",
+                "区别",
+                "不同",
+                "比较",
+            )
         ):
             return None
         evidence_ids = self.metadata.search_evidence_phrases(
@@ -1105,11 +1685,11 @@ class GraphAnswerEngine:
             normalized_query=normalized,
             intent=intent,
             answer_text=(
-                "如果按营养学和当前文献里常用的分类，维生素K最核心的两大类是"
-                "维生素K1和维生素K2。\n\n"
-                + "".join(claim.text for claim in claims[2:])
-                + "\n\n所以，大类上通常说两种；但K2内部并不是单一物质，"
-                "而是包含多个MK-n亚型。"
+                "维生素K1和维生素K2不是同一种形式，主要区别在于具体化合物类别"
+                "和K2内部的亚型结构。\n\n"
+                + "".join(claim.text for claim in claims)
+                + "\n\n因此，大类上通常说两种；但K2内部并不是单一物质，"
+                "而是包含多个MK-n亚型，不能把K1和K2互换理解。"
             ),
             claims=claims,
             citations=self._citations_for_claims(claims),
@@ -1118,6 +1698,7 @@ class GraphAnswerEngine:
             data_version=self.snapshot.data_version,
             elapsed_ms=int((time.perf_counter() - started) * 1000),
         )
+        answer.graph_paths = self._paths_for_evidence(answer.citations)
         self._finish_answer(answer)
         return answer
 
@@ -1268,6 +1849,7 @@ class GraphAnswerEngine:
             data_version=self.snapshot.data_version,
             elapsed_ms=int((time.perf_counter() - started) * 1000),
         )
+        answer.graph_paths = self._paths_for_evidence(answer.citations)
         self._finish_answer(answer)
         return answer
 
@@ -1333,6 +1915,45 @@ class GraphAnswerEngine:
                 )
             )
         return citations
+
+    def _paths_for_evidence(self, citations: list[Citation]) -> list[GraphPath]:
+        evidence_rows = self.metadata.get_evidence_many(
+            [citation.id for citation in citations]
+        )
+        edge_ids = {
+            str(row.get("edge_id") or "")
+            for row in evidence_rows
+            if row.get("edge_id")
+        }
+        edge_order = {
+            str(row.get("edge_id") or ""): index
+            for index, row in enumerate(evidence_rows)
+            if row.get("edge_id")
+        }
+        edges = sorted(
+            self.graph.get_edges_by_ids(edge_ids),
+            key=lambda edge: edge_order.get(edge.id, len(edge_order)),
+        )
+        paths: list[GraphPath] = []
+        seen_edges: set[str] = set()
+        for edge in edges:
+            if edge.id in seen_edges:
+                continue
+            source = self.graph.get_node(edge.source)
+            target = self.graph.get_node(edge.target)
+            if not source or not target:
+                continue
+            seen_edges.add(edge.id)
+            paths.append(
+                GraphPath(
+                    nodes=[source, target],
+                    edges=[edge],
+                    evidence_ids=edge.evidence_ids,
+                )
+            )
+            if len(paths) >= 8:
+                break
+        return paths
 
     def _related_entities(self, query: str, entities: list[GraphNode]) -> list[GraphNode]:
         output = list(entities)

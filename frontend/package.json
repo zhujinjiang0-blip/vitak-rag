@@ -7,6 +7,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:public": "tsc -b && vite build --mode public",
+    "check:public": "node ../scripts/check-public-bundle.mjs",
+    "test:public": "node ../scripts/public-bundle-smoke.mjs",
     "preview": "vite preview",
     "test": "vitest run"
   },

@@ -1,0 +1,31 @@
+{
+  "gold_set": "/Users/kevin/Documents/ChatGPT/雷雷毕业设计/data/eval/gold-questions-v2.jsonl",
+  "evidence_data": "/Users/kevin/Documents/ChatGPT/雷雷毕业设计/frontend/public/real-evidence.json",
+  "data_version": "real-public-2026.11-structured",
+  "question_count": 20,
+  "evidence_backed_questions": 18,
+  "abstain_questions": 2,
+  "safety_questions": 1,
+  "boundary_required_questions": 16,
+  "categories": {
+    "definition_form": 1,
+    "subtype_metabolism": 1,
+    "mechanism": 2,
+    "drug_interaction": 1,
+    "clinical_research": 1,
+    "negative_evidence": 1,
+    "interaction": 1,
+    "research_conflict": 1,
+    "causal_boundary": 1,
+    "measurement_interpretation": 1,
+    "food_source": 2,
+    "structured_food": 1,
+    "drug_monitoring": 1,
+    "deficiency_risk": 1,
+    "biomarker": 2,
+    "medical_safety": 1,
+    "no_evidence": 1
+  },
+  "valid": true,
+  "errors": []
+}

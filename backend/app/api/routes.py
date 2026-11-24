@@ -6,11 +6,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import APIRouter, File, Form, Header, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, Request, Response, UploadFile
 from fastapi.responses import StreamingResponse
 
 from app.schemas import (
     Answer,
+    AuthUser,
+    EvidenceSufficiency,
     EvidenceTableImportRequest,
     ExternalTripleImportRequest,
     ExternalTripleImportResponse,
@@ -19,16 +21,33 @@ from app.schemas import (
     HealthResponse,
     IngestRequest,
     IngestResponse,
+    LoginRequest,
+    LoginResponse,
+    QAMode,
     QARequest,
+    ResearchEvidenceResponse,
+    ResearchInsights,
+    ResearchOverview,
     ReviewDecisionRequest,
     SearchResponse,
     SearchResult,
+    SnapshotAudit,
+    SnapshotDiff,
     SubgraphRequest,
     SubgraphResponse,
+    TriageAnswerRequest,
+    TriageSessionResponse,
+    UnmetNeedRecord,
+    UnmetNeedRequest,
+    UnmetNeedsResponse,
+    UserRole,
 )
 from app.services.evidence_tables import EvidenceTableImporter
 from app.services.external_triples import ExternalTripleImporter
 from app.services.ingest import IngestionService
+from app.services.qa_orchestrator import RuntimeQAService
+from app.services.research import ResearchService
+from app.services.triage import TriageService
 
 router = APIRouter()
 
@@ -43,6 +62,13 @@ def _snapshot(request: Request):
 
 def _manager(request: Request):
     return request.app.state.snapshot_manager
+
+
+def _known_snapshot_version(request: Request, version: str) -> str:
+    known = {item["version"] for item in _manager(request).list()}
+    if version not in known:
+        raise HTTPException(status_code=404, detail="snapshot not found")
+    return version
 
 
 def _json_object(value: Any) -> dict[str, Any]:
@@ -91,21 +117,119 @@ def _search_evidence_json(row: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
-def _assert_internal_token(request: Request, token: str | None) -> None:
-    expected = request.app.state.settings.internal_token
-    if not token or token != expected:
-        raise HTTPException(status_code=401, detail="invalid internal token")
+def _source_types_for_origin(origin: str | None) -> set[str] | None:
+    if origin == "internal":
+        return {"internal"}
+    if origin == "external":
+        return _external_source_types()
+    return None
+
+
+def _auth(request: Request):
+    return request.app.state.auth
+
+
+def _session_token(request: Request) -> str | None:
+    cookie_name = request.app.state.settings.session_cookie_name
+    return request.cookies.get(cookie_name)
+
+
+def _optional_user(request: Request) -> AuthUser | None:
+    return _auth(request).resolve_session(_session_token(request))
+
+
+def _require_user(request: Request) -> AuthUser:
+    user = _optional_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="research login required")
+    return user
+
+
+def _require_admin(request: Request) -> AuthUser:
+    user = _require_user(request)
+    if user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="administrator role required")
     client_host = request.client.host if request.client else ""
     if client_host not in {"127.0.0.1", "::1", "localhost", "testclient"}:
         raise HTTPException(status_code=403, detail="internal API is localhost-only")
+    return user
+
+
+def _research(request: Request) -> ResearchService:
+    return ResearchService(request.app.state.settings, _snapshot(request))
+
+
+def _runtime_qa(request: Request) -> RuntimeQAService:
+    return RuntimeQAService(
+        request.app.state.settings,
+        _snapshot(request),
+        llm=request.app.state.runtime_llm,
+    )
+
+
+def _triage(request: Request) -> TriageService:
+    return request.app.state.triage
+
+
+def _external_source_types() -> set[str]:
+    return {"literature", "structured", "public", "synthetic", "legacy", ""}
+
+
+@router.post("/api/v1/auth/login", response_model=LoginResponse)
+def login(payload: LoginRequest, request: Request, response: Response) -> LoginResponse:
+    authenticated = _auth(request).authenticate(payload.username, payload.password)
+    if not authenticated:
+        raise HTTPException(status_code=401, detail="invalid username or password")
+    user, token = authenticated
+    response.set_cookie(
+        request.app.state.settings.session_cookie_name,
+        token,
+        max_age=request.app.state.settings.session_ttl_hours * 3600,
+        httponly=True,
+        secure=request.app.state.settings.env == "production",
+        samesite="strict",
+        path="/",
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return LoginResponse(user=user)
+
+
+@router.post("/api/v1/auth/logout")
+def logout(request: Request, response: Response):
+    user = _optional_user(request)
+    _auth(request).logout(_session_token(request), user.id if user else None)
+    response.delete_cookie(
+        request.app.state.settings.session_cookie_name,
+        path="/",
+        httponly=True,
+        samesite="strict",
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return {"status": "logged_out"}
+
+
+@router.get("/api/v1/auth/me", response_model=AuthUser)
+def current_user(request: Request):
+    return _require_user(request)
+
+
+@router.get("/api/v1/auth/session", response_model=AuthUser | None)
+def current_session(request: Request):
+    return _optional_user(request)
 
 
 @router.get("/api/v1/health", response_model=HealthResponse)
 def health(request: Request) -> HealthResponse:
     snapshot = _snapshot(request)
+    runtime_llm = request.app.state.runtime_llm
     return HealthResponse(
         status="ok",
-        runtime_llm=False,
+        runtime_llm=runtime_llm.available,
+        llm_provider=runtime_llm.provider if runtime_llm.available else "",
+        llm_model=runtime_llm.model if runtime_llm.available else "",
+        llm_configured=runtime_llm.configured,
+        llm_endpoint_class=runtime_llm.endpoint_class,
+        llm_protected_evidence_allowed=runtime_llm.protected_evidence_allowed,
         data_version=snapshot.data_version,
         graph_backend=snapshot.graph.backend_name,
         vector_backend=snapshot.vectors.backend_name,
@@ -115,12 +239,46 @@ def health(request: Request) -> HealthResponse:
 
 @router.post("/api/v1/qa/query", response_model=Answer)
 def query_answer(payload: QARequest, request: Request) -> Answer:
-    return _engine(request).answer(payload.query, payload.session_id)
+    return _answer_for_mode(payload, request)
+
+
+@router.post("/api/v1/triage/sessions", response_model=TriageSessionResponse)
+def start_triage(request: Request) -> TriageSessionResponse:
+    return _triage(request).start()
+
+
+@router.get(
+    "/api/v1/triage/sessions/{session_id}",
+    response_model=TriageSessionResponse,
+)
+def get_triage(session_id: str, request: Request) -> TriageSessionResponse:
+    response = _triage(request).get(session_id)
+    if response is None:
+        raise HTTPException(status_code=404, detail="triage session not found")
+    return response
+
+
+@router.post(
+    "/api/v1/triage/sessions/{session_id}/answer",
+    response_model=TriageSessionResponse,
+)
+def answer_triage(
+    session_id: str,
+    payload: TriageAnswerRequest,
+    request: Request,
+) -> TriageSessionResponse:
+    try:
+        response = _triage(request).answer(session_id, payload)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    if response is None:
+        raise HTTPException(status_code=404, detail="triage session not found")
+    return response
 
 
 @router.post("/api/v1/qa/stream")
 def stream_answer(payload: QARequest, request: Request) -> StreamingResponse:
-    answer = _engine(request).answer(payload.query, payload.session_id)
+    answer = _answer_for_mode(payload, request)
 
     def serialize(event: str, data: dict) -> str:
         return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
@@ -137,6 +295,11 @@ def stream_answer(payload: QARequest, request: Request) -> StreamingResponse:
         yield serialize("intent", {"intent": answer.intent})
         if answer.safety_notice:
             yield serialize("safety", {"notice": answer.safety_notice})
+        if answer.generation.configured:
+            yield serialize(
+                "generation",
+                answer.generation.model_dump(mode="json"),
+            )
         for claim in answer.claims:
             yield serialize("claim", claim.model_dump(mode="json"))
         for citation in answer.citations:
@@ -158,16 +321,95 @@ def stream_answer(payload: QARequest, request: Request) -> StreamingResponse:
     )
 
 
+def _answer_for_mode(payload: QARequest, request: Request) -> Answer:
+    user = _optional_user(request)
+    if payload.mode != QAMode.DOMAIN and not user:
+        raise HTTPException(status_code=401, detail="research login required")
+    answer = _runtime_qa(request).answer(
+        payload.query,
+        session_id=payload.session_id,
+        mode=payload.mode,
+        filters=payload.filters,
+    )
+    if user:
+        _auth(request).audit_access(
+            user.id,
+            "qa_query",
+            target=payload.mode.value,
+            metadata={
+                "question": payload.query[:300],
+                "generation_status": answer.generation.status.value,
+                "generation_used": answer.generation.used,
+                "data_version": answer.data_version.version,
+                "data_scope": answer.data_scope,
+            },
+        )
+    _record_unmet_answer(request, answer)
+    return answer
+
+
+def _record_unmet_answer(request: Request, answer: Answer) -> None:
+    if (
+        answer.intent == "capabilities"
+        or answer.sufficiency == EvidenceSufficiency.SUFFICIENT
+        or answer.safety_notice
+    ):
+        return
+    reason = (
+        "partial_evidence"
+        if answer.sufficiency == EvidenceSufficiency.PARTIAL
+        else "evidence_insufficient"
+    )
+    detail = (
+        f"自动记录：答案充分性为 {answer.sufficiency.value}；"
+        f"已检索来源 {', '.join(answer.data_scope) or '未标记'}。"
+    )
+    _snapshot(request).metadata.record_unmet_need(
+        session_id=answer.session_id,
+        query=answer.query,
+        mode=answer.mode.value,
+        intent=answer.intent,
+        reason=reason,
+        detail=detail,
+        data_scope=answer.data_scope,
+        data_version=answer.data_version.version,
+    )
+
+
 @router.get("/api/v1/search", response_model=SearchResponse)
 def search(
     request: Request,
     q: str = Query(min_length=1, max_length=500),
     limit: int = Query(default=10, ge=1, le=30),
+    origin: str | None = Query(
+        default=None,
+        pattern="^(internal|external|public|all)$",
+    ),
 ) -> SearchResponse:
     snapshot = _snapshot(request)
+    user = _optional_user(request)
+    if origin == "internal" and not user:
+        raise HTTPException(status_code=401, detail="research login required")
+    effective_origin = origin
     combined: dict[str, SearchResult] = {}
     expanded_query = _engine(request)._expanded_text_query(q) or q
-    for row in snapshot.metadata.search_fts(expanded_query, limit=limit):
+    source_types = (
+        _external_source_types()
+        if not user and origin in {None, "all"}
+        else _source_types_for_origin(effective_origin)
+    )
+    for row in snapshot.metadata.search_fts(
+        expanded_query,
+        limit=limit,
+        source_types=source_types,
+    ):
+        if (
+            effective_origin not in {None, "all"}
+            and row["data_origin"] != effective_origin
+        ):
+            continue
+        if not user and row["data_origin"] == "internal":
+            continue
         score = 1.0 / (1.0 + abs(float(row["rank"] or 0.0)))
         evidence_json = _search_evidence_json(row)
         combined[row["id"]] = SearchResult(
@@ -198,13 +440,21 @@ def search(
             is_demo=bool(row["is_demo"]),
         )
 
-    for item in snapshot.vectors.search(expanded_query, limit=limit):
+    vector_limit = limit * 4 if effective_origin not in {None, "all"} else limit
+    for item in snapshot.vectors.search(expanded_query, limit=vector_limit):
         chunk_id = item["chunk_id"]
         vector_metadata = item.get("metadata") or {}
         if vector_metadata.get("kind") == "graph_summary":
             continue
         chunk = snapshot.metadata.get_chunk(chunk_id)
         if not chunk:
+            continue
+        if (
+            effective_origin not in {None, "all"}
+            and chunk["data_origin"] != effective_origin
+        ):
+            continue
+        if not user and chunk["data_origin"] == "internal":
             continue
         previous = combined.get(chunk_id)
         score = float(item["score"])
@@ -246,6 +496,8 @@ def evidence(evidence_id: str, request: Request):
     row = _snapshot(request).metadata.get_evidence(evidence_id)
     if not row:
         raise HTTPException(status_code=404, detail="evidence not found")
+    if row["data_origin"] == "internal" and not _optional_user(request):
+        raise HTTPException(status_code=404, detail="evidence not found")
     evidence_json = _search_evidence_json(row)
     return {
         "evidence_json": evidence_json,
@@ -268,31 +520,175 @@ def evidence(evidence_id: str, request: Request):
     }
 
 
+@router.get("/api/v1/research/overview", response_model=ResearchOverview)
+def research_overview(request: Request) -> ResearchOverview:
+    _require_user(request)
+    return _research(request).overview()
+
+
+@router.get("/api/v1/research/facets")
+def research_facets(request: Request):
+    _require_user(request)
+    return _research(request).facets()
+
+
+@router.get(
+    "/api/v1/research/evidence",
+    response_model=ResearchEvidenceResponse,
+)
+def research_evidence(
+    request: Request,
+    q: str = Query(default="", max_length=500),
+    collection: str = Query(default="all", pattern="^(all|core|contextual)$"),
+    test_family: str = Query(default="", max_length=80),
+    outcome: str = Query(default="", max_length=120),
+    evidence_level: str = Query(default="", max_length=40),
+    result_status: str = Query(default="", max_length=80),
+    review_status: str = Query(default="", max_length=80),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+) -> ResearchEvidenceResponse:
+    _require_user(request)
+    return _research(request).search(
+        query=q,
+        collection=collection,
+        test_family=test_family,
+        outcome=outcome,
+        evidence_level=evidence_level,
+        result_status=result_status,
+        review_status=review_status,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.get(
+    "/api/v1/research/insights",
+    response_model=ResearchInsights,
+)
+def research_insights(request: Request) -> ResearchInsights:
+    _require_user(request)
+    return _research(request).insights()
+
+
+@router.post(
+    "/api/v1/feedback/unmet",
+    response_model=UnmetNeedRecord,
+)
+def record_unmet_need(
+    payload: UnmetNeedRequest,
+    request: Request,
+) -> UnmetNeedRecord:
+    user = _optional_user(request)
+    if payload.mode != QAMode.DOMAIN and not user:
+        raise HTTPException(status_code=401, detail="research login required")
+    if "internal" in payload.data_scope and not user:
+        raise HTTPException(status_code=401, detail="research login required")
+    record = _snapshot(request).metadata.record_unmet_need(
+        session_id=payload.session_id,
+        query=payload.query,
+        mode=payload.mode.value,
+        intent="",
+        reason=payload.reason,
+        detail=payload.detail,
+        data_scope=payload.data_scope,
+        data_version=_snapshot(request).version,
+    )
+    return UnmetNeedRecord(**record)
+
+
+def _graph_scope(request: Request, scope: str) -> str:
+    if scope not in {"domain", "research", "comparison"}:
+        raise HTTPException(status_code=422, detail="invalid graph scope")
+    if scope in {"research", "comparison"} and not _optional_user(request):
+        raise HTTPException(status_code=401, detail="research login required")
+    return scope
+
+
+def _filter_graph_scope(
+    request: Request,
+    nodes,
+    edges,
+    scope: str,
+):
+    if scope == "comparison":
+        return nodes, edges
+    internal_rows = _snapshot(request).metadata.all_internal_evidence()
+    internal_edge_ids = {str(row.get("edge_id") or "") for row in internal_rows}
+    internal_evidence_ids = {str(row.get("id") or "") for row in internal_rows}
+
+    def allowed(edge) -> bool:
+        is_internal = (
+            edge.id in internal_edge_ids
+            or bool(internal_evidence_ids.intersection(edge.evidence_ids))
+        )
+        return is_internal if scope == "research" else not is_internal
+
+    scoped_edges = [edge for edge in edges if allowed(edge)]
+    node_ids = {
+        node_id
+        for edge in scoped_edges
+        for node_id in (edge.source, edge.target)
+    }
+    scoped_nodes = [node for node in nodes if node.id in node_ids]
+    return scoped_nodes, scoped_edges
+
+
 @router.get("/api/v1/graph/search", response_model=GraphSearchResponse)
 def graph_search(
     request: Request,
     q: str = Query(default="", max_length=200),
     limit: int = Query(default=20, ge=1, le=100),
+    scope: str = Query(default="domain"),
 ) -> GraphSearchResponse:
-    items = _snapshot(request).graph.search_nodes(q, limit=limit)
+    scope = _graph_scope(request, scope)
+    snapshot = _snapshot(request)
+    nodes, edges = _filter_graph_scope(
+        request,
+        snapshot.graph.all_nodes(),
+        snapshot.graph.all_edges(),
+        scope,
+    )
+    allowed_ids = {node.id for node in nodes}
+    normalized_query = _engine(request).normalize(q)
+    items = [
+        node
+        for node in snapshot.graph.search_nodes(normalized_query, limit=max(limit, 100))
+        if node.id in allowed_ids
+    ][:limit]
     return GraphSearchResponse(items=items, total=len(items))
 
 
 @router.get("/api/v1/graph/meta")
-def graph_meta(request: Request):
-    nodes = _snapshot(request).graph.all_nodes()
+def graph_meta(
+    request: Request,
+    scope: str = Query(default="domain"),
+):
+    scope = _graph_scope(request, scope)
+    nodes, edges = _filter_graph_scope(
+        request,
+        _snapshot(request).graph.all_nodes(),
+        _snapshot(request).graph.all_edges(),
+        scope,
+    )
     domains = sorted({node.domain for node in nodes})
     types = sorted({node.type for node in nodes})
     return {
         "domains": domains,
         "types": types,
-        "stats": _snapshot(request).graph.stats(),
+        "stats": {"nodes": len(nodes), "edges": len(edges)},
         "data_version": _snapshot(request).data_version,
     }
 
 
 @router.post("/api/v1/graph/full", response_model=SubgraphResponse)
 def graph_full(payload: FullGraphRequest, request: Request) -> SubgraphResponse:
+    scope = _graph_scope(request, payload.scope)
+    if scope == "research":
+        raise HTTPException(
+            status_code=400,
+            detail="research graph only supports focus subgraphs",
+        )
     snapshot = _snapshot(request)
     domains = set(payload.domains)
     nodes = [
@@ -304,6 +700,7 @@ def graph_full(payload: FullGraphRequest, request: Request) -> SubgraphResponse:
         for edge in snapshot.graph.all_edges()
         if edge.source in node_ids and edge.target in node_ids
     ]
+    nodes, edges = _filter_graph_scope(request, nodes, edges, scope)
     return SubgraphResponse(
         nodes=nodes,
         edges=edges,
@@ -313,12 +710,14 @@ def graph_full(payload: FullGraphRequest, request: Request) -> SubgraphResponse:
 
 @router.post("/api/v1/graph/subgraph", response_model=SubgraphResponse)
 def graph_subgraph(payload: SubgraphRequest, request: Request) -> SubgraphResponse:
+    scope = _graph_scope(request, payload.scope)
     nodes, edges = _snapshot(request).graph.subgraph(
         payload.entity_ids,
         depth=payload.depth,
         domains=set(payload.domains) or None,
         limit=payload.limit,
     )
+    nodes, edges = _filter_graph_scope(request, nodes, edges, scope)
     return SubgraphResponse(
         nodes=nodes,
         edges=edges,
@@ -330,9 +729,8 @@ def graph_subgraph(payload: SubgraphRequest, request: Request) -> SubgraphRespon
 def ingest(
     payload: IngestRequest,
     request: Request,
-    x_internal_token: str | None = Header(default=None),
 ) -> IngestResponse:
-    _assert_internal_token(request, x_internal_token)
+    _require_admin(request)
     service = IngestionService(request.app.state.settings, _manager(request))
     result = service.ingest(
         Path(payload.path).expanduser().resolve(),
@@ -355,9 +753,8 @@ def ingest(
 def import_external_triples(
     payload: ExternalTripleImportRequest,
     request: Request,
-    x_internal_token: str | None = Header(default=None),
 ) -> ExternalTripleImportResponse:
-    _assert_internal_token(request, x_internal_token)
+    _require_admin(request)
     importer = ExternalTripleImporter(_manager(request))
     result = importer.import_csv(
         Path(payload.path).expanduser().resolve(),
@@ -375,9 +772,8 @@ async def upload_external_triples(
     file: Annotated[UploadFile, File()],
     data_owner: str = Form(default="已发表维生素 K 研究文献"),
     activate: bool = Form(default=False),
-    x_internal_token: str | None = Header(default=None),
 ) -> dict:
-    _assert_internal_token(request, x_internal_token)
+    _require_admin(request)
     return await _import_uploaded_evidence_table(
         request,
         file,
@@ -393,9 +789,8 @@ async def upload_internal_csv(
     source_type: str = Form(default="rct"),
     source_classification: str = Form(default="internal_rct"),
     activate: bool = Form(default=False),
-    x_internal_token: str | None = Header(default=None),
 ) -> IngestResponse:
-    _assert_internal_token(request, x_internal_token)
+    _require_admin(request)
     return await _import_uploaded_evidence_table(
         request,
         file,
@@ -430,9 +825,8 @@ async def _import_uploaded_evidence_table(
 def import_evidence_tables(
     payload: EvidenceTableImportRequest,
     request: Request,
-    x_internal_token: str | None = Header(default=None),
 ):
-    _assert_internal_token(request, x_internal_token)
+    _require_admin(request)
     result = EvidenceTableImporter(_manager(request)).import_files(
         [Path(path).expanduser().resolve() for path in payload.paths],
         version=payload.version,
@@ -445,19 +839,18 @@ def import_evidence_tables(
 @router.get("/internal/v1/review")
 def review_items(
     request: Request,
-    x_internal_token: str | None = Header(default=None),
+    status: str = Query(default="pending", max_length=40),
 ):
-    _assert_internal_token(request, x_internal_token)
-    return {"items": _snapshot(request).metadata.list_review_items("pending")}
+    _require_admin(request)
+    return {"items": _snapshot(request).metadata.list_review_items(status)}
 
 
 @router.post("/internal/v1/review")
 def review_decide(
     payload: ReviewDecisionRequest,
     request: Request,
-    x_internal_token: str | None = Header(default=None),
 ):
-    _assert_internal_token(request, x_internal_token)
+    _require_admin(request)
     service = IngestionService(request.app.state.settings, _manager(request))
     count = service.apply_review(
         _snapshot(request),
@@ -472,9 +865,9 @@ def review_decide(
 def activate_snapshot(
     version: str,
     request: Request,
-    x_internal_token: str | None = Header(default=None),
 ):
-    _assert_internal_token(request, x_internal_token)
+    _require_admin(request)
+    version = _known_snapshot_version(request, version)
     if request.app.state.snapshot.version == version:
         return {"version": version, "status": "already-active"}
     request.app.state.snapshot.close()
@@ -486,13 +879,76 @@ def activate_snapshot(
     engine.graph = snapshot.graph
     engine.vectors = snapshot.vectors
     request.app.state.snapshot = snapshot
+    request.app.state.triage.rebind(snapshot)
     return payload
 
 
 @router.get("/internal/v1/snapshots")
 def snapshots(
     request: Request,
-    x_internal_token: str | None = Header(default=None),
 ):
-    _assert_internal_token(request, x_internal_token)
+    _require_admin(request)
     return {"items": _manager(request).list()}
+
+
+@router.get(
+    "/internal/v1/governance/active",
+    response_model=SnapshotAudit,
+)
+def active_snapshot_audit(request: Request) -> SnapshotAudit:
+    _require_admin(request)
+    return _manager(request).audit(_snapshot(request).version)
+
+
+@router.get(
+    "/internal/v1/governance/snapshots/{version}",
+    response_model=SnapshotAudit,
+)
+def snapshot_audit(
+    version: str,
+    request: Request,
+) -> SnapshotAudit:
+    _require_admin(request)
+    version = _known_snapshot_version(request, version)
+    return _manager(request).audit(version)
+
+
+@router.get(
+    "/internal/v1/governance/diff",
+    response_model=SnapshotDiff,
+)
+def snapshot_diff(
+    request: Request,
+    from_version: str = Query(min_length=1, max_length=160),
+    to_version: str = Query(min_length=1, max_length=160),
+) -> SnapshotDiff:
+    _require_admin(request)
+    from_version = _known_snapshot_version(request, from_version)
+    to_version = _known_snapshot_version(request, to_version)
+    return _manager(request).diff(from_version, to_version)
+
+
+@router.get("/internal/v1/audit-logs")
+def audit_logs(
+    request: Request,
+    limit: int = Query(default=100, ge=1, le=500),
+):
+    _require_admin(request)
+    return {"items": _auth(request).audit_log(limit)}
+
+
+@router.get("/internal/v1/unmet-needs", response_model=UnmetNeedsResponse)
+def unmet_needs(
+    request: Request,
+    status: str = Query(default="", max_length=80),
+    limit: int = Query(default=100, ge=1, le=500),
+) -> UnmetNeedsResponse:
+    _require_admin(request)
+    items = _snapshot(request).metadata.list_unmet_needs(
+        status=status,
+        limit=limit,
+    )
+    return UnmetNeedsResponse(
+        items=[UnmetNeedRecord(**item) for item in items],
+        total=len(items),
+    )

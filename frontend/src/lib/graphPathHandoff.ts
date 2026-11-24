@@ -3,6 +3,7 @@ import type {
   GraphEdge,
   GraphNode,
   GraphPath,
+  QAMode,
   Subgraph
 } from "./types";
 
@@ -16,6 +17,7 @@ export interface GraphPathHandoff {
   intent: string;
   createdAt: number;
   dataVersion: string;
+  qaMode?: QAMode;
   paths: GraphPath[];
   relatedEntities: GraphNode[];
 }
@@ -35,6 +37,7 @@ export function createGraphPathHandoff(answer: Answer): GraphPathHandoff | null 
     intent: answer.intent,
     createdAt: Date.now(),
     dataVersion: answer.data_version.version,
+    qaMode: answer.mode ?? "domain",
     paths: answer.graph_paths,
     relatedEntities: answer.related_entities
   };

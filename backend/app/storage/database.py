@@ -101,6 +101,18 @@ class MetadataStore:
                     source_locator TEXT NOT NULL DEFAULT '',
                     source_file TEXT NOT NULL DEFAULT '',
                     source_row_value TEXT NOT NULL DEFAULT '',
+                    test_family TEXT NOT NULL DEFAULT '',
+                    analysis_context TEXT NOT NULL DEFAULT '',
+                    effect_size TEXT NOT NULL DEFAULT '',
+                    ci_low TEXT NOT NULL DEFAULT '',
+                    ci_high TEXT NOT NULL DEFAULT '',
+                    p_value TEXT NOT NULL DEFAULT '',
+                    q_value TEXT NOT NULL DEFAULT '',
+                    sample_n TEXT NOT NULL DEFAULT '',
+                    model_type TEXT NOT NULL DEFAULT '',
+                    core_48_flag INTEGER NOT NULL DEFAULT 0,
+                    retention_status TEXT NOT NULL DEFAULT '',
+                    conflict_id TEXT NOT NULL DEFAULT '',
                     metadata_json TEXT NOT NULL DEFAULT '{}',
                     FOREIGN KEY(chunk_id) REFERENCES chunks(id),
                     FOREIGN KEY(source_id) REFERENCES sources(id)
@@ -140,6 +152,22 @@ class MetadataStore:
                     created_at TEXT NOT NULL
                 );
 
+                CREATE TABLE IF NOT EXISTS unmet_needs (
+                    id TEXT PRIMARY KEY,
+                    session_id TEXT NOT NULL DEFAULT '',
+                    query TEXT NOT NULL,
+                    mode TEXT NOT NULL,
+                    intent TEXT NOT NULL DEFAULT '',
+                    reason TEXT NOT NULL,
+                    detail TEXT NOT NULL DEFAULT '',
+                    data_scope_json TEXT NOT NULL DEFAULT '[]',
+                    data_version TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'pending_review',
+                    reviewer_note TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+
                 CREATE TABLE IF NOT EXISTS review_items (
                     id TEXT PRIMARY KEY,
                     job_id TEXT NOT NULL,
@@ -163,6 +191,8 @@ class MetadataStore:
                 CREATE INDEX IF NOT EXISTS idx_chunks_source ON chunks(source_id);
                 CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id, created_at);
                 CREATE INDEX IF NOT EXISTS idx_review_status ON review_items(status, created_at);
+                CREATE INDEX IF NOT EXISTS idx_unmet_needs_status
+                ON unmet_needs(status, created_at DESC);
                 """
             )
             self._migrate_source_columns(connection)
@@ -175,6 +205,17 @@ class MetadataStore:
             )
             connection.execute(
                 "CREATE INDEX IF NOT EXISTS idx_evidence_answer_eligible ON evidence(answer_eligible)"
+            )
+            connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_evidence_chunk ON evidence(chunk_id)"
+            )
+            connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_evidence_internal_family "
+                "ON evidence(source_type, test_family, core_48_flag)"
+            )
+            connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_evidence_result_status "
+                "ON evidence(evidence_status, evidence_level)"
             )
 
     @staticmethod
@@ -246,6 +287,18 @@ class MetadataStore:
             "source_locator": "TEXT NOT NULL DEFAULT ''",
             "source_file": "TEXT NOT NULL DEFAULT ''",
             "source_row_value": "TEXT NOT NULL DEFAULT ''",
+            "test_family": "TEXT NOT NULL DEFAULT ''",
+            "analysis_context": "TEXT NOT NULL DEFAULT ''",
+            "effect_size": "TEXT NOT NULL DEFAULT ''",
+            "ci_low": "TEXT NOT NULL DEFAULT ''",
+            "ci_high": "TEXT NOT NULL DEFAULT ''",
+            "p_value": "TEXT NOT NULL DEFAULT ''",
+            "q_value": "TEXT NOT NULL DEFAULT ''",
+            "sample_n": "TEXT NOT NULL DEFAULT ''",
+            "model_type": "TEXT NOT NULL DEFAULT ''",
+            "core_48_flag": "INTEGER NOT NULL DEFAULT 0",
+            "retention_status": "TEXT NOT NULL DEFAULT ''",
+            "conflict_id": "TEXT NOT NULL DEFAULT ''",
         }
         added_any = False
         for name, definition in additions.items():
@@ -267,6 +320,41 @@ class MetadataStore:
                 WHERE review_status = ''
                 """
             )
+        connection.execute(
+            """
+            UPDATE evidence
+            SET
+                test_family = COALESCE(NULLIF(test_family, ''),
+                    json_extract(metadata_json, '$.test_family'), ''),
+                analysis_context = COALESCE(NULLIF(analysis_context, ''),
+                    json_extract(metadata_json, '$.analysis_context'), ''),
+                effect_size = COALESCE(NULLIF(effect_size, ''),
+                    json_extract(metadata_json, '$.effect_size'), ''),
+                ci_low = COALESCE(NULLIF(ci_low, ''),
+                    json_extract(metadata_json, '$.ci_low'), ''),
+                ci_high = COALESCE(NULLIF(ci_high, ''),
+                    json_extract(metadata_json, '$.ci_high'), ''),
+                p_value = COALESCE(NULLIF(p_value, ''),
+                    json_extract(metadata_json, '$.p_value'), ''),
+                q_value = COALESCE(NULLIF(q_value, ''),
+                    json_extract(metadata_json, '$.q_value'), ''),
+                sample_n = COALESCE(NULLIF(sample_n, ''),
+                    json_extract(metadata_json, '$.sample_n'), ''),
+                model_type = COALESCE(NULLIF(model_type, ''),
+                    json_extract(metadata_json, '$.model_type'), ''),
+                core_48_flag = CASE
+                    WHEN lower(COALESCE(json_extract(metadata_json, '$.core_48_flag'), 'false'))
+                         IN ('true', '1') THEN 1
+                    ELSE 0
+                END,
+                retention_status = COALESCE(NULLIF(retention_status, ''),
+                    json_extract(metadata_json, '$.retention_status'), ''),
+                conflict_id = COALESCE(NULLIF(conflict_id, ''),
+                    json_extract(metadata_json, '$.conflict_id'), '')
+            WHERE metadata_json != '{}'
+            """
+        )
+
     def has_demo_data(self) -> bool:
         with self.connect() as connection:
             row = connection.execute("SELECT COUNT(*) AS count FROM sources").fetchone()
@@ -399,6 +487,8 @@ class MetadataStore:
         source_file: str = "",
         source_row_value: str = "",
     ) -> None:
+        metadata = metadata or {}
+        core_48 = str(metadata.get("core_48_flag", "")).lower() in {"true", "1"}
         with self.connect() as connection:
             connection.execute(
                 """
@@ -408,9 +498,15 @@ class MetadataStore:
                     confidence, source_type, review_status, input_status,
                     fusion_status, evidence_status, graph_display_role,
                     answer_eligible, source_record_id, source_version,
-                    source_locator, source_file, source_row_value, metadata_json
+                    source_locator, source_file, source_row_value,
+                    test_family, analysis_context, effect_size, ci_low, ci_high,
+                    p_value, q_value, sample_n, model_type, core_48_flag,
+                    retention_status, conflict_id, metadata_json
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                )
                 """,
                 (
                     evidence_id,
@@ -432,7 +528,19 @@ class MetadataStore:
                     source_locator,
                     source_file,
                     source_row_value,
-                    json.dumps(metadata or {}, ensure_ascii=False),
+                    str(metadata.get("test_family", "")),
+                    str(metadata.get("analysis_context", "")),
+                    str(metadata.get("effect_size", "")),
+                    str(metadata.get("ci_low", "")),
+                    str(metadata.get("ci_high", "")),
+                    str(metadata.get("p_value", "")),
+                    str(metadata.get("q_value", "")),
+                    str(metadata.get("sample_n", "")),
+                    str(metadata.get("model_type", "")),
+                    int(core_48),
+                    str(metadata.get("retention_status", "")),
+                    str(metadata.get("conflict_id", "")),
+                    json.dumps(metadata, ensure_ascii=False),
                 ),
             )
 
@@ -503,6 +611,24 @@ class MetadataStore:
                 FROM evidence e
                 JOIN chunks c ON c.id = e.chunk_id
                 JOIN sources s ON s.id = e.source_id
+                ORDER BY e.id
+                """
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+    def all_internal_evidence(self) -> list[dict[str, Any]]:
+        with self.connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT e.*, c.text AS chunk_text, c.entity_ids_json, c.locator,
+                       s.title, s.source_type AS source_table_type,
+                       s.source_classification, s.data_origin, s.data_owner,
+                       s.access_scope, s.publisher, s.published_at, s.url,
+                       s.is_demo
+                FROM evidence e
+                JOIN chunks c ON c.id = e.chunk_id
+                JOIN sources s ON s.id = e.source_id
+                WHERE s.data_origin = 'internal'
                 ORDER BY e.id
                 """
             ).fetchall()
@@ -723,6 +849,91 @@ class MetadataStore:
                     utc_now(),
                 ),
             )
+
+    def record_unmet_need(
+        self,
+        *,
+        query: str,
+        mode: str,
+        reason: str,
+        data_version: str,
+        session_id: str | None = None,
+        intent: str = "",
+        detail: str = "",
+        data_scope: list[str] | None = None,
+    ) -> dict[str, Any]:
+        now = utc_now()
+        record_id = str(uuid.uuid4())
+        with self.connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO unmet_needs
+                (
+                    id, session_id, query, mode, intent, reason, detail,
+                    data_scope_json, data_version, status, reviewer_note,
+                    created_at, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_review', '', ?, ?)
+                """,
+                (
+                    record_id,
+                    session_id or "",
+                    query.strip(),
+                    mode,
+                    intent,
+                    reason,
+                    detail.strip(),
+                    json.dumps(data_scope or [], ensure_ascii=False),
+                    data_version,
+                    now,
+                    now,
+                ),
+            )
+        return {
+            "id": record_id,
+            "session_id": session_id or "",
+            "query": query.strip(),
+            "mode": mode,
+            "intent": intent,
+            "reason": reason,
+            "detail": detail.strip(),
+            "data_scope": data_scope or [],
+            "data_version": data_version,
+            "status": "pending_review",
+            "reviewer_note": "",
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    def list_unmet_needs(
+        self,
+        *,
+        status: str = "",
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        status_clause = ""
+        parameters: list[Any] = []
+        if status:
+            status_clause = "WHERE status = ?"
+            parameters.append(status)
+        parameters.append(limit)
+        with self.connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT *
+                FROM unmet_needs
+                {status_clause}
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                parameters,
+            ).fetchall()
+        items = []
+        for row in rows:
+            item = dict(row)
+            item["data_scope"] = json.loads(item.pop("data_scope_json") or "[]")
+            items.append(item)
+        return items
 
     def add_review_candidates(self, job_id: str, candidates: list[dict[str, Any]]) -> None:
         now = utc_now()

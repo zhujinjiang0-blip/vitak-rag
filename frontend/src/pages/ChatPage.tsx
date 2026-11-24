@@ -3,6 +3,9 @@ import {
   ArrowUp,
   BookOpen,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCheck,
   ExternalLink,
   FolderKanban,
   FolderPlus,
@@ -13,6 +16,7 @@ import {
   Network,
   Pencil,
   Plus,
+  RotateCcw,
   Search,
   ShieldAlert,
   Sparkles,
@@ -20,13 +24,20 @@ import {
   X
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { askQuestion } from "../lib/api";
+import { answerTriage, askQuestion, startTriage } from "@api";
+import { useAuth } from "@auth";
+import { PUBLIC_BUILD } from "../lib/buildMode";
+import {
+  CLAIM_TYPE_LABELS,
+  COMPARISON_STATUS_LABELS,
+  claimScienceProfile
+} from "../lib/claimBoundary";
 import {
   createGraphPathHandoff,
   saveGraphPathHandoff
 } from "../lib/graphPathHandoff";
 import { STATIC_DEMO_MODE } from "../lib/staticDemo";
-import type { Answer } from "../lib/types";
+import type { Answer, QAMode, TriageSession } from "../lib/types";
 import DataSourceLegend from "../components/DataSourceLegend";
 
 interface Message {
@@ -222,23 +233,19 @@ const PUBLIC_SUGGESTIONS = [
   "PIVKA-II可以反映什么？"
 ];
 
-const PRIVATE_SUGGESTIONS = [
-  "维生素K有哪些食物来源？",
-  "华法林和维生素K有什么关系？",
-  "骨钙素与维生素K2有什么关系？",
-  "MK-7有哪些随机对照研究证据？",
-  "内部队列中MK-7和胰岛素有什么关系？",
-  "内部队列中VK1和HOMA-IR有什么关系？"
-];
-
 function ChatPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [input, setInput] = useState("");
   const [conversation, setConversation] =
     useState<ConversationState>(loadConversationState);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
   const [thinkingSteps, setThinkingSteps] = useState<string[]>([]);
+  const [triage, setTriage] = useState<TriageSession | null>(null);
+  const [triageSelection, setTriageSelection] = useState<string[]>([]);
+  const [triageLoading, setTriageLoading] = useState(false);
+  const [triageError, setTriageError] = useState("");
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
@@ -246,6 +253,10 @@ function ChatPage() {
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingSessionTitle, setEditingSessionTitle] = useState("");
   const [sessionSearch, setSessionSearch] = useState("");
+  const [highlightedCitationId, setHighlightedCitationId] = useState<string | null>(
+    null
+  );
+  const qaMode: QAMode = "domain";
   const thinkingStepsRef = useRef<string[]>([]);
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
@@ -262,6 +273,10 @@ function ChatPage() {
   const activeAnswer = useMemo(
     () =>
       [...messages].reverse().find((message) => message.answer)?.answer ?? null,
+    [messages]
+  );
+  const latestAnswerMessageId = useMemo(
+    () => [...messages].reverse().find((message) => message.answer)?.id ?? null,
     [messages]
   );
   const orderedSessions = useMemo(
@@ -337,6 +352,18 @@ function ChatPage() {
   }, [conversation.activeSessionId]);
 
   useEffect(() => {
+    setHighlightedCitationId(null);
+    setTriage(null);
+    setTriageSelection([]);
+    setTriageError("");
+  }, [conversation.activeSessionId]);
+
+  useEffect(() => {
+    setTriageSelection([]);
+    setTriageError("");
+  }, [triage?.question?.id]);
+
+  useEffect(() => {
     const element = chatScrollRef.current;
     if (!element) return;
     if (messages.at(-1)?.role === "user") {
@@ -356,6 +383,72 @@ function ChatPage() {
     setEditingSessionId(null);
     setEditingSessionTitle("");
     thinkingStepsRef.current = [];
+  }
+
+  async function beginTriage() {
+    if (triageLoading) return;
+    setTriageLoading(true);
+    setTriageError("");
+    try {
+      const session = await startTriage();
+      setTriage(session);
+      setTriageSelection([]);
+    } catch (error) {
+      setTriageError(
+        error instanceof Error ? error.message : "无法启动风险自查"
+      );
+    } finally {
+      setTriageLoading(false);
+    }
+  }
+
+  function toggleTriageOption(value: string) {
+    const question = triage?.question;
+    if (!question || triageLoading) return;
+    if (!question.multiple) {
+      setTriageSelection([value]);
+      return;
+    }
+    if (value === "none") {
+      setTriageSelection(["none"]);
+      return;
+    }
+    setTriageSelection((current) => {
+      const withoutNone = current.filter((item) => item !== "none");
+      return withoutNone.includes(value)
+        ? withoutNone.filter((item) => item !== value)
+        : [...withoutNone, value];
+    });
+  }
+
+  async function advanceTriage(action: "next" | "back" = "next") {
+    if (!triage?.question || triageLoading) return;
+    if (action === "next" && triageSelection.length === 0) return;
+    setTriageLoading(true);
+    setTriageError("");
+    try {
+      const updated = await answerTriage(
+        triage.session_id,
+        triage.question.id,
+        triageSelection,
+        action
+      );
+      setTriage(updated);
+      if (updated.question) setTriageSelection([]);
+    } catch (error) {
+      setTriageError(
+        error instanceof Error ? error.message : "无法提交本次选择"
+      );
+    } finally {
+      setTriageLoading(false);
+    }
+  }
+
+  function closeTriage() {
+    if (triageLoading) return;
+    setTriage(null);
+    setTriageSelection([]);
+    setTriageError("");
   }
 
   function createSession() {
@@ -629,7 +722,7 @@ function ChatPage() {
     thinkingStepsRef.current = [];
 
     try {
-      await askQuestion(trimmed, targetSessionId, {
+      await askQuestion(trimmed, targetSessionId, qaMode, {
         status: (message) => {
           setStatus(message);
           appendThinkingStep(message);
@@ -674,6 +767,16 @@ function ChatPage() {
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     void submit(input);
+  }
+
+  function focusCitation(evidenceId: string) {
+    setHighlightedCitationId(evidenceId);
+    window.requestAnimationFrame(() => {
+      document
+        .getElementById(`citation-${evidenceId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    window.setTimeout(() => setHighlightedCitationId(null), 2200);
   }
 
   function openAnswerGraph(answer: Answer) {
@@ -910,9 +1013,7 @@ function ChatPage() {
             <span className="eyebrow">知识图谱检索</span>
             <h1>维K智问</h1>
             <p>
-              {STATIC_DEMO_MODE
-                ? "回答由真实外部文献证据和原文片段确定性组装，不调用生成式模型。"
-                : "回答可使用真实外部文献与本地内部队列证据，不调用生成式模型。"}
+              仅使用外部公开证据；模型输出必须通过证据校验，失败时自动回退。
             </p>
           </div>
           <div className="knowledge-badge">
@@ -941,7 +1042,7 @@ function ChatPage() {
                 系统会先定位实体，再查询图谱路径和原始证据。知识库无法支持的问题会明确拒答。
               </p>
               <div className="suggestion-grid">
-                {(STATIC_DEMO_MODE ? PUBLIC_SUGGESTIONS : PRIVATE_SUGGESTIONS).map((suggestion) => (
+                {PUBLIC_SUGGESTIONS.map((suggestion) => (
                   <button
                     key={suggestion}
                     className="suggestion-button"
@@ -952,6 +1053,19 @@ function ChatPage() {
                   </button>
                 ))}
               </div>
+              <button
+                type="button"
+                className="triage-start-button"
+                onClick={() => void beginTriage()}
+                disabled={triageLoading}
+              >
+                <ClipboardCheck size={17} />
+                <span>
+                  <strong>{triageLoading ? "正在准备" : "开始维生素K风险自查"}</strong>
+                  <small>7 步结构化问答，不进行疾病诊断</small>
+                </span>
+                <ChevronRight size={17} />
+              </button>
             </div>
           ) : (
             <div className="message-list">
@@ -977,6 +1091,9 @@ function ChatPage() {
                     {message.answer && (
                       <div className="message-meta">
                         <span>{intentLabel(message.answer.intent)}</span>
+                        {!PUBLIC_BUILD && (
+                          <span>{modeLabel(message.answer.mode ?? "domain")}</span>
+                        )}
                         {message.answer.intent !== "capabilities" && (
                           <>
                             <span>{sufficiencyLabel(message.answer.sufficiency)}</span>
@@ -988,8 +1105,117 @@ function ChatPage() {
                         {message.answer.intent === "capabilities" && (
                           <span>功能范围说明</span>
                         )}
+                        {message.answer.generation?.configured && (
+                          <span
+                            className={`generation-pill status-${message.answer.generation.status}`}
+                            title={message.answer.generation.fallback_reason}
+                          >
+                            {generationLabel(message.answer.generation.status)}
+                          </span>
+                        )}
                       </div>
                     )}
+                    {message.answer &&
+                      message.id === latestAnswerMessageId &&
+                      message.answer.claims.length > 0 && (
+                        <details className="claim-evidence-panel" open>
+                          <summary>
+                            <span>结论级证据</span>
+                            <small>{message.answer.claims.length} 条结论</small>
+                          </summary>
+                          <div className="claim-evidence-list">
+                            {message.answer.claims.map((claim, index) => {
+                              const profile = claimScienceProfile(claim);
+                              return (
+                                <article
+                                  className={`claim-evidence-item claim-type-${profile.claimType}`}
+                                  key={claim.id}
+                                >
+                                  <div className="claim-evidence-main">
+                                    <span className="claim-index">{index + 1}</span>
+                                    <p>{claim.text}</p>
+                                  </div>
+                                  <div className="claim-evidence-footer">
+                                    <span className="claim-type-badge">
+                                      {CLAIM_TYPE_LABELS[profile.claimType]}
+                                    </span>
+                                    <div className="claim-citation-list">
+                                      {claim.evidence_ids.map((evidenceId) => {
+                                        const citation = message.answer?.citations.find(
+                                          (item) => item.id === evidenceId
+                                        );
+                                        return (
+                                          <button
+                                            type="button"
+                                            key={evidenceId}
+                                            className={
+                                              highlightedCitationId === evidenceId
+                                                ? "active"
+                                                : ""
+                                            }
+                                            onClick={() => focusCitation(evidenceId)}
+                                            title={citation?.source_title ?? evidenceId}
+                                          >
+                                            {citation?.source_id ?? "查看证据"}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                  {profile.boundaryNote && (
+                                    <p className="claim-boundary-note">
+                                      {profile.boundaryNote}
+                                    </p>
+                                  )}
+                                </article>
+                              );
+                            })}
+                          </div>
+                        </details>
+                      )}
+                    {message.answer &&
+                      message.id === latestAnswerMessageId &&
+                      (message.answer.comparisons?.length ?? 0) > 0 && (
+                        <section className="evidence-comparison-panel">
+                          <div className="evidence-comparison-heading">
+                            <span>证据差异与适用条件</span>
+                            <small>
+                              {message.answer.comparisons?.length} 项
+                            </small>
+                          </div>
+                          <div className="evidence-comparison-list">
+                            {message.answer.comparisons?.map((comparison) => (
+                              <article
+                                className={`evidence-comparison-item status-${comparison.status}`}
+                                key={comparison.id}
+                              >
+                                <span className="comparison-type">
+                                  {COMPARISON_STATUS_LABELS[comparison.status] ??
+                                    comparison.status}
+                                </span>
+                                <p>{comparison.summary}</p>
+                                <div className="comparison-evidence-list">
+                                  {comparison.evidence_ids.map((evidenceId) => {
+                                    const citation =
+                                      message.answer?.citations.find(
+                                        (item) => item.id === evidenceId
+                                      );
+                                    return (
+                                      <button
+                                        type="button"
+                                        key={evidenceId}
+                                        onClick={() => focusCitation(evidenceId)}
+                                      >
+                                        {citation?.source_id ?? "查看证据"}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </article>
+                            ))}
+                          </div>
+                        </section>
+                      )}
                     {message.answer && message.trace && message.trace.length > 0 && (
                       <details className="reasoning-trace">
                         <summary>查看检索过程</summary>
@@ -1029,6 +1255,19 @@ function ChatPage() {
                 </article>
               )}
             </div>
+          )}
+          {triage && (
+            <TriagePanel
+              session={triage}
+              selection={triageSelection}
+              loading={triageLoading}
+              error={triageError}
+              onToggle={toggleTriageOption}
+              onNext={() => void advanceTriage("next")}
+              onBack={() => void advanceTriage("back")}
+              onRestart={() => void beginTriage()}
+              onClose={closeTriage}
+            />
           )}
         </div>
 
@@ -1085,6 +1324,22 @@ function ChatPage() {
               </div>
             )}
 
+            {activeAnswer.generation?.configured && (
+              <div className={`generation-panel status-${activeAnswer.generation.status}`}>
+                <Sparkles size={16} />
+                <div>
+                  <strong>{generationLabel(activeAnswer.generation.status)}</strong>
+                  <p>
+                    {activeAnswer.generation.used
+                      ? `${activeAnswer.generation.provider} / ${activeAnswer.generation.model}，`
+                        + `${activeAnswer.generation.accepted_claim_count} 条 Claim 已通过证据核验。`
+                      : activeAnswer.generation.fallback_reason
+                        || "本次使用确定性证据回答。"}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="rail-section">
               <div className="rail-section-heading">
                 <h3>图谱路径</h3>
@@ -1114,7 +1369,10 @@ function ChatPage() {
                     <GitBranch size={16} />
                     <div>
                       {path.nodes.map((node, nodeIndex) => (
-                        <span className="path-step" key={node.id}>
+                        <span
+                          className="path-step"
+                          key={`${index}-${nodeIndex}-${node.id}`}
+                        >
                           <strong>{node.name}</strong>
                           {nodeIndex < path.edges.length && (
                             <small>{path.edges[nodeIndex]?.predicate}</small>
@@ -1131,7 +1389,13 @@ function ChatPage() {
               <h3>来源证据</h3>
               <div className="citation-list">
                 {activeAnswer.citations.map((citation) => (
-                  <article className="citation-card" key={citation.id}>
+                  <article
+                    className={`citation-card ${
+                      highlightedCitationId === citation.id ? "highlighted" : ""
+                    }`}
+                    id={`citation-${citation.id}`}
+                    key={citation.id}
+                  >
                     <div className="citation-topline">
                       <span className="source-type">
                         {citation.source_classification || citation.source_type}
@@ -1141,6 +1405,12 @@ function ChatPage() {
                       </span>
                       {citation.review_status && (
                         <span className="review-pill">{citation.review_status}</span>
+                      )}
+                      {citation.test_family && (
+                        <span className="review-pill">{citation.test_family}</span>
+                      )}
+                      {!PUBLIC_BUILD && citation.core_48 && (
+                        <span className="core-pill">核心</span>
                       )}
                       {citation.is_demo && <span className="demo-pill">演示</span>}
                     </div>
@@ -1157,6 +1427,8 @@ function ChatPage() {
                         {citation.sample_n && <span>n={citation.sample_n}</span>}
                         {citation.effect_size && <span>效应：{citation.effect_size}</span>}
                         {citation.p_value && <span>P={citation.p_value}</span>}
+                        {citation.q_value && <span>Q={citation.q_value}</span>}
+                        {citation.conflict_id && <span>冲突 {citation.conflict_id}</span>}
                       </div>
                     )}
                     <div className="citation-footer">
@@ -1183,6 +1455,164 @@ function ChatPage() {
   );
 }
 
+function TriagePanel({
+  session,
+  selection,
+  loading,
+  error,
+  onToggle,
+  onNext,
+  onBack,
+  onRestart,
+  onClose
+}: {
+  session: TriageSession;
+  selection: string[];
+  loading: boolean;
+  error: string;
+  onToggle: (value: string) => void;
+  onNext: () => void;
+  onBack: () => void;
+  onRestart: () => void;
+  onClose: () => void;
+}) {
+  const question = session.question;
+  const outcome = session.outcome;
+  return (
+    <section className="triage-panel" aria-live="polite">
+      <div className="triage-header">
+        <div>
+          <span className="eyebrow">结构化风险自查</span>
+          <h2>维生素K补充风险自查</h2>
+        </div>
+        <button type="button" onClick={onClose} aria-label="关闭风险自查">
+          <X size={16} />
+        </button>
+      </div>
+      <div className="triage-progress">
+        <span>
+          {outcome
+            ? "自查完成"
+            : `第 ${session.progress.current} / ${session.progress.total} 步`}
+        </span>
+        <div aria-hidden="true">
+          <i
+            style={{
+              width: `${Math.min(
+                100,
+                (session.progress.current / session.progress.total) * 100
+              )}%`
+            }}
+          />
+        </div>
+      </div>
+
+      {question ? (
+        <>
+          <h3>{question.prompt}</h3>
+          {question.help_text && <p className="triage-help">{question.help_text}</p>}
+          <div className="triage-options">
+            {question.options.map((option) => (
+              <button
+                type="button"
+                key={option.value}
+                className={selection.includes(option.value) ? "selected" : ""}
+                aria-pressed={selection.includes(option.value)}
+                onClick={() => onToggle(option.value)}
+                disabled={loading}
+              >
+                <span className="triage-check">
+                  {selection.includes(option.value) && <CheckCircle2 size={14} />}
+                </span>
+                <span>
+                  <strong>{option.label}</strong>
+                  {option.description && <small>{option.description}</small>}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="triage-actions">
+            <button
+              type="button"
+              className="secondary"
+              onClick={onBack}
+              disabled={loading || session.progress.current <= 1}
+            >
+              <ChevronLeft size={15} />
+              上一步
+            </button>
+            <button
+              type="button"
+              onClick={onNext}
+              disabled={loading || selection.length === 0}
+            >
+              {loading ? <LoaderCircle size={15} className="spin" /> : null}
+              {session.progress.current === session.progress.total
+                ? "查看自查结果"
+                : "下一步"}
+              <ChevronRight size={15} />
+            </button>
+          </div>
+        </>
+      ) : (
+        outcome && (
+          <div className={`triage-outcome level-${outcome.level}`}>
+            <div className="triage-outcome-heading">
+              <ShieldAlert size={20} />
+              <div>
+                <span>
+                  {
+                    {
+                      emergency: "需要优先处理",
+                      professional_review: "建议专业评估",
+                      insufficient_information: "信息不足"
+                    }[outcome.level]
+                  }
+                </span>
+                <h3>{outcome.title}</h3>
+              </div>
+            </div>
+            <p>{outcome.summary}</p>
+            <ul>
+              {outcome.recommendations.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+            <div className="triage-cannot-conclude">{outcome.cannot_conclude}</div>
+            {outcome.citations.length > 0 && (
+              <details className="triage-evidence">
+                <summary>查看相关公开证据</summary>
+                {outcome.citations.map((citation) => (
+                  <article key={citation.id}>
+                    <strong>{citation.source_title}</strong>
+                    <p>{citation.snippet}</p>
+                    <small>{citation.source_locator || citation.locator}</small>
+                    {citation.url && (
+                      <a href={citation.url} target="_blank" rel="noreferrer">
+                        查看来源 <ExternalLink size={13} />
+                      </a>
+                    )}
+                  </article>
+                ))}
+              </details>
+            )}
+            <div className="triage-actions">
+              <button type="button" className="secondary" onClick={onRestart}>
+                <RotateCcw size={15} />
+                重新自查
+              </button>
+              <button type="button" onClick={onClose}>
+                返回问答
+              </button>
+            </div>
+          </div>
+        )
+      )}
+      {error && <div className="triage-error">{error}</div>}
+    </section>
+  );
+}
+
 function intentLabel(intent: string) {
   const labels: Record<string, string> = {
     food_sources: "食物来源",
@@ -1192,11 +1622,13 @@ function intentLabel(intent: string) {
     lab_tests: "检测指标",
     recommendations: "建议信息",
     research: "研究证据",
+    negative_evidence: "阴性证据",
     comparison: "关系比较",
     definition: "知识介绍",
     emergency: "紧急安全",
     medication: "用药安全",
     diagnosis: "诊断边界",
+    no_evidence: "无证据拒答",
     general: "图谱检索",
     capabilities: "能力说明"
   };
@@ -1209,6 +1641,23 @@ function sufficiencyLabel(value: Answer["sufficiency"]) {
     partial: "部分证据",
     none: "无充分证据"
   }[value];
+}
+
+function modeLabel(value: QAMode) {
+  return {
+    domain: "领域模式",
+    research: "研究模式",
+    comparison: "对照模式"
+  }[value];
+}
+
+function generationLabel(status: string) {
+  return {
+    generated: "大模型证据改写",
+    fallback: "已回退确定性回答",
+    not_attempted: "确定性证据回答",
+    disabled: "未启用运行时模型"
+  }[status] ?? status;
 }
 
 function originLabel(origin: string) {

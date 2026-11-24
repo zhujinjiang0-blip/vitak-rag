@@ -1,0 +1,59 @@
+{
+  "freeze_id": "vitak-rag-v2-requirements-2026-11-25",
+  "generated_at": "2026-11-24T16:06:57Z",
+  "stage": "development_verification",
+  "data": {
+    "verified_snapshot": "vitak-real-2026.11",
+    "evidence_count": 73396,
+    "entity_count": 36638,
+    "relation_count": 73279,
+    "internal_evidence_count": 248
+  },
+  "verification": {
+    "backend_tests": "40 passed",
+    "backend_lint": "passed",
+    "frontend_typecheck": "passed",
+    "frontend_production_build": "passed",
+    "gold_set_validation": "20 questions valid",
+    "runtime_llm_contract_tests": "5 passed",
+    "runtime_llm_default": "disabled",
+    "runtime_llm_local_status": "enabled",
+    "runtime_llm_live_probe": "passed",
+    "runtime_llm_live_generation": "passed",
+    "runtime_llm_live_claims": 5,
+    "runtime_llm_live_citations": 4,
+    "runtime_llm_out_of_scope_guard": "passed",
+    "runtime_llm_public_build_included": false,
+    "browser_console_errors": 0,
+    "mobile_horizontal_overflow": false,
+    "browser_viewports": [
+      "1440x1000 desktop",
+      "390x844 mobile"
+    ],
+    "browser_checks": [
+      "default chat entry",
+      "three evidence modes",
+      "research insights and effect plot",
+      "research evidence filtering",
+      "admin governance audit and version diff",
+      "missing-need queue",
+      "local graph default scope",
+      "2D and 3D graph export",
+      "structured evidence",
+      "real DeepSeek generation with verified claims and citations",
+      "runtime LLM generated/fallback status rendering",
+      "medical safety boundary",
+      "mobile overflow"
+    ]
+  },
+  "performance_check": {
+    "snapshot": "vitak-real-2026.11",
+    "example_question": "维生素K有哪些食物来源？",
+    "observed_end_to_end_ms": 2509,
+    "note": "Single local development observation after adding the evidence.chunk_id index; not a benchmark threshold."
+  },
+  "scientific_review": {
+    "status": "pending_scientific_owner",
+    "note": "Automated checks do not replace expert review of ontology, scientific semantics, clinical boundaries or user feedback."
+  }
+}

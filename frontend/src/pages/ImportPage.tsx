@@ -9,13 +9,14 @@ import {
 } from "lucide-react";
 import DataSourceLegend from "../components/DataSourceLegend";
 import { uploadExternalTriples, uploadInternalCsv } from "../lib/api";
+import { useAuth } from "../lib/auth";
 import { STATIC_DEMO_MODE } from "../lib/staticDemo";
 
 function ImportPage() {
+  const { user } = useAuth();
   const [mode, setMode] = useState<"external" | "internal">("external");
   const [file, setFile] = useState<File | null>(null);
   const [activate, setActivate] = useState(false);
-  const [token, setToken] = useState("change-me-in-local-development");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -42,8 +43,8 @@ function ImportPage() {
     try {
       const result =
         mode === "external"
-          ? await uploadExternalTriples(file, activate, token)
-          : await uploadInternalCsv(file, activate, token);
+          ? await uploadExternalTriples(file, activate)
+          : await uploadInternalCsv(file, activate);
       setMessage(
         `导入完成：快照 ${result.version ?? result.snapshot_version}，` +
           `${result.rows ?? result.chunks ?? 0} 条数据，` +
@@ -78,6 +79,26 @@ function ImportPage() {
           </p>
         </div>
         <DataSourceLegend />
+      </div>
+    );
+  }
+
+  if (!user || user.role !== "admin") {
+    return (
+      <div className="import-page">
+        <section className="page-heading">
+          <div>
+            <span className="eyebrow">管理员入口</span>
+            <h1>需要管理员会话</h1>
+            <p>数据导入、快照切换和审核操作只允许本地管理员账号执行。</p>
+          </div>
+          <DatabaseZap size={34} />
+        </section>
+        <div className="import-static-notice">
+          <LockKeyhole size={28} />
+          <h2>当前会话没有导入权限</h2>
+          <p>研究员可查看、问答和筛选内部证据；导入与快照管理由管理员负责。</p>
+        </div>
       </div>
     );
   }
@@ -131,15 +152,12 @@ function ImportPage() {
           </p>
         </div>
 
-        <div className="import-fields">
-          <label>
-            <span>内部接口令牌</span>
-            <input
-              type="password"
-              value={token}
-              onChange={(event) => setToken(event.target.value)}
-            />
-          </label>
+        <div className="import-classification-note">
+          <LockKeyhole size={17} />
+          <p>
+            <strong>管理员会话：</strong>
+            {user.display_name} · 导入和快照操作将写入本地审计记录。
+          </p>
         </div>
 
         <label className="checkbox-line">

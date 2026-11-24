@@ -21,4 +21,15 @@ data/snapshots/
 data/review/
 data/private_handoff/
 data/private_reports/
+
+# Controlled evaluation artifacts derived from internal snapshots.
+data/eval/research-questions-v1.jsonl
+data/eval/research-run-2026.11.json
+data/eval/two-group-questions-2026-11-25.jsonl
+data/eval/report-two-group-2026-11-25.json
+data/eval/report-two-group-2026-11-25.manifest.json
+
+# Separate internal Neo4j prototype contains private working data.
+/vitak-rag-neo4j-demo/
+
 *.log

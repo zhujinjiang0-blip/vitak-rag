@@ -1,10 +1,22 @@
 import type {
   Answer,
+  AuditLogItem,
+  AuthUser,
   GraphMeta,
   GraphNode,
   Health,
+  QAMode,
+  ResearchEvidenceResponse,
+  ResearchFacets,
+  ResearchInsights,
+  ResearchOverview,
   SearchResult,
-  Subgraph
+  SnapshotAudit,
+  SnapshotDiff,
+  SnapshotInfo,
+  Subgraph,
+  TriageSession,
+  UnmetNeedRecord
 } from "./types";
 import {
   askStaticQuestion,
@@ -18,7 +30,14 @@ import {
 } from "./staticDemo";
 
 async function jsonRequest<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, init);
+  const response = await fetch(url, {
+    ...init,
+    credentials: "include",
+    headers: {
+      ...(init?.body ? { "Content-Type": "application/json" } : {}),
+      ...init?.headers
+    }
+  });
   if (!response.ok) {
     const message = await response.text();
     throw new Error(`${response.status} ${message}`);
@@ -31,20 +50,26 @@ export function getHealth(): Promise<Health> {
   return jsonRequest<Health>("/api/v1/health");
 }
 
-export function getGraphMeta(): Promise<GraphMeta> {
+export function getGraphMeta(scope = "domain"): Promise<GraphMeta> {
   if (STATIC_DEMO_MODE) return getStaticGraphMeta();
-  return jsonRequest<GraphMeta>("/api/v1/graph/meta");
+  return jsonRequest<GraphMeta>(`/api/v1/graph/meta?scope=${scope}`);
 }
 
-export function searchGraph(query: string): Promise<{ items: GraphNode[]; total: number }> {
+export function searchGraph(
+  query: string,
+  scope = "domain"
+): Promise<{ items: GraphNode[]; total: number }> {
   if (STATIC_DEMO_MODE) return searchStaticGraph(query);
-  return jsonRequest(`/api/v1/graph/search?q=${encodeURIComponent(query)}&limit=30`);
+  return jsonRequest(
+    `/api/v1/graph/search?q=${encodeURIComponent(query)}&limit=30&scope=${scope}`
+  );
 }
 
 export function getSubgraph(
   entityIds: string[],
   depth: number,
-  domains: string[]
+  domains: string[],
+  scope = "domain"
 ): Promise<Subgraph> {
   if (STATIC_DEMO_MODE) return getStaticSubgraph(entityIds, depth, domains);
   return jsonRequest<Subgraph>("/api/v1/graph/subgraph", {
@@ -54,26 +79,30 @@ export function getSubgraph(
       entity_ids: entityIds,
       depth,
       domains,
-      limit: 100
+      limit: 100,
+      scope
     })
   });
 }
 
-export function getFullGraph(domains: string[]): Promise<Subgraph> {
+export function getFullGraph(domains: string[], scope = "domain"): Promise<Subgraph> {
   if (STATIC_DEMO_MODE) return getStaticFullGraph(domains);
   return jsonRequest<Subgraph>("/api/v1/graph/full", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ domains })
+    body: JSON.stringify({ domains, scope })
   });
 }
 
-export function searchEvidence(query: string): Promise<{
+export function searchEvidence(query: string, origin = "all"): Promise<{
   items: SearchResult[];
   total: number;
 }> {
   if (STATIC_DEMO_MODE) return searchStaticEvidence(query);
-  return jsonRequest(`/api/v1/search?q=${encodeURIComponent(query)}&limit=20`);
+  const originParam = origin === "all" ? "" : `&origin=${encodeURIComponent(origin)}`;
+  return jsonRequest(
+    `/api/v1/search?q=${encodeURIComponent(query)}&limit=20${originParam}`
+  );
 }
 
 interface ImportResult {
@@ -92,8 +121,7 @@ interface ImportResult {
 async function uploadRequest(
   endpoint: string,
   file: File,
-  fields: Record<string, string>,
-  token: string
+  fields: Record<string, string>
 ): Promise<ImportResult> {
   const form = new FormData();
   form.append("file", file);
@@ -102,7 +130,7 @@ async function uploadRequest(
   }
   const response = await fetch(endpoint, {
     method: "POST",
-    headers: { "X-Internal-Token": token },
+    credentials: "include",
     body: form
   });
   if (!response.ok) {
@@ -113,37 +141,34 @@ async function uploadRequest(
 
 export function uploadExternalTriples(
   file: File,
-  activate: boolean,
-  token: string
+  activate: boolean
 ): Promise<ImportResult> {
   return uploadRequest(
     "/internal/v1/upload-external-triples",
     file,
     {
       activate: String(activate)
-    },
-    token
+    }
   );
 }
 
 export function uploadInternalCsv(
   file: File,
-  activate: boolean,
-  token: string
+  activate: boolean
 ): Promise<ImportResult> {
   return uploadRequest(
     "/internal/v1/upload-internal-csv",
     file,
     {
       activate: String(activate)
-    },
-    token
+    }
   );
 }
 
 export async function askQuestion(
   query: string,
   sessionId: string | null,
+  mode: QAMode,
   handlers: {
     status?: (message: string) => void;
     onAnswer: (answer: Answer) => Promise<void> | void;
@@ -171,8 +196,9 @@ export async function askQuestion(
   await emitThinkingSteps();
   const response = await fetch("/api/v1/qa/stream", {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, session_id: sessionId })
+    body: JSON.stringify({ query, session_id: sessionId, mode })
   });
   if (!response.ok || !response.body) {
     throw new Error(`问答接口失败：${response.status}`);
@@ -199,7 +225,151 @@ export async function askQuestion(
       const event = eventLine.slice(7);
       const payload = JSON.parse(dataLine.slice(6));
       if (event === "status") handlers.status?.(payload.message);
+      if (event === "generation") {
+        handlers.status?.(
+          payload.used
+            ? "大模型改写已通过证据校验"
+            : "已完成确定性证据回退"
+        );
+      }
       if (event === "done") await handlers.onAnswer(payload as Answer);
     }
   }
+}
+
+export function getCurrentUser(): Promise<AuthUser | null> {
+  return jsonRequest<AuthUser | null>("/api/v1/auth/session");
+}
+
+export async function login(
+  username: string,
+  password: string
+): Promise<AuthUser> {
+  const result = await jsonRequest<{ user: AuthUser }>("/api/v1/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ username, password })
+  });
+  return result.user;
+}
+
+export function logout(): Promise<void> {
+  return jsonRequest("/api/v1/auth/logout", { method: "POST" });
+}
+
+export function getResearchOverview(): Promise<ResearchOverview> {
+  return jsonRequest<ResearchOverview>("/api/v1/research/overview");
+}
+
+export function getResearchFacets(): Promise<ResearchFacets> {
+  return jsonRequest<ResearchFacets>("/api/v1/research/facets");
+}
+
+export function getResearchInsights(): Promise<ResearchInsights> {
+  return jsonRequest<ResearchInsights>("/api/v1/research/insights");
+}
+
+export function searchResearchEvidence(
+  params: Record<string, string | number>
+): Promise<ResearchEvidenceResponse> {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (String(value).length > 0) search.set(key, String(value));
+  }
+  return jsonRequest<ResearchEvidenceResponse>(
+    `/api/v1/research/evidence?${search.toString()}`
+  );
+}
+
+export function getSnapshots(): Promise<{ items: SnapshotInfo[] }> {
+  return jsonRequest<{ items: SnapshotInfo[] }>("/internal/v1/snapshots");
+}
+
+export function getSnapshotAudit(version: string): Promise<SnapshotAudit> {
+  return jsonRequest<SnapshotAudit>(
+    `/internal/v1/governance/snapshots/${encodeURIComponent(version)}`
+  );
+}
+
+export function getActiveSnapshotAudit(): Promise<SnapshotAudit> {
+  return jsonRequest<SnapshotAudit>("/internal/v1/governance/active");
+}
+
+export function getSnapshotDiff(
+  fromVersion: string,
+  toVersion: string
+): Promise<SnapshotDiff> {
+  const params = new URLSearchParams({
+    from_version: fromVersion,
+    to_version: toVersion
+  });
+  return jsonRequest<SnapshotDiff>(`/internal/v1/governance/diff?${params}`);
+}
+
+export function activateSnapshot(
+  version: string
+): Promise<{ version: string; status: string }> {
+  return jsonRequest<{ version: string; status: string }>(
+    `/internal/v1/snapshots/${encodeURIComponent(version)}/activate`,
+    { method: "POST" }
+  );
+}
+
+export function getUnmetNeeds(): Promise<{
+  items: UnmetNeedRecord[];
+  total: number;
+}> {
+  return jsonRequest<{ items: UnmetNeedRecord[]; total: number }>(
+    "/internal/v1/unmet-needs"
+  );
+}
+
+export function getAuditLogs(): Promise<{
+  items: AuditLogItem[];
+}> {
+  return jsonRequest<{ items: AuditLogItem[] }>("/internal/v1/audit-logs");
+}
+
+export function getReviewItems(): Promise<{
+  items: Array<{
+    id: string;
+    job_id: string;
+    candidate_type: string;
+    status: string;
+    reviewer: string | null;
+    created_at: string;
+    payload: Record<string, unknown>;
+  }>;
+}> {
+  return jsonRequest("/internal/v1/review?status=pending");
+}
+
+export function startTriage(): Promise<TriageSession> {
+  return jsonRequest<TriageSession>("/api/v1/triage/sessions", {
+    method: "POST"
+  });
+}
+
+export function getTriageSession(sessionId: string): Promise<TriageSession> {
+  return jsonRequest<TriageSession>(
+    `/api/v1/triage/sessions/${encodeURIComponent(sessionId)}`
+  );
+}
+
+export function answerTriage(
+  sessionId: string,
+  questionId: string,
+  values: string[],
+  action: "next" | "back" = "next"
+): Promise<TriageSession> {
+  return jsonRequest<TriageSession>(
+    `/api/v1/triage/sessions/${encodeURIComponent(sessionId)}/answer`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        question_id: questionId,
+        values,
+        action
+      })
+    }
+  );
 }

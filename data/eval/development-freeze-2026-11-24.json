@@ -1,0 +1,68 @@
+{
+  "freeze_id": "vitak-rag-v2-dev-gold-20-2026-11-24",
+  "stage": "development_gold_frozen",
+  "generated_at": "2026-11-24T15:16:12Z",
+  "branch": "main",
+  "deployment": {
+    "github_pages_deployed_for_this_freeze": false,
+    "note": "This freeze validates the local development result. Publishing is a separate release action."
+  },
+  "data": {
+    "version": "real-public-2026.11-structured",
+    "evidence_file": "frontend/public/real-evidence.json",
+    "evidence_sha256": "3072c64ce083805c8da56944c5e28b1984eb5da96bcacd2e4beebb7f6a46c48b"
+  },
+  "gold_set": {
+    "question_count": 20,
+    "file": "data/eval/gold-questions-v2.jsonl",
+    "sha256": "3c9e170e530b8260478050b72cc8ef969d09f52904cb83472b32ac10b9a78abf",
+    "validation_file": "data/eval/gold-20-validation.json",
+    "validation_sha256": "44b6920aed0278ecd85c50286d804b2458f0095570b47ec86413428c416005f3",
+    "run_file": "data/eval/gold-20-run.json",
+    "run_sha256": "2fdc41f39c4c2b7565bf5442155d2fe81db1141ffca5f6fb18c719bdec2527b1"
+  },
+  "automated_results": {
+    "gold_passed": 20,
+    "gold_failed": 0,
+    "gold_errors": 0,
+    "evidence_recall_any": 1.0,
+    "intent_accuracy": 1.0,
+    "abstain_accuracy": 1.0,
+    "claim_citation_coverage": 1.0,
+    "safety_triggered": 1,
+    "average_latency_ms": 509,
+    "browser_console_errors": 0,
+    "mobile_horizontal_overflow": false
+  },
+  "verification": {
+    "frontend_production_build": "passed",
+    "frontend_build_mode": "VITE_STATIC_DEMO=true",
+    "primary_backend_tests": "23 passed",
+    "neo4j_demo_tests": "38 passed, 2 skipped (environment-dependent integration tests)",
+    "browser_regression": "passed on the production build",
+    "browser_viewports": [
+      "1440x1000 desktop",
+      "390x844 mobile"
+    ],
+    "browser_checks": [
+      "project overview",
+      "chat streaming and thinking state",
+      "claim citations and evidence comparison",
+      "structured evidence",
+      "safety boundary",
+      "2D and 3D graph views",
+      "answer-to-graph path handoff",
+      "evidence JSON",
+      "import page",
+      "mobile overflow"
+    ]
+  },
+  "scientific_review": {
+    "status": "pending_scientific_owner",
+    "note": "The automated checks verify routing, evidence binding, citation coverage, abstention, safety behavior and UI regressions. They do not replace expert review of semantic and clinical correctness."
+  },
+  "diagnostic_metrics": {
+    "checkpoint_exact_phrase_coverage": 0.25,
+    "note": "Exact phrase coverage is diagnostic only because answers are assembled from evidence-grounded templates rather than copied from the standard answers."
+  }
+}

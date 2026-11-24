@@ -41,7 +41,11 @@ jobs:
         working-directory: frontend
         env:
           VITE_STATIC_DEMO: "true"
-        run: pnpm build
+        run: pnpm build:public
+
+      - name: Verify public bundle boundary
+        working-directory: frontend
+        run: pnpm check:public
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -63,4 +67,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-

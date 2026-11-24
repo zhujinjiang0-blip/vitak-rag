@@ -295,6 +295,13 @@ def stream_answer(payload: QARequest, request: Request) -> StreamingResponse:
         yield serialize("intent", {"intent": answer.intent})
         if answer.safety_notice:
             yield serialize("safety", {"notice": answer.safety_notice})
+        yield serialize(
+            "status",
+            {
+                "stage": "reasoning",
+                "message": "正在汇总证据并整理推理分析",
+            },
+        )
         if answer.generation.configured:
             yield serialize(
                 "generation",
@@ -330,6 +337,7 @@ def _answer_for_mode(payload: QARequest, request: Request) -> Answer:
         session_id=payload.session_id,
         mode=payload.mode,
         filters=payload.filters,
+        include_internal_context=bool(user),
     )
     if user:
         _auth(request).audit_access(

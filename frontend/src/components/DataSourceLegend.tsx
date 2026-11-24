@@ -20,8 +20,8 @@ const PUBLIC_ORIGINS = [
 const AUTHENTICATED_ORIGINS = [
   {
     key: "internal",
-    label: "内部私有",
-    description: "395 人干预队列证据，仅在本地私有快照中使用"
+    label: "研究数据",
+    description: "本研究纳入样本的统计证据，仅在本地完整版显示"
   },
   ...PUBLIC_ORIGINS
 ];

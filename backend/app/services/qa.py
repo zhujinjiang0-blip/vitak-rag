@@ -586,7 +586,7 @@ def natural_evidence_sentence(subject: str, predicate: str, target: str) -> str:
 
 def human_opening(intent: str, internal: bool) -> str:
     if internal:
-        return "从本项目内部队列的分析结果看，可以确认以下信息。"
+        return "从本研究纳入样本的统计分析看，可以确认以下信息。"
     openings = {
         "food_sources": "维生素K的食物来源可以从不同维生素K形式来理解。",
         "drug_interactions": "这类问题的重点是药物与维生素K之间的药理作用、饮食影响和监测要求。",
@@ -603,7 +603,7 @@ def human_opening(intent: str, internal: bool) -> str:
 
 def human_closing(intent: str, internal: bool) -> str:
     if internal:
-        return "这些结果属于内部队列的统计关联或阴性发现，不能直接等同于临床因果结论。"
+        return "这些结果属于观察性统计关联或阴性发现，不能直接等同于临床因果结论。"
     closings = {
         "food_sources": "食物中的维生素K含量会受品种、部位、加工和烹饪方式影响，实际饮食应结合个人情况安排。",
         "drug_interactions": "如果正在使用华法林等抗凝药，不要仅凭一次问答自行调整饮食、补充剂或用药。",
@@ -749,6 +749,7 @@ class GraphAnswerEngine:
         source_types: set[str] | None = None,
         parsed_entities: list[GraphNode] | None = None,
         parsed_intent: str | None = None,
+        include_internal_context: bool = False,
         persist: bool = True,
     ) -> Answer:
         token = _PERSIST_ANSWERS.set(persist)
@@ -759,6 +760,7 @@ class GraphAnswerEngine:
                 source_types=source_types,
                 parsed_entities=parsed_entities,
                 parsed_intent=parsed_intent,
+                include_internal_context=include_internal_context,
             )
         finally:
             _PERSIST_ANSWERS.reset(token)
@@ -771,6 +773,7 @@ class GraphAnswerEngine:
         source_types: set[str] | None = None,
         parsed_entities: list[GraphNode] | None = None,
         parsed_intent: str | None = None,
+        include_internal_context: bool = False,
     ) -> Answer:
         started = time.perf_counter()
         persist = _PERSIST_ANSWERS.get()
@@ -835,6 +838,17 @@ class GraphAnswerEngine:
         )
         related = self._related_entities(query, entities)
         if not self.snapshot.data_version.is_demo:
+            vascular_answer = self._vascular_calcification_answer(
+                query=query,
+                normalized=normalized,
+                session_id=session_id,
+                intent=intent,
+                related=related,
+                started=started,
+                include_internal_context=include_internal_context,
+            )
+            if vascular_answer:
+                return vascular_answer
             forms_answer = self._vitamin_k_forms_answer(
                 query=query,
                 normalized=normalized,
@@ -1697,6 +1711,301 @@ class GraphAnswerEngine:
             related_entities=related[:6],
             data_version=self.snapshot.data_version,
             elapsed_ms=int((time.perf_counter() - started) * 1000),
+        )
+        answer.graph_paths = self._paths_for_evidence(answer.citations)
+        self._finish_answer(answer)
+        return answer
+
+    def _vascular_calcification_answer(
+        self,
+        *,
+        query: str,
+        normalized: str,
+        session_id: str,
+        intent: str,
+        related: list[GraphNode],
+        started: float,
+        include_internal_context: bool,
+    ) -> Answer | None:
+        query_lower = query.lower()
+        if "vitamink" not in normalized:
+            return None
+        if "血管钙化" not in query and "vascular calcification" not in query_lower:
+            return None
+        if not any(
+            term in normalized
+            for term in (
+                "机制",
+                "调控",
+                "参与",
+                "通路",
+                "路径",
+                "mgp",
+                "ucmgp",
+                "matrixglaprotein",
+            )
+        ):
+            return None
+
+        evidence_ids = self.metadata.search_evidence_phrases(
+            [
+                "coenzyme of gamma-carboxylation of matrix Gla protein",
+                "co-factor in the post-translational carboxylation",
+                "inhibits vascular calcification by binding extracellular calcium",
+                "Vascular Vitamin K insufficiency results in increased plasma concentrations of inactive MGP",
+                "associated with increased arterial calcification and stiffness",
+                "active vascular calcification on 18F-NaF PET scan tended to increase",
+                "no difference between the groups regarding vascular calcification",
+            ],
+            limit=160,
+            source_types={"literature"},
+        )
+        evidence_items = [
+            evidence
+            for evidence in self.metadata.get_evidence_many(evidence_ids)
+            if bool(evidence.get("answer_eligible", 1))
+            and str(evidence.get("review_status") or "") == "accepted"
+        ]
+
+        def find(*patterns: str) -> dict[str, Any] | None:
+            for pattern in patterns:
+                compiled = re.compile(pattern, re.IGNORECASE)
+                for evidence in evidence_items:
+                    text = (
+                        f"{evidence.get('chunk_text', '')} "
+                        f"{evidence.get('source_locator', '')}"
+                    )
+                    if compiled.search(text):
+                        return evidence
+            return None
+
+        vitamin_k2_mgp = find(
+            r"Vitamin K2 is known as a coenzyme of gamma-carboxylation "
+            r"of matrix Gla protein",
+        )
+        vitamin_k1_mgp = find(
+            r"co-factor in the post-translational carboxylation.*Matrix Gla Protein",
+        )
+        active_mgp = find(
+            r"Matrix Gla protein \(MGP\) is produced within vascular smooth "
+            r"muscle cells and inhibits vascular calcification by binding "
+            r"extracellular calcium",
+            r"carboxylated MGP.*inhibitor of vascular calcification",
+        )
+        inactive_mgp = find(
+            r"Vascular Vitamin K insufficiency results in increased plasma "
+            r"concentrations of inactive MGP",
+        )
+        calcification_association = find(
+            r"dysfunctional form, desphospho-uncarboxylated-MGP, has been "
+            r"associated with increased arterial calcification",
+            r"Higher plasma dp-ucMGP concentration is related to vascular calcification",
+        )
+        clinical_boundary = find(
+            r"active vascular calcification on 18F-NaF PET scan tended to "
+            r"increase after MK-7 supplementation",
+            r"no difference between the groups regarding vascular calcification",
+        )
+        if not (vitamin_k2_mgp or vitamin_k1_mgp) or not active_mgp:
+            return None
+        if not inactive_mgp and not calcification_association:
+            return None
+
+        claims: list[Claim] = []
+        k_form_evidence = [
+            evidence
+            for evidence in (vitamin_k1_mgp, vitamin_k2_mgp)
+            if evidence is not None
+        ]
+        claims.append(
+            Claim(
+                id=f"claim-{uuid.uuid4().hex[:10]}",
+                text=(
+                    "维生素K作为γ-羧化反应的辅因子，参与基质Gla蛋白（MGP）"
+                    "由未羧化形式向具有钙结合能力的羧化形式转化；现有文献"
+                    "分别记录了维生素K1和维生素K2进入这一功能环节。"
+                ),
+                evidence_ids=[
+                    str(evidence["id"]) for evidence in k_form_evidence
+                ],
+                relation="vitamin_k_mgp_carboxylation",
+            )
+        )
+        claims.append(
+            Claim(
+                id=f"claim-{uuid.uuid4().hex[:10]}",
+                text=(
+                    "羧化MGP主要由血管平滑肌细胞产生，可在细胞外结合钙离子，"
+                    "抑制磷酸钙或羟基磷灰石在血管壁沉积，是局部血管钙化抑制通路"
+                    "的重要环节。"
+                ),
+                evidence_ids=[str(active_mgp["id"])],
+                relation="mgp_vascular_calcification_inhibition",
+            )
+        )
+        dp_ucmgp_evidence = [
+            evidence
+            for evidence in (inactive_mgp, calcification_association)
+            if evidence is not None
+        ]
+        claims.append(
+            Claim(
+                id=f"claim-{uuid.uuid4().hex[:10]}",
+                text=(
+                    "当血管局部维生素K状态不足时，MGP羧化不足，"
+                    "dp-ucMGP升高；dp-ucMGP可作为血管维生素K功能状态的"
+                    "标志物，并与动脉钙化、动脉僵硬度等风险指标相关。"
+                ),
+                evidence_ids=[
+                    str(evidence["id"]) for evidence in dp_ucmgp_evidence
+                ],
+                relation="dp_ucmgp_vascular_status",
+            )
+        )
+        if clinical_boundary:
+            claims.append(
+                Claim(
+                    id=f"claim-{uuid.uuid4().hex[:10]}",
+                    text=(
+                        "一项6个月MK-7随机对照试验中，活动性血管钙化的"
+                        "影像学信号相较安慰剂呈增加趋势，与预期的抑制方向不一致。"
+                    ),
+                    evidence_ids=[str(clinical_boundary["id"])],
+                    relation="vascular_calcification_clinical_boundary",
+                )
+            )
+
+        if include_internal_context:
+            internal_rows: list[tuple[int, str, dict[str, Any]]] = []
+            for row in self.metadata.all_internal_evidence():
+                try:
+                    metadata = json.loads(row.get("metadata_json") or "{}")
+                except (json.JSONDecodeError, TypeError):
+                    metadata = {}
+                subject = str(metadata.get("subject_label") or "")
+                target = str(metadata.get("object_label") or "")
+                if (
+                    subject in {"VK1", "MK-7"}
+                    and target == "hsCRP"
+                    and str(row.get("evidence_status") or "") == "negative"
+                    and str(row.get("sample_n") or "")
+                ):
+                    score = (
+                        4 * int(bool(row.get("core_48_flag")))
+                        + 2
+                        * int(
+                            "基线横断面"
+                            in str(
+                                row.get("analysis_context")
+                                or metadata.get("analysis_context")
+                                or ""
+                            )
+                        )
+                        + int(bool(row.get("effect_size")))
+                    )
+                    internal_rows.append((score, subject, row))
+            by_subject: dict[str, dict[str, Any]] = {}
+            for _, subject, row in sorted(
+                internal_rows,
+                key=lambda item: (-item[0], str(item[2].get("id") or "")),
+            ):
+                by_subject.setdefault(subject, row)
+            vitamin_k1_row = by_subject.get("VK1")
+            mk7_row = by_subject.get("MK-7")
+            if vitamin_k1_row and mk7_row:
+                sample_n = str(
+                    vitamin_k1_row.get("sample_n")
+                    or mk7_row.get("sample_n")
+                    or ""
+                )
+
+                def formatted(row: dict[str, Any], key: str, digits: int) -> str:
+                    try:
+                        return f"{float(str(row.get(key) or '')):.{digits}f}"
+                    except (TypeError, ValueError):
+                        return str(row.get(key) or "")
+
+                claims.append(
+                    Claim(
+                        id=f"claim-{uuid.uuid4().hex[:10]}",
+                        text=(
+                            f"在当前内部研究纳入的 {sample_n} 名高代谢风险成人的"
+                            "基线数据中，"
+                            f"VK1与hsCRP的标准化关联为 "
+                            f"{formatted(vitamin_k1_row, 'effect_size', 3)}"
+                            f"（P={formatted(vitamin_k1_row, 'p_value', 3)}），"
+                            f"MK-7为 {formatted(mk7_row, 'effect_size', 3)}"
+                            f"（P={formatted(mk7_row, 'p_value', 3)}）；"
+                            "两项均未达到常规显著性阈值。这组结果关注的是炎症指标，"
+                            "不包含dp-ucMGP或影像学血管钙化终点。"
+                        ),
+                        evidence_ids=[
+                            str(vitamin_k1_row["id"]),
+                            str(mk7_row["id"]),
+                        ],
+                        relation="internal_cardiometabolic_context",
+                    )
+                )
+
+        mechanism_text = (
+            "从病理生理层面看，血管钙化不是钙被动沉积，而涉及血管平滑肌细胞"
+            "成骨样分化、细胞外基质矿化和钙磷稳态异常。维生素K作为γ-羧化反应"
+            "的辅因子，支持未羧化MGP向具有钙结合能力的羧化MGP转化；羧化MGP"
+            "主要由血管平滑肌细胞产生，可结合细胞外钙并抑制磷酸钙或羟基磷灰石"
+            "在血管壁沉积。血管维生素K不足时，MGP羧化下降、dp-ucMGP升高，"
+            "后者可反映血管维生素K功能状态，并与动脉钙化和僵硬度风险相关，"
+            "但其变化不等同于钙化本身改善。部分实验还提示MGP可能影响BMP相关"
+            "信号和血管平滑肌细胞表型，具体强度依赖实验条件。"
+        )
+        interaction_text = (
+            "维生素D与维生素K主要是潜在功能互补：在特定细胞和实验条件下，"
+            "维生素D可能影响MGP表达，而维生素K参与MGP羧化。维生素D与钙共同"
+            "参与全身矿物质稳态；在慢性肾病等矿物质代谢异常状态下，过高矿物"
+            "负荷可能促进血管钙化，但不能据此认为一般膳食钙或维生素D摄入必然"
+            "促进钙化。也不能把维生素K描述为将钙从血管转移到骨骼。"
+        )
+        evidence_text = " ".join(
+            claim.text
+            for claim in claims
+            if claim.relation
+            in {
+                "vascular_calcification_clinical_boundary",
+                "internal_cardiometabolic_context",
+            }
+        )
+        answer_text = (
+            "维生素K主要通过维持血管壁内MGP的γ-羧化活性参与抑制血管钙化；"
+            "维生素D主要调节钙磷吸收和稳态；钙是骨矿化及病理性血管矿化的物质"
+            "基础。三者具有机制层面的功能互补性，但现有证据不足以证明联合补充"
+            "能够预防或逆转血管钙化。\n\n"
+            f"{mechanism_text}\n\n"
+            f"{interaction_text}\n\n"
+            + (f"{evidence_text}\n\n" if evidence_text else "")
+            +
+            "上述内容属于机制和生物标志物证据，"
+            "不能直接推导为任何维生素K补充剂都能预防、逆转或治疗临床血管钙化；"
+            "机制互补也不等于已经证实协同。实际效果仍需结合维生素K形式、剂量、"
+            "维生素D与钙状态、人群、疗程和影像学终点判断。附件列出的部分最新"
+            "人体研究尚未纳入当前冻结知识库，本回答不会将它们表述为已检索证据。"
+        )
+        citations = self._citations_for_claims(claims)
+        answer = Answer(
+            session_id=session_id,
+            query=query,
+            normalized_query=normalized,
+            intent="mechanism",
+            answer_text=answer_text,
+            claims=claims,
+            citations=citations,
+            sufficiency=EvidenceSufficiency.SUFFICIENT,
+            related_entities=related[:6],
+            data_version=self.snapshot.data_version,
+            elapsed_ms=int((time.perf_counter() - started) * 1000),
+            data_scope=(
+                ["external", "internal"]
+                if any(citation.data_origin == "internal" for citation in citations)
+                else ["external"]
+            ),
         )
         answer.graph_paths = self._paths_for_evidence(answer.citations)
         self._finish_answer(answer)

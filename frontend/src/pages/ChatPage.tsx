@@ -37,7 +37,7 @@ import {
   saveGraphPathHandoff
 } from "../lib/graphPathHandoff";
 import { STATIC_DEMO_MODE } from "../lib/staticDemo";
-import type { Answer, QAMode, TriageSession } from "../lib/types";
+import type { Answer, Citation, QAMode, TriageSession } from "../lib/types";
 import DataSourceLegend from "../components/DataSourceLegend";
 
 interface Message {
@@ -278,6 +278,14 @@ function ChatPage() {
   const latestAnswerMessageId = useMemo(
     () => [...messages].reverse().find((message) => message.answer)?.id ?? null,
     [messages]
+  );
+  const internalCitations = useMemo(
+    () => activeAnswer?.citations.filter((citation) => citation.data_origin === "internal") ?? [],
+    [activeAnswer]
+  );
+  const externalCitations = useMemo(
+    () => activeAnswer?.citations.filter((citation) => citation.data_origin !== "internal") ?? [],
+    [activeAnswer]
   );
   const orderedSessions = useMemo(
     () => [...projectSessions].sort((left, right) => right.updatedAt - left.updatedAt),
@@ -784,6 +792,69 @@ function ChatPage() {
     if (!handoff) return;
     saveGraphPathHandoff(handoff);
     navigate("/graph?source=answer");
+  }
+
+  function renderCitationCard(citation: Citation) {
+    return (
+      <article
+        className={`citation-card citation-${citation.data_origin} ${
+          highlightedCitationId === citation.id ? "highlighted" : ""
+        }`}
+        id={`citation-${citation.id}`}
+        key={citation.id}
+      >
+        <div className="citation-topline">
+          <span className="source-type">
+            {citation.data_origin === "internal"
+              ? "研究统计"
+              : citation.source_classification || citation.source_type}
+          </span>
+          <span className={`origin-pill ${citation.data_origin}`}>
+            {originLabel(citation.data_origin)}
+          </span>
+          {citation.review_status && (
+            <span className="review-pill">{citation.review_status}</span>
+          )}
+          {citation.test_family && (
+            <span className="review-pill">{citation.test_family}</span>
+          )}
+          {!PUBLIC_BUILD && citation.core_48 && (
+            <span className="core-pill">核心</span>
+          )}
+          {citation.is_demo && <span className="demo-pill">演示</span>}
+        </div>
+        <h4>{citation.source_title}</h4>
+        <p>{citation.snippet}</p>
+        {(citation.analysis_context ||
+          citation.model_type ||
+          citation.sample_n ||
+          citation.effect_size ||
+          citation.p_value) && (
+          <div className="citation-statline">
+            {citation.analysis_context && <span>分析：{citation.analysis_context}</span>}
+            {citation.model_type && <span>模型：{citation.model_type}</span>}
+            {citation.sample_n && <span>n={citation.sample_n}</span>}
+            {citation.effect_size && <span>效应：{citation.effect_size}</span>}
+            {citation.p_value && <span>P={citation.p_value}</span>}
+            {citation.q_value && <span>Q={citation.q_value}</span>}
+            {citation.conflict_id && <span>冲突 {citation.conflict_id}</span>}
+          </div>
+        )}
+        <div className="citation-footer">
+          <span>
+            {citation.source_version ||
+              citation.data_owner ||
+              citation.locator ||
+              citation.source_id}
+          </span>
+          {citation.url && (
+            <a href={citation.url} target="_blank" rel="noreferrer">
+              查看来源 <ExternalLink size={13} />
+            </a>
+          )}
+        </div>
+      </article>
+    );
   }
 
   return (
@@ -1340,6 +1411,20 @@ function ChatPage() {
               </div>
             )}
 
+            {internalCitations.length > 0 && (
+              <div className="rail-section internal-evidence-section">
+                <div className="rail-section-heading">
+                  <h3>研究数据证据</h3>
+                  <small className="evidence-count">
+                    {internalCitations.length} 条 · 纳入样本统计
+                  </small>
+                </div>
+                <div className="citation-list">
+                  {internalCitations.map(renderCitationCard)}
+                </div>
+              </div>
+            )}
+
             <div className="rail-section">
               <div className="rail-section-heading">
                 <h3>图谱路径</h3>
@@ -1386,67 +1471,23 @@ function ChatPage() {
             </div>
 
             <div className="rail-section">
-              <h3>来源证据</h3>
-              <div className="citation-list">
-                {activeAnswer.citations.map((citation) => (
-                  <article
-                    className={`citation-card ${
-                      highlightedCitationId === citation.id ? "highlighted" : ""
-                    }`}
-                    id={`citation-${citation.id}`}
-                    key={citation.id}
-                  >
-                    <div className="citation-topline">
-                      <span className="source-type">
-                        {citation.source_classification || citation.source_type}
-                      </span>
-                      <span className={`origin-pill ${citation.data_origin}`}>
-                        {originLabel(citation.data_origin)}
-                      </span>
-                      {citation.review_status && (
-                        <span className="review-pill">{citation.review_status}</span>
-                      )}
-                      {citation.test_family && (
-                        <span className="review-pill">{citation.test_family}</span>
-                      )}
-                      {!PUBLIC_BUILD && citation.core_48 && (
-                        <span className="core-pill">核心</span>
-                      )}
-                      {citation.is_demo && <span className="demo-pill">演示</span>}
-                    </div>
-                    <h4>{citation.source_title}</h4>
-                    <p>{citation.snippet}</p>
-                    {(citation.analysis_context ||
-                      citation.model_type ||
-                      citation.sample_n ||
-                      citation.effect_size ||
-                      citation.p_value) && (
-                      <div className="citation-statline">
-                        {citation.analysis_context && <span>分析：{citation.analysis_context}</span>}
-                        {citation.model_type && <span>模型：{citation.model_type}</span>}
-                        {citation.sample_n && <span>n={citation.sample_n}</span>}
-                        {citation.effect_size && <span>效应：{citation.effect_size}</span>}
-                        {citation.p_value && <span>P={citation.p_value}</span>}
-                        {citation.q_value && <span>Q={citation.q_value}</span>}
-                        {citation.conflict_id && <span>冲突 {citation.conflict_id}</span>}
-                      </div>
-                    )}
-                    <div className="citation-footer">
-                      <span>
-                        {citation.source_version ||
-                          citation.data_owner ||
-                          citation.locator ||
-                          citation.source_id}
-                      </span>
-                      {citation.url && (
-                        <a href={citation.url} target="_blank" rel="noreferrer">
-                          查看来源 <ExternalLink size={13} />
-                        </a>
-                      )}
-                    </div>
-                  </article>
-                ))}
+              <div className="rail-section-heading">
+                <h3>来源证据</h3>
+                <small className="evidence-count">
+                  外部 {externalCitations.length}
+                </small>
               </div>
+              {externalCitations.length > 0 && (
+                <div className="citation-section">
+                  <div className="citation-group-heading">
+                    <span>外部文献与公开数据</span>
+                    <small>{externalCitations.length} 条</small>
+                  </div>
+                  <div className="citation-list">
+                    {externalCitations.map(renderCitationCard)}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1662,7 +1703,7 @@ function generationLabel(status: string) {
 
 function originLabel(origin: string) {
   return {
-    internal: "内部数据",
+    internal: "研究数据",
     external: "外部数据",
     public: "公开数据",
     synthetic: "合成数据"

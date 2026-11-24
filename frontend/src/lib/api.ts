@@ -179,6 +179,7 @@ export async function askQuestion(
       "正在理解问题并识别询问意图",
       "正在匹配维生素K实体与别名",
       "正在检索真实证据、图谱关系和文献来源",
+      "正在汇总证据并整理推理分析",
       "正在核对审核状态、证据充分性与安全边界"
     ];
     for (const step of steps) {

@@ -70,7 +70,9 @@ function GraphPage() {
         ? "comparison"
         : "domain"
   );
-  const [query, setQuery] = useState("维生素K");
+  const [query, setQuery] = useState(
+    sourceIsAnswer ? "" : "维生素K"
+  );
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [selected, setSelected] = useState<GraphNode | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -244,6 +246,10 @@ function GraphPage() {
     if (!answerPathUnavailable) return;
     setSearchParams({}, { replace: true });
   }, [answerPathUnavailable, setSearchParams]);
+
+  useEffect(() => {
+    if (sourceIsAnswer) setQuery("");
+  }, [sourceIsAnswer]);
 
   useEffect(() => {
     if (sourceIsAnswer || !answerHandoff) return;

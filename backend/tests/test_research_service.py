@@ -4,7 +4,9 @@ import os
 import pytest
 
 from app.config import PROJECT_ROOT, Settings
+from app.schemas import QAMode
 from app.services.qa import GraphAnswerEngine
+from app.services.qa_orchestrator import RuntimeQAService
 from app.services.research import ResearchService
 from app.services.snapshot import SnapshotManager
 
@@ -109,6 +111,78 @@ def test_domain_engine_excludes_internal_evidence(research_context):
     )
 
     assert all(citation.data_origin != "internal" for citation in answer.citations)
+
+
+def test_vascular_calcification_answer_synthesizes_mgp_pathway(research_context):
+    settings, context = research_context
+    answer = GraphAnswerEngine(settings, context).answer(
+        "维生素K通过哪些生物学机制参与血管钙化调控？请展示相关科学关联路径。",
+        source_types={"literature", "structured"},
+        persist=False,
+    )
+
+    assert answer.intent == "mechanism"
+    assert "直接回答" not in answer.answer_text
+    assert "推理分析" not in answer.answer_text
+    assert "边界说明" not in answer.answer_text
+    assert "科学关联路径" not in answer.answer_text
+    assert "MGP" in answer.answer_text
+    assert "dp-ucMGP" in answer.answer_text
+    assert "维生素D" in answer.answer_text
+    assert "钙" in answer.answer_text
+    assert "机制互补" in answer.answer_text
+    assert len(answer.claims) >= 3
+    assert answer.graph_paths
+    assert all(citation.data_origin != "internal" for citation in answer.citations)
+
+
+def test_vascular_calcification_answer_can_cite_internal_cohort_context(
+    research_context,
+):
+    settings, context = research_context
+    answer = GraphAnswerEngine(settings, context).answer(
+        "维生素K通过哪些生物学机制参与血管钙化调控？请展示相关科学关联路径。",
+        source_types={"literature", "structured"},
+        include_internal_context=True,
+        persist=False,
+    )
+
+    internal_claims = [
+        claim
+        for claim in answer.claims
+        if any(
+            citation.id in claim.evidence_ids
+            and citation.data_origin == "internal"
+            for citation in answer.citations
+        )
+    ]
+    assert internal_claims
+    assert any("385" in claim.text and "hsCRP" in claim.text for claim in internal_claims)
+    assert any(
+        "在当前内部研究纳入的 385 名高代谢风险成人的基线数据中" in claim.text
+        for claim in internal_claims
+    )
+    assert all("本项目内部" not in claim.text for claim in internal_claims)
+    assert all("内部队列" not in claim.text for claim in internal_claims)
+    assert "internal" in answer.data_scope
+    assert "不包含dp-ucMGP或影像学血管钙化终点" in internal_claims[0].text
+
+
+def test_domain_runtime_answer_adds_internal_context_when_authorized(
+    research_context,
+):
+    settings, context = research_context
+    answer = RuntimeQAService(settings, context).answer(
+        "维生素K通过哪些生物学机制参与血管钙化调控？请展示相关科学关联路径。",
+        session_id=None,
+        mode=QAMode.DOMAIN,
+        include_internal_context=True,
+        persist=False,
+    )
+
+    assert answer.mode == QAMode.DOMAIN
+    assert answer.data_scope == ["external", "internal"]
+    assert any(citation.data_origin == "internal" for citation in answer.citations)
 
 
 def test_domain_engine_rejects_out_of_scope_question_on_real_snapshot(
@@ -228,3 +302,14 @@ def test_vitamin_k1_and_k2_comparison_uses_form_evidence(eval_context):
     assert answer.citations
     assert "没有找到足够可靠" not in answer.answer_text
     assert "K2内部" in answer.answer_text
+
+
+def test_llm_resolved_vitamin_k1_prefers_canonical_entity(eval_context):
+    settings, context = eval_context
+    service = RuntimeQAService(settings, context)
+
+    resolved = service._resolve_entities(["VITAMIN K1"])
+
+    assert resolved
+    assert resolved[0].id.startswith("ENT_")
+    assert resolved[0].name == "Vitamin K1"

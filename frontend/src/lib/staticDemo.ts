@@ -1030,7 +1030,8 @@ function buildTopicAnswer(
   opening: string,
   closing: string,
   specs: SynthesisSpec[],
-  includeStructuredFoodEvidence = true
+  includeStructuredFoodEvidence = true,
+  includeClaimsInText = true
 ): Answer | null {
   const usedSources = new Set<string>();
   const claims: Claim[] = [];
@@ -1104,8 +1105,10 @@ function buildTopicAnswer(
     intent,
     answer_text:
       `${opening}\n\n` +
-      claims.map((claim) => claim.text).join("") +
-      `\n\n${closing}`,
+      (includeClaimsInText
+        ? `${claims.map((claim) => claim.text).join("")}\n\n`
+        : "") +
+      closing,
     claims,
     citations,
     graph_paths: paths,
@@ -1225,6 +1228,57 @@ function topicSynthesisAnswer(
           ]
         }
       ]
+    );
+  }
+
+  if (
+    normalizedQuery.includes("vitamink") &&
+    (normalizedQuery.includes("血管钙化") ||
+      normalizedQuery.includes("vascularcalcification")) &&
+    ["机制", "调控", "参与", "通路", "路径", "mgp", "ucmgp"].some((term) =>
+      normalizedQuery.includes(term)
+    )
+  ) {
+    return buildTopicAnswer(
+      query,
+      data,
+      entities,
+      intent,
+      sessionId,
+      started,
+      "维生素K主要通过维持血管壁内MGP的γ-羧化活性参与抑制血管钙化；维生素D主要调节钙磷吸收和稳态；钙是骨矿化及病理性血管矿化的物质基础。三者具有机制层面的功能互补性，但现有证据不足以证明联合补充能够预防或逆转血管钙化。\n\n血管钙化不是钙被动沉积，而涉及血管平滑肌细胞成骨样分化、细胞外基质矿化和钙磷稳态异常。维生素K支持未羧化MGP向具有钙结合能力的羧化MGP转化；羧化MGP可结合细胞外钙并抑制磷酸钙或羟基磷灰石在血管壁沉积。dp-ucMGP可反映血管维生素K功能状态，并与动脉钙化和僵硬度风险相关，但其变化不等同于钙化本身改善。部分实验还提示MGP可能影响BMP相关信号和血管平滑肌细胞表型。\n\n维生素D与钙共同参与全身矿物质稳态。在特定实验条件下，维生素D可能影响MGP表达，而维生素K参与MGP羧化，因此二者具有潜在功能互补。慢性肾病等矿物质代谢异常时，过高矿物负荷可能促进血管钙化，但不能据此认为一般膳食钙或维生素D摄入必然促进钙化，也不能把维生素K描述为将钙从血管转移到骨骼。\n\n一项6个月MK-7随机对照试验中，活动性血管钙化的影像学信号相较安慰剂呈增加趋势，未呈现预期方向。",
+      "上述内容属于机制和生物标志物证据，不能直接推导为任何维生素K补充剂都能预防、逆转或治疗临床血管钙化；机制互补也不等于已经证实协同。实际效果仍需结合维生素K形式、剂量、维生素D与钙状态、人群、疗程和影像学终点判断。当前演示数据未覆盖附件中列出的全部最新研究，未收录内容不会作为系统已检索证据展示。",
+      [
+        {
+          text: "维生素K作为γ-羧化反应的辅因子，参与基质Gla蛋白（MGP）由未羧化形式向具有钙结合能力的羧化形式转化。",
+          patterns: [
+            /coenzyme of gamma-carboxylation of matrix Gla protein/i,
+            /co-factor in the post-translational carboxylation.*Matrix Gla Protein/i
+          ]
+        },
+        {
+          text: "羧化MGP主要由血管平滑肌细胞产生，可在细胞外结合钙离子，抑制磷酸钙或羟基磷灰石在血管壁沉积。",
+          patterns: [
+            /MGP.*produced within vascular smooth muscle cells.*inhibits vascular calcification by binding extracellular calcium/i,
+            /carboxylated MGP.*inhibitor of vascular calcification/i
+          ]
+        },
+        {
+          text: "当血管局部维生素K状态不足时，MGP羧化不足，dp-ucMGP升高；dp-ucMGP可作为血管维生素K功能状态标志物，并与动脉钙化、动脉僵硬度等风险指标相关。",
+          patterns: [
+            /Vascular Vitamin K insufficiency results in increased plasma concentrations of inactive MGP/i,
+            /desphospho-uncarboxylated-MGP.*associated with increased arterial calcification/i
+          ]
+        },
+        {
+          text: "一项6个月MK-7随机对照试验中，活动性血管钙化的影像学信号相较安慰剂呈增加趋势，与预期的抑制方向不一致。",
+          patterns: [
+            /active vascular calcification on 18F-NaF PET scan tended to increase after MK-7 supplementation/i
+          ]
+        }
+      ],
+      false,
+      false
     );
   }
 

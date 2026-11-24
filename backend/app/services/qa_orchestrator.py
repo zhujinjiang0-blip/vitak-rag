@@ -101,6 +101,8 @@ class RuntimeQAService:
         session_id: str | None,
         mode: QAMode,
         filters: dict[str, Any] | None = None,
+        include_internal_context: bool = False,
+        persist: bool = True,
     ) -> Answer:
         started = time.perf_counter()
         explicit_filters = {
@@ -151,10 +153,21 @@ class RuntimeQAService:
                 source_types=EXTERNAL_SOURCE_TYPES,
                 parsed_entities=parsed_entities,
                 parsed_intent=parsed_intent,
+                include_internal_context=include_internal_context,
                 persist=False,
             )
             domain.mode = QAMode.DOMAIN
-            domain.data_scope = ["external"]
+            domain.data_scope = [
+                "external",
+                *(
+                    ["internal"]
+                    if any(
+                        citation.data_origin == "internal"
+                        for citation in domain.citations
+                    )
+                    else []
+                ),
+            ]
             answer = domain
             if mode == QAMode.COMPARISON and not domain.safety_notice:
                 internal = self.research.answer(
@@ -171,16 +184,26 @@ class RuntimeQAService:
         answer.generation = self._initial_generation(
             parsed_used=bool(parsed_intent or parsed_entities),
         )
+        protected_answer = any(
+            citation.data_origin == "internal" for citation in answer.citations
+        )
+        llm_answer_allowed = model_mode_allowed and (
+            protected_evidence_allowed or not protected_answer
+        )
         if (
             answer.claims
             and not answer.safety_notice
             and self.llm.available
-            and model_mode_allowed
+            and llm_answer_allowed
         ):
             answer = self._enhance_with_llm(query, answer, started)
         elif self.llm.available:
             if answer.safety_notice:
                 answer.generation.fallback_reason = "safety rule handled the question"
+            elif protected_answer and not protected_evidence_allowed:
+                answer.generation.fallback_reason = (
+                    "internal evidence was not sent to a public-only runtime model"
+                )
             elif not model_mode_allowed:
                 answer.generation.fallback_reason = (
                     "configured runtime model is public-only; "
@@ -193,7 +216,8 @@ class RuntimeQAService:
             answer.generation.status = GenerationStatus.NOT_ATTEMPTED
 
         answer.elapsed_ms = int((time.perf_counter() - started) * 1000)
-        self._persist(answer)
+        if persist:
+            self._persist(answer)
         return answer
 
     def _parse(
@@ -248,7 +272,13 @@ class RuntimeQAService:
                     for value in [node.name, node.id, *node.aliases]
                 }
             ]
-            selected = (exact or matches)[0]
+            selected = sorted(
+                exact or matches,
+                key=lambda node: (
+                    0 if node.id.startswith("ENT_") else 1,
+                    node.id,
+                ),
+            )[0]
             if selected.id not in seen:
                 seen.add(selected.id)
                 output.append(selected)
@@ -335,9 +365,15 @@ class RuntimeQAService:
 
         opening = self._clean_narrative(draft.opening if draft else "")
         closing = self._clean_narrative(draft.closing if draft else "")
-        sections = [section for section in [opening, *(
-            claim.text for claim in generated_claims
-        ), closing] if section]
+        sections = [
+            section
+            for section in [
+                opening,
+                *(claim.text for claim in generated_claims),
+                closing,
+            ]
+            if section
+        ]
         answer.answer_text = "\n\n".join(sections)
         answer.claims = generated_claims
         answer.comparisons = build_evidence_comparisons(
